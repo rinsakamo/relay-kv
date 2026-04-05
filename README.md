@@ -306,6 +306,11 @@ Areas of interest include:
 - backend integration
 - profiling and benchmark tooling
 
+## Documentation Note
+
+Core project documents are written in English.
+Informal development notes may be written in Japanese.
+
 ## License
 
 MIT
