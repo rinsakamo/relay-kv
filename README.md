@@ -21,6 +21,14 @@ RelayKV is built around a simple idea:
 
 RelayKV treats KV cache as a managed memory system rather than a fixed GPU-only artifact. It keeps hot KV close to the GPU, offloads cold KV to CPU memory, and restores only the most relevant candidates for the current query.
 
+## Current Scope
+
+RelayKV currently focuses on:
+- GPU/CPU KV tiering
+- block-wise cold KV layout
+- selective candidate recall
+- profiling on commodity hardware
+
 ## Motivation
 
 Existing local inference backends can run quantized models efficiently, but KV cache itself remains a major bottleneck for long-context workloads.
