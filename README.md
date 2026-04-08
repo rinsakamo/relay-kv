@@ -37,6 +37,53 @@ KV split
 → attention comparison
 ```
 
+## Main Entry Points
+
+The current repository has three main entry points.
+
+### 1. Baseline measurement
+
+```bash
+python scripts/run_baseline.py
+```
+
+Use this to collect baseline memory and latency measurements without RelayKV candidate reconstruction.
+
+### 2. RelayKV prototype pipeline
+
+```bash
+python scripts/run_relaykv_pipeline.py   --seq-len 1024   --hot-window 128   --block-size 128   --top-k 2   --layer-idx 27
+```
+
+Use this to run the full RelayKV prototype path in one execution:
+
+```text
+forward
+→ hot/cold split
+→ cold offload
+→ blockify
+→ metadata
+→ scoring
+→ retrieval
+→ candidate KV
+→ working KV
+→ attention comparison
+```
+
+The default output is:
+
+```text
+results/raw/prototype_checks/relaykv_pipeline_summary.json
+```
+
+### 3. Sweep experiment
+
+```bash
+python scripts/run_attention_sweep.py
+```
+
+Use this to run a parameter sweep over sequence length, hot window, block size, top-k, and layer index.
+
 ## Motivation
 
 Long-context inference is often constrained not only by compute, but by KV cache growth.
@@ -82,34 +129,31 @@ Application / Agent / API Server
    Attention Comparison / Future Re-Attention
 ```
 
-## Key Prototype Results
+## Example Pipeline Output
 
-RelayKV already supports the following prototype path:
+A representative pipeline run with:
+
+- `seq_len = 1024`
+- `hot_window = 128`
+- `block_size = 128`
+- `top_k = 2`
+- `layer_idx = 27`
+
+produced:
+
+- `cold_k_len = 896`
+- `candidate_k_len = 256`
+- `coverage_ratio = 0.2857`
+- `working_k_len = 384`
+- `working_ratio = 0.375`
+- `mean_abs_diff = 0.0182`
+- `max_abs_diff = 0.0931`
+
+The corresponding JSON artifact is stored at:
 
 ```text
-KV split
-→ CPU cold offload
-→ blockify
-→ metadata
-→ scoring
-→ retrieval
-→ candidate KV
-→ working KV
-→ attention comparison
+results/raw/prototype_checks/relaykv_pipeline_summary.json
 ```
-
-In a smaller test case:
-
-- full KV length: `386`
-- working KV length: `384`
-
-Even after dropping a small part of the cold KV, the prototype produced extremely small output differences:
-
-- mean absolute difference: `1.46e-08`
-- max absolute difference: `1.19e-07`
-- L2 difference: `4.62e-07`
-
-This is an encouraging sanity check that the end-to-end pipeline is correctly wired.
 
 ## Sweep Findings
 
@@ -127,27 +171,6 @@ This suggests that approximation quality is explained better by **effective cand
 
 **Figure 1.** Mean absolute attention-output difference as a function of candidate coverage ratio for `layer_idx=27`. The plot shows two sequence lengths (`1024` and `2048`). In both cases, approximation error decreases as coverage increases, while the longer context remains consistently harder. The overall trend supports a coverage-first interpretation of RelayKV behavior.
 
-### Example Table
-
-| hot_window | block_size | top_k | coverage_ratio | mean_abs_diff |
-|---:|---:|---:|---:|---:|
-| 128 | 64  | 1 | 0.0714 | 0.072750889 |
-| 128 | 64  | 2 | 0.1429 | 0.062801488 |
-| 128 | 64  | 3 | 0.2143 | 0.056178473 |
-| 128 | 128 | 2 | 0.2857 | 0.050129421 |
-| 128 | 128 | 3 | 0.4286 | 0.038244553 |
-| 128 | 256 | 3 | 0.7143 | 0.015856747 |
-| 256 | 256 | 3 | 1.0000 | 0.000000000 |
-
-### Current Interpretation
-
-The current prototype evidence supports the following empirical view:
-
-- higher **coverage_ratio** generally reduces approximation error
-- for matched coverage, different block sizes may behave similarly
-- longer sequence lengths remain harder, but follow the same trend
-- larger hot windows improve stability by preserving more recent KV directly
-
 ## Repository Structure
 
 ```text
@@ -156,17 +179,22 @@ relay-kv/
 ├─ LICENSE
 ├─ docs/
 │  ├─ README.md
-│  ├─ experiment_spec.md
 │  ├─ current_status.md
 │  ├─ experimental_findings_2026-04-07.md
 │  ├─ figures/
 │  │  └─ relaykv_coverage_vs_error.png
 │  └─ data/
 │     └─ relaykv_coverage_vs_error.csv
-├─ notes/
+├─ results/
+│  ├─ README.md
+│  ├─ raw/
+│  │  ├─ prototype_checks/
+│  │  │  └─ relaykv_pipeline_summary.json
+│  │  └─ sweeps/
+│  ├─ processed/
+│  └─ figures/
 ├─ relaykv/
 ├─ scripts/
-├─ results/
 └─ tests/
 ```
 
@@ -179,17 +207,6 @@ RelayKV is built with the following goals:
 - **efficiency**: reduce unnecessary KV residency and transfer
 - **scalability**: support longer context windows through tiered storage
 - **quality retention**: preserve attention quality through useful candidate recall
-
-## Non-Goals
-
-RelayKV is not intended to be:
-
-- a complete LLM serving framework
-- a model training system
-- a replacement for all runtime optimizations
-- a guarantee of exact full-attention equivalence in every setting
-
-Its focus is narrower: efficient KV management for long-context local inference.
 
 ## Planned Next Steps
 

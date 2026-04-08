@@ -1,0 +1,107 @@
+{
+  "model": "Qwen/Qwen2.5-1.5B-Instruct",
+  "device": "cuda",
+  "seq_len_target": 1024,
+  "seq_len_actual": 1024,
+  "layer_idx": 27,
+  "hot_window": 128,
+  "block_size": 128,
+  "top_k": 2,
+  "cold_range": [
+    0,
+    896
+  ],
+  "hot_range": [
+    896,
+    1024
+  ],
+  "num_layers": 28,
+  "num_all_blocks": 196,
+  "num_layer_blocks": 7,
+  "num_selected_blocks": 2,
+  "cold_k_len": 896,
+  "candidate_k_len": 256,
+  "full_k_len": 1024,
+  "working_k_len": 384,
+  "coverage_ratio": 0.2857142857142857,
+  "working_ratio": 0.375,
+  "candidate_kv": {
+    "layer_idx": 27,
+    "start": 640,
+    "end": 896,
+    "length": 256,
+    "k_shape": [
+      1,
+      2,
+      256,
+      128
+    ],
+    "v_shape": [
+      1,
+      2,
+      256,
+      128
+    ],
+    "k_device": "cpu",
+    "v_device": "cpu"
+  },
+  "working_kv": {
+    "layer_idx": 27,
+    "candidate_range": [
+      640,
+      896
+    ],
+    "hot_range": [
+      896,
+      1024
+    ],
+    "length": 384,
+    "k_shape": [
+      1,
+      2,
+      384,
+      128
+    ],
+    "v_shape": [
+      1,
+      2,
+      384,
+      128
+    ],
+    "k_device": "cpu",
+    "v_device": "cpu"
+  },
+  "attention_compare": {
+    "full_output_shape": [
+      1,
+      2,
+      1,
+      128
+    ],
+    "approx_output_shape": [
+      1,
+      2,
+      1,
+      128
+    ],
+    "mean_abs_diff": 0.01823497749865055,
+    "max_abs_diff": 0.09314870834350586,
+    "l2_diff": 0.4333457350730896
+  },
+  "top_scores": [
+    {
+      "layer_idx": 27,
+      "block_id": 6,
+      "start": 768,
+      "end": 896,
+      "score": 623.427001953125
+    },
+    {
+      "layer_idx": 27,
+      "block_id": 5,
+      "start": 640,
+      "end": 768,
+      "score": 596.5167846679688
+    }
+  ]
+}

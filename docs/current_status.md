@@ -14,39 +14,18 @@ RelayKV currently has a working end-to-end prototype for:
 - working KV assembly
 - attention output comparison
 
-## What is already verified
+## Main executable path
 
-### Verified on real model KV tensors
+The prototype now has a single main executable path through:
 
-The prototype successfully operates on actual KV tensors extracted from a model cache object rather than on synthetic toy tensors only.
-
-### DynamicCache inspection
-
-The current model backend exposes KV layers through `DynamicCache.layers`, where each layer provides:
-
-- `keys`
-- `values`
-
-with tensor shape:
-
-```text
-[batch, heads, seq_len, head_dim]
+```bash
+python scripts/run_relaykv_pipeline.py
 ```
 
-### Real split path
-
-The current split path is:
+This script runs the representative RelayKV path and writes:
 
 ```text
-full KV
-→ split into hot / cold
-→ move cold to CPU
-→ blockify cold KV
-→ build metadata
-→ score and retrieve
-→ build candidate KV
-→ merge with hot KV
-→ compare to full attention output
+results/raw/prototype_checks/relaykv_pipeline_summary.json
 ```
 
 ## Current empirical picture
@@ -57,7 +36,3 @@ The prototype already supports direct approximation-quality measurement. The cur
 - larger hot windows improve stability
 - deeper layers are harder than shallow layers
 - longer contexts remain harder, but still follow the same coverage-driven trend
-
-## Figure reference
-
-See `docs/figures/relaykv_coverage_vs_error.png` for the current coverage-vs-error view, and `docs/data/relaykv_coverage_vs_error.csv` for the aggregated plotting data.
