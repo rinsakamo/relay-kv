@@ -1,0 +1,4 @@
+mode,model,context_length,gpu_peak_mb,cpu_rss_mb,elapsed_ms,output_tokens
+baseline,Qwen/Qwen2.5-1.5B-Instruct,2048,3141.59,2017.34,1989.64,2080
+baseline,Qwen/Qwen2.5-1.5B-Instruct,4096,3324.67,2022.21,1658.82,4128
+baseline,Qwen/Qwen2.5-1.5B-Instruct,8192,3696.81,2027.09,2151.25,8224

@@ -1,0 +1,35 @@
+{
+  "seq_len": 322,
+  "cold_range": [
+    0,
+    194
+  ],
+  "hot_range": [
+    194,
+    322
+  ],
+  "block_size": 128,
+  "num_layer0_blocks": 2,
+  "top_k": 4,
+  "query_shape": [
+    1,
+    2,
+    128
+  ],
+  "top_blocks": [
+    {
+      "layer_idx": 0,
+      "block_id": 0,
+      "start": 0,
+      "end": 128,
+      "score": 1215385.25
+    },
+    {
+      "layer_idx": 0,
+      "block_id": 1,
+      "start": 128,
+      "end": 194,
+      "score": 1215291.125
+    }
+  ]
+}

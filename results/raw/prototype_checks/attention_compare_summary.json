@@ -1,0 +1,59 @@
+{
+  "seq_len": 386,
+  "cold_range": [
+    0,
+    258
+  ],
+  "hot_range": [
+    258,
+    386
+  ],
+  "block_size": 128,
+  "top_k": 2,
+  "layer_idx": 0,
+  "full_k_shape": [
+    1,
+    2,
+    386,
+    128
+  ],
+  "working_k_shape": [
+    1,
+    2,
+    384,
+    128
+  ],
+  "attention_compare": {
+    "full_output_shape": [
+      1,
+      2,
+      1,
+      128
+    ],
+    "approx_output_shape": [
+      1,
+      2,
+      1,
+      128
+    ],
+    "mean_abs_diff": 1.455737219657749e-08,
+    "max_abs_diff": 1.1920928955078125e-07,
+    "l2_diff": 4.623874758635793e-07
+  },
+  "top_scores": [
+    {
+      "layer_idx": 0,
+      "block_id": 1,
+      "start": 128,
+      "end": 256,
+      "score": 1215510.25
+    },
+    {
+      "layer_idx": 0,
+      "block_id": 0,
+      "start": 0,
+      "end": 128,
+      "score": 1215499.125
+    }
+  ]
+}

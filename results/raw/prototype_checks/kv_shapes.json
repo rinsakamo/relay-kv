@@ -1,0 +1,33 @@
+{
+  "model": "Qwen/Qwen2.5-1.5B-Instruct",
+  "device": "cuda",
+  "past_key_values_type": "<class 'transformers.cache_utils.DynamicCache'>",
+  "available_attrs": {
+    "layers": {
+      "type": "<class 'list'>",
+      "len": 28,
+      "first_item_type": "<class 'transformers.cache_utils.DynamicLayer'>"
+    }
+  },
+  "available_methods": [],
+  "first_layer_attrs": {
+    "keys": {
+      "type": "<class 'torch.Tensor'>",
+      "shape": [
+        1,
+        2,
+        450,
+        128
+      ]
+    },
+    "values": {
+      "type": "<class 'torch.Tensor'>",
+      "shape": [
+        1,
+        2,
+        450,
+        128
+      ]
+    }
+  }
+}

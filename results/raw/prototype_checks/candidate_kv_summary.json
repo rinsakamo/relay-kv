@@ -1,0 +1,34 @@
+{
+  "seq_len": 386,
+  "cold_range": [
+    0,
+    258
+  ],
+  "hot_range": [
+    258,
+    386
+  ],
+  "block_size": 128,
+  "top_k": 2,
+  "num_retrieved": 2,
+  "candidate_kv": {
+    "layer_idx": 0,
+    "start": 0,
+    "end": 256,
+    "length": 256,
+    "k_shape": [
+      1,
+      2,
+      256,
+      128
+    ],
+    "v_shape": [
+      1,
+      2,
+      256,
+      128
+    ],
+    "k_device": "cpu",
+    "v_device": "cpu"
+  }
+}

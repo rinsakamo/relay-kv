@@ -1,0 +1,87 @@
+{
+  "seq_len": 386,
+  "cold_range": [
+    0,
+    258
+  ],
+  "hot_range": [
+    258,
+    386
+  ],
+  "num_layers": 28,
+  "num_cold_segments": 28,
+  "first_hot_k_shape": [
+    1,
+    2,
+    128,
+    128
+  ],
+  "first_hot_v_shape": [
+    1,
+    2,
+    128,
+    128
+  ],
+  "cold_segments": [
+    {
+      "layer_idx": 0,
+      "start": 0,
+      "end": 258,
+      "length": 258,
+      "k_shape": [
+        1,
+        2,
+        258,
+        128
+      ],
+      "v_shape": [
+        1,
+        2,
+        258,
+        128
+      ],
+      "k_device": "cpu",
+      "v_device": "cpu"
+    },
+    {
+      "layer_idx": 1,
+      "start": 0,
+      "end": 258,
+      "length": 258,
+      "k_shape": [
+        1,
+        2,
+        258,
+        128
+      ],
+      "v_shape": [
+        1,
+        2,
+        258,
+        128
+      ],
+      "k_device": "cpu",
+      "v_device": "cpu"
+    },
+    {
+      "layer_idx": 2,
+      "start": 0,
+      "end": 258,
+      "length": 258,
+      "k_shape": [
+        1,
+        2,
+        258,
+        128
+      ],
+      "v_shape": [
+        1,
+        2,
+        258,
+        128
+      ],
+      "k_device": "cpu",
+      "v_device": "cpu"
+    }
+  ]
+}

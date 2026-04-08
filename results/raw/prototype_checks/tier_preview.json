@@ -1,0 +1,490 @@
+[
+  {
+    "seq_len": 2048,
+    "hot_window": 1024,
+    "block_size": 128,
+    "cold_range": [
+      0,
+      1024
+    ],
+    "hot_range": [
+      1024,
+      2048
+    ],
+    "num_blocks": 8,
+    "blocks": [
+      {
+        "block_id": 0,
+        "start": 0,
+        "end": 128
+      },
+      {
+        "block_id": 1,
+        "start": 128,
+        "end": 256
+      },
+      {
+        "block_id": 2,
+        "start": 256,
+        "end": 384
+      },
+      {
+        "block_id": 3,
+        "start": 384,
+        "end": 512
+      },
+      {
+        "block_id": 4,
+        "start": 512,
+        "end": 640
+      },
+      {
+        "block_id": 5,
+        "start": 640,
+        "end": 768
+      },
+      {
+        "block_id": 6,
+        "start": 768,
+        "end": 896
+      },
+      {
+        "block_id": 7,
+        "start": 896,
+        "end": 1024
+      }
+    ]
+  },
+  {
+    "seq_len": 4096,
+    "hot_window": 1024,
+    "block_size": 128,
+    "cold_range": [
+      0,
+      3072
+    ],
+    "hot_range": [
+      3072,
+      4096
+    ],
+    "num_blocks": 24,
+    "blocks": [
+      {
+        "block_id": 0,
+        "start": 0,
+        "end": 128
+      },
+      {
+        "block_id": 1,
+        "start": 128,
+        "end": 256
+      },
+      {
+        "block_id": 2,
+        "start": 256,
+        "end": 384
+      },
+      {
+        "block_id": 3,
+        "start": 384,
+        "end": 512
+      },
+      {
+        "block_id": 4,
+        "start": 512,
+        "end": 640
+      },
+      {
+        "block_id": 5,
+        "start": 640,
+        "end": 768
+      },
+      {
+        "block_id": 6,
+        "start": 768,
+        "end": 896
+      },
+      {
+        "block_id": 7,
+        "start": 896,
+        "end": 1024
+      },
+      {
+        "block_id": 8,
+        "start": 1024,
+        "end": 1152
+      },
+      {
+        "block_id": 9,
+        "start": 1152,
+        "end": 1280
+      },
+      {
+        "block_id": 10,
+        "start": 1280,
+        "end": 1408
+      },
+      {
+        "block_id": 11,
+        "start": 1408,
+        "end": 1536
+      },
+      {
+        "block_id": 12,
+        "start": 1536,
+        "end": 1664
+      },
+      {
+        "block_id": 13,
+        "start": 1664,
+        "end": 1792
+      },
+      {
+        "block_id": 14,
+        "start": 1792,
+        "end": 1920
+      },
+      {
+        "block_id": 15,
+        "start": 1920,
+        "end": 2048
+      },
+      {
+        "block_id": 16,
+        "start": 2048,
+        "end": 2176
+      },
+      {
+        "block_id": 17,
+        "start": 2176,
+        "end": 2304
+      },
+      {
+        "block_id": 18,
+        "start": 2304,
+        "end": 2432
+      },
+      {
+        "block_id": 19,
+        "start": 2432,
+        "end": 2560
+      },
+      {
+        "block_id": 20,
+        "start": 2560,
+        "end": 2688
+      },
+      {
+        "block_id": 21,
+        "start": 2688,
+        "end": 2816
+      },
+      {
+        "block_id": 22,
+        "start": 2816,
+        "end": 2944
+      },
+      {
+        "block_id": 23,
+        "start": 2944,
+        "end": 3072
+      }
+    ]
+  },
+  {
+    "seq_len": 8192,
+    "hot_window": 1024,
+    "block_size": 128,
+    "cold_range": [
+      0,
+      7168
+    ],
+    "hot_range": [
+      7168,
+      8192
+    ],
+    "num_blocks": 56,
+    "blocks": [
+      {
+        "block_id": 0,
+        "start": 0,
+        "end": 128
+      },
+      {
+        "block_id": 1,
+        "start": 128,
+        "end": 256
+      },
+      {
+        "block_id": 2,
+        "start": 256,
+        "end": 384
+      },
+      {
+        "block_id": 3,
+        "start": 384,
+        "end": 512
+      },
+      {
+        "block_id": 4,
+        "start": 512,
+        "end": 640
+      },
+      {
+        "block_id": 5,
+        "start": 640,
+        "end": 768
+      },
+      {
+        "block_id": 6,
+        "start": 768,
+        "end": 896
+      },
+      {
+        "block_id": 7,
+        "start": 896,
+        "end": 1024
+      },
+      {
+        "block_id": 8,
+        "start": 1024,
+        "end": 1152
+      },
+      {
+        "block_id": 9,
+        "start": 1152,
+        "end": 1280
+      },
+      {
+        "block_id": 10,
+        "start": 1280,
+        "end": 1408
+      },
+      {
+        "block_id": 11,
+        "start": 1408,
+        "end": 1536
+      },
+      {
+        "block_id": 12,
+        "start": 1536,
+        "end": 1664
+      },
+      {
+        "block_id": 13,
+        "start": 1664,
+        "end": 1792
+      },
+      {
+        "block_id": 14,
+        "start": 1792,
+        "end": 1920
+      },
+      {
+        "block_id": 15,
+        "start": 1920,
+        "end": 2048
+      },
+      {
+        "block_id": 16,
+        "start": 2048,
+        "end": 2176
+      },
+      {
+        "block_id": 17,
+        "start": 2176,
+        "end": 2304
+      },
+      {
+        "block_id": 18,
+        "start": 2304,
+        "end": 2432
+      },
+      {
+        "block_id": 19,
+        "start": 2432,
+        "end": 2560
+      },
+      {
+        "block_id": 20,
+        "start": 2560,
+        "end": 2688
+      },
+      {
+        "block_id": 21,
+        "start": 2688,
+        "end": 2816
+      },
+      {
+        "block_id": 22,
+        "start": 2816,
+        "end": 2944
+      },
+      {
+        "block_id": 23,
+        "start": 2944,
+        "end": 3072
+      },
+      {
+        "block_id": 24,
+        "start": 3072,
+        "end": 3200
+      },
+      {
+        "block_id": 25,
+        "start": 3200,
+        "end": 3328
+      },
+      {
+        "block_id": 26,
+        "start": 3328,
+        "end": 3456
+      },
+      {
+        "block_id": 27,
+        "start": 3456,
+        "end": 3584
+      },
+      {
+        "block_id": 28,
+        "start": 3584,
+        "end": 3712
+      },
+      {
+        "block_id": 29,
+        "start": 3712,
+        "end": 3840
+      },
+      {
+        "block_id": 30,
+        "start": 3840,
+        "end": 3968
+      },
+      {
+        "block_id": 31,
+        "start": 3968,
+        "end": 4096
+      },
+      {
+        "block_id": 32,
+        "start": 4096,
+        "end": 4224
+      },
+      {
+        "block_id": 33,
+        "start": 4224,
+        "end": 4352
+      },
+      {
+        "block_id": 34,
+        "start": 4352,
+        "end": 4480
+      },
+      {
+        "block_id": 35,
+        "start": 4480,
+        "end": 4608
+      },
+      {
+        "block_id": 36,
+        "start": 4608,
+        "end": 4736
+      },
+      {
+        "block_id": 37,
+        "start": 4736,
+        "end": 4864
+      },
+      {
+        "block_id": 38,
+        "start": 4864,
+        "end": 4992
+      },
+      {
+        "block_id": 39,
+        "start": 4992,
+        "end": 5120
+      },
+      {
+        "block_id": 40,
+        "start": 5120,
+        "end": 5248
+      },
+      {
+        "block_id": 41,
+        "start": 5248,
+        "end": 5376
+      },
+      {
+        "block_id": 42,
+        "start": 5376,
+        "end": 5504
+      },
+      {
+        "block_id": 43,
+        "start": 5504,
+        "end": 5632
+      },
+      {
+        "block_id": 44,
+        "start": 5632,
+        "end": 5760
+      },
+      {
+        "block_id": 45,
+        "start": 5760,
+        "end": 5888
+      },
+      {
+        "block_id": 46,
+        "start": 5888,
+        "end": 6016
+      },
+      {
+        "block_id": 47,
+        "start": 6016,
+        "end": 6144
+      },
+      {
+        "block_id": 48,
+        "start": 6144,
+        "end": 6272
+      },
+      {
+        "block_id": 49,
+        "start": 6272,
+        "end": 6400
+      },
+      {
+        "block_id": 50,
+        "start": 6400,
+        "end": 6528
+      },
+      {
+        "block_id": 51,
+        "start": 6528,
+        "end": 6656
+      },
+      {
+        "block_id": 52,
+        "start": 6656,
+        "end": 6784
+      },
+      {
+        "block_id": 53,
+        "start": 6784,
+        "end": 6912
+      },
+      {
+        "block_id": 54,
+        "start": 6912,
+        "end": 7040
+      },
+      {
+        "block_id": 55,
+        "start": 7040,
+        "end": 7168
+      }
+    ]
+  }
+]

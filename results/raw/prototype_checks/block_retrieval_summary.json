@@ -1,0 +1,76 @@
+{
+  "seq_len": 322,
+  "cold_range": [
+    0,
+    194
+  ],
+  "hot_range": [
+    194,
+    322
+  ],
+  "block_size": 128,
+  "top_k": 2,
+  "num_all_blocks": 56,
+  "num_layer0_blocks": 2,
+  "num_retrieved": 2,
+  "top_scores": [
+    {
+      "layer_idx": 0,
+      "block_id": 0,
+      "start": 0,
+      "end": 128,
+      "score": 1215355.25
+    },
+    {
+      "layer_idx": 0,
+      "block_id": 1,
+      "start": 128,
+      "end": 194,
+      "score": 1215269.125
+    }
+  ],
+  "retrieved_blocks": [
+    {
+      "layer_idx": 0,
+      "block_id": 0,
+      "start": 0,
+      "end": 128,
+      "length": 128,
+      "k_shape": [
+        1,
+        2,
+        128,
+        128
+      ],
+      "v_shape": [
+        1,
+        2,
+        128,
+        128
+      ],
+      "k_device": "cpu",
+      "v_device": "cpu"
+    },
+    {
+      "layer_idx": 0,
+      "block_id": 1,
+      "start": 128,
+      "end": 194,
+      "length": 66,
+      "k_shape": [
+        1,
+        2,
+        66,
+        128
+      ],
+      "v_shape": [
+        1,
+        2,
+        66,
+        128
+      ],
+      "k_device": "cpu",
+      "v_device": "cpu"
+    }
+  ]
+}
