@@ -21,14 +21,14 @@ from relaykv import (
 
 
 MODEL_NAME = "Qwen/Qwen2.5-1.5B-Instruct"
-RESULTS_DIR = Path("results")
-RESULTS_CSV = RESULTS_DIR / "attention_sweep_large.csv"
+RESULTS_DIR = Path("results/raw/sweeps")
+RESULTS_CSV = RESULTS_DIR / "attention_sweep_4096.csv"
 
-SEQ_LEN_TARGETS = [1024, 2048]
+SEQ_LEN_TARGETS = [1024, 2048, 4096]
 HOT_WINDOW_VALUES = [128, 256]
-BLOCK_SIZE_VALUES = [64, 128, 256]
+BLOCK_SIZE_VALUES = [128, 256]
 TOP_K_VALUES = [1, 2, 3]
-LAYER_IDXS = [0, 14, 27]
+LAYER_IDXS = [27]
 
 
 def ensure_results_dir() -> None:
