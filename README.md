@@ -157,19 +157,35 @@ results/raw/prototype_checks/relaykv_pipeline_summary.json
 
 ## Sweep Findings
 
-A larger sweep on `seq_len=1024` and `seq_len=2048` at `layer_idx=27` showed a clear trend:
+A larger sweep on `seq_len=1024`, `2048`, and `4096` at `layer_idx=27` showed a stable trend:
 
 - approximation error decreases as **candidate coverage** increases
 - larger hot windows improve stability
 - different `(block_size, top_k)` pairs often produce similar error when they yield similar effective coverage
+- the same qualitative trend persists even at `seq_len=4096`
 
-This suggests that approximation quality is explained better by **effective candidate coverage** than by execution granularity alone.
+### Coverage vs. Error (3 sequence lengths)
 
-### Coverage vs. Error
+![RelayKV coverage vs error](docs/figures/relaykv_coverage_vs_error_3seq.png)
 
-![RelayKV coverage vs error](docs/figures/relaykv_coverage_vs_error.png)
+**Figure 1.** Mean absolute attention-output difference as a function of candidate coverage ratio for `layer_idx=27`, shown for `seq_len=1024`, `2048`, and `4096`. In all three cases, approximation error decreases as coverage increases.
 
-**Figure 1.** Mean absolute attention-output difference as a function of candidate coverage ratio for `layer_idx=27`. The plot shows two sequence lengths (`1024` and `2048`). In both cases, approximation error decreases as coverage increases, while the longer context remains consistently harder. The overall trend supports a coverage-first interpretation of RelayKV behavior.
+### Working Ratio vs. Error (3 sequence lengths)
+
+![RelayKV working ratio vs error](docs/figures/relaykv_working_ratio_vs_error_3seq.png)
+
+**Figure 2.** Mean absolute attention-output difference as a function of working ratio for `layer_idx=27`, shown for `seq_len=1024`, `2048`, and `4096`. This complementary view highlights the role of both selected cold candidates and preserved hot KV in the reconstructed working set.
+
+### Current Interpretation
+
+The current prototype evidence supports the following empirical view:
+
+- higher **coverage_ratio** generally reduces approximation error
+- for matched coverage, different block sizes may behave similarly
+- longer sequence lengths remain harder, but follow the same trend
+- larger hot windows improve stability by preserving more recent KV directly
+
+For compact tables, see the corresponding files in `docs/` or the project notes.
 
 ## Repository Structure
 
