@@ -182,6 +182,51 @@ The current detailed comparison for `layer_idx=27` can be summarized as follows.
 
 ---
 
+## Prompt-Type Comparison at 4096 Tokens
+
+To test whether the same qualitative behavior persists across different input styles, RelayKV was additionally evaluated at `seq_len=4096` and `layer_idx=27` with three prompt types:
+
+- `repetitive`
+- `prose`
+- `structured`
+
+The main trend remained consistent across all three:
+
+- approximation error decreased as effective candidate coverage increased
+- different `(block_size, top_k)` combinations often produced similar error when they yielded similar effective coverage
+- the coverage-driven trend did not disappear when the prompt style changed
+
+### Coverage vs. Error by Prompt Type
+
+![RelayKV prompt-type comparison](figures/relaykv_prompt_types_4096.png)
+
+**Figure 3.** Mean absolute attention-output difference as a function of candidate coverage ratio for `seq_len=4096` and `layer_idx=27`, shown for three prompt styles. Although the absolute error level varies across prompt types, the same qualitative trend remains: approximation error decreases as effective candidate coverage increases.
+
+### Representative Prompt-Type Slice
+
+| prompt_type | representative coverage_ratio | representative mean_abs_diff |
+|---|---:|---:|
+| repetitive | 0.0323 | 0.041207977 |
+| repetitive | 0.0968 | 0.036567513 |
+| repetitive | 0.2000 | 0.032424182 |
+| prose | 0.0323 | 0.043005638 |
+| prose | 0.0968 | 0.039616458 |
+| prose | 0.2000 | 0.033717092 |
+| structured | 0.0323 | 0.044670910 |
+| structured | 0.0968 | 0.028622082 |
+| structured | 0.2000 | 0.019438244 |
+
+### Prompt-Type Interpretation
+
+The current prompt-type comparison suggests that:
+
+1. The coverage-driven trend is preserved across multiple prompt styles.
+2. Absolute error varies somewhat by prompt type.
+3. Under the current prototype setup, the structured prompt appears easiest once coverage increases.
+4. RelayKV behavior is therefore not limited to a single repetitive prompt pattern.
+
+At the current stage, this should still be treated as an empirical prototype result rather than a broad claim about all prompt distributions.
+
 ## Interpretation
 
 The current evidence supports a consistent empirical picture across `1024`, `2048`, and `4096` tokens:
