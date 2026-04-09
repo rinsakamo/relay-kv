@@ -22,13 +22,14 @@ from relaykv import (
 
 MODEL_NAME = "Qwen/Qwen2.5-1.5B-Instruct"
 RESULTS_DIR = Path("results/raw/sweeps")
-RESULTS_CSV = RESULTS_DIR / "attention_sweep_4096.csv"
+RESULTS_CSV = RESULTS_DIR / "attention_sweep_prompt_types.csv"
 
-SEQ_LEN_TARGETS = [1024, 2048, 4096]
+SEQ_LEN_TARGETS = [1024, 4096]
 HOT_WINDOW_VALUES = [128, 256]
 BLOCK_SIZE_VALUES = [128, 256]
 TOP_K_VALUES = [1, 2, 3]
 LAYER_IDXS = [27]
+PROMPT_TYPES = ["repetitive", "prose", "structured"]
 
 
 def ensure_results_dir() -> None:
@@ -49,17 +50,40 @@ def load_model():
     return tokenizer, model, device
 
 
-def make_prompt_for_target_tokens(target_tokens: int) -> str:
-    base = "RelayKV long-context sweep test. "
-    words = base.split()
-    chunks = []
-    while len(" ".join(chunks).split()) < target_tokens:
-        chunks.extend(words)
-    return " ".join(chunks)
+def make_prompt_for_target_tokens(target_tokens: int, prompt_type: str) -> str:
+    if prompt_type == "repetitive":
+        base = "RelayKV long-context sweep test. "
+        unit = base
+
+    elif prompt_type == "prose":
+        unit = (
+            "RelayKV studies how tiered KV cache reconstruction behaves under long-context inference. "
+            "The system keeps recent KV in a hot window, moves older KV to colder storage, "
+            "retrieves useful blocks, and rebuilds a working KV set for approximate attention. "
+        )
+
+    elif prompt_type == "structured":
+        unit = (
+            "- topic: RelayKV\n"
+            "- goal: tiered KV cache for long-context inference\n"
+            "- components: hot KV, cold KV, block metadata, scoring, retrieval, working KV\n"
+            "- evaluation: coverage ratio, working ratio, mean absolute difference\n"
+        )
+
+    else:
+        raise ValueError(f"Unsupported prompt_type: {prompt_type}")
+
+    text = ""
+    while True:
+        candidate = text + unit
+        token_count = len(candidate.split())
+        if token_count >= target_tokens:
+            return candidate
+        text = candidate
 
 
-def run_once(model, tokenizer, device, seq_len_target: int, hot_window: int, block_size: int, top_k: int, layer_idx: int) -> dict:
-    prompt = make_prompt_for_target_tokens(seq_len_target)
+def run_once(model, tokenizer, device, seq_len_target: int, hot_window: int, block_size: int, top_k: int, layer_idx: int, prompt_type: str) -> dict:
+    prompt = make_prompt_for_target_tokens(seq_len_target, prompt_type)
     inputs = tokenizer(prompt, return_tensors="pt", truncation=True, max_length=seq_len_target)
 
     if device == "cuda":
@@ -125,6 +149,7 @@ def run_once(model, tokenizer, device, seq_len_target: int, hot_window: int, blo
         "seq_len_target": seq_len_target,
         "seq_len_actual": seq_len,
         "layer_idx": layer_idx,
+        "prompt_type": prompt_type,
         "hot_window": hot_window,
         "block_size": block_size,
         "top_k": top_k,
@@ -149,22 +174,24 @@ def main() -> None:
     rows = []
 
     for seq_len_target in SEQ_LEN_TARGETS:
-        for hot_window in HOT_WINDOW_VALUES:
-            for block_size in BLOCK_SIZE_VALUES:
-                for top_k in TOP_K_VALUES:
-                    for layer_idx in LAYER_IDXS:
-                        row = run_once(
-                            model=model,
-                            tokenizer=tokenizer,
-                            device=device,
-                            seq_len_target=seq_len_target,
-                            hot_window=hot_window,
-                            block_size=block_size,
-                            top_k=top_k,
-                            layer_idx=layer_idx,
-                        )
-                        rows.append(row)
-                        print(row)
+        for prompt_type in PROMPT_TYPES:
+            for hot_window in HOT_WINDOW_VALUES:
+                for block_size in BLOCK_SIZE_VALUES:
+                    for top_k in TOP_K_VALUES:
+                        for layer_idx in LAYER_IDXS:
+                            row = run_once(
+                                model=model,
+                                tokenizer=tokenizer,
+                                device=device,
+                                seq_len_target=seq_len_target,
+                                hot_window=hot_window,
+                                block_size=block_size,
+                                top_k=top_k,
+                                layer_idx=layer_idx,
+                                prompt_type=prompt_type,
+                            )
+                            rows.append(row)
+                            print(row)
 
     with RESULTS_CSV.open("w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=list(rows[0].keys()))

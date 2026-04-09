@@ -176,6 +176,29 @@ A larger sweep on `seq_len=1024`, `2048`, and `4096` at `layer_idx=27` showed a 
 
 **Figure 2.** Mean absolute attention-output difference as a function of working ratio for `layer_idx=27`, shown for `seq_len=1024`, `2048`, and `4096`. This complementary view highlights the role of both selected cold candidates and preserved hot KV in the reconstructed working set.
 
+### Prompt-Type Comparison at 4096 Tokens
+
+To check whether the same qualitative behavior persists across different input styles, RelayKV was also evaluated at `seq_len=4096`, `layer_idx=27` with three prompt types:
+
+- `repetitive`
+- `prose`
+- `structured`
+
+![RelayKV prompt-type comparison](docs/figures/relaykv_prompt_types_4096.png)
+
+**Figure 3.** Mean absolute attention-output difference as a function of candidate coverage ratio for `seq_len=4096` and `layer_idx=27`, shown for three prompt styles. Although the absolute error level varies by prompt type, the same qualitative trend remains: approximation error decreases as effective candidate coverage increases.
+
+### Prompt-Type Interpretation
+
+The current prompt-type comparison suggests that:
+
+- the coverage-driven trend is preserved across multiple prompt styles
+- absolute error varies somewhat by prompt type
+- the structured prompt currently appears easiest under this prototype setup
+- RelayKV behavior is therefore not limited to a single repetitive prompt pattern
+
+For more detailed experimental observations, see `docs/experimental_findings.md`.
+
 ### Current Interpretation
 
 The current prototype evidence supports the following empirical view:
