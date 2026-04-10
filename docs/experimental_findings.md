@@ -291,6 +291,12 @@ This should still be treated as a prototype-stage observation rather than a fina
 
 ---
 
+## Preliminary Note on Scoring Variants
+
+Simple norm-augmented scoring variants (`mean_plus_norm` and `mean_plus_vnorm`) did not change retrieval behavior under the tested settings, suggesting that the current block ranking is dominated by the query–mean-key similarity term.
+
+At the current stage, this is best interpreted as a small negative result: adding lightweight norm terms was not enough to change block selection under the tested setup.
+
 ## Recommended Next Analyses
 
 - extend to more sequence lengths

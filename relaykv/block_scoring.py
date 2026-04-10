@@ -25,18 +25,34 @@ class BlockScore:
 def score_blocks_with_query(
     metadata: list[BlockMetadata],
     query: torch.Tensor,
+    variant: str = "mean_only",
+    norm_weight: float = 0.0,
 ) -> list[BlockScore]:
     """
-    query shape: [1, heads, head_dim]
-    metadata k_mean shape: [1, heads, head_dim]
+    metadata: list[BlockMetadata]
+    query: [1, heads, head_dim]
     """
-    scores: list[BlockScore] = []
 
     query = query.detach().cpu().float()
 
+    scores: list[BlockScore] = []
+
     for m in metadata:
-        k_mean = m.k_mean.float()
-        score = float((query * k_mean).sum().item())
+        k_mean = m.k_mean.detach().cpu().float()  # [1, heads, head_dim]
+
+        mean_score = torch.sum(query * k_mean).item()
+
+        if variant == "mean_only":
+            score_value = mean_score
+
+        elif variant == "mean_plus_norm":
+            score_value = mean_score + norm_weight * float(m.k_norm)
+
+        elif variant == "mean_plus_vnorm":
+            score_value = mean_score + norm_weight * float(m.v_norm)
+
+        else:
+            raise ValueError(f"Unsupported scoring variant: {variant}")
 
         scores.append(
             BlockScore(
@@ -44,17 +60,13 @@ def score_blocks_with_query(
                 block_id=m.block_id,
                 start=m.start,
                 end=m.end,
-                score=score,
+                score=float(score_value),
             )
         )
 
+    scores.sort(key=lambda x: x.score, reverse=True)
     return scores
 
 
-def top_k_blocks(
-    scores: list[BlockScore],
-    k: int = 4,
-) -> list[BlockScore]:
-    if k <= 0:
-        raise ValueError("k must be > 0")
-    return sorted(scores, key=lambda x: x.score, reverse=True)[:k]
+def top_k_blocks(scores: list[BlockScore], k: int) -> list[BlockScore]:
+    return scores[:k]

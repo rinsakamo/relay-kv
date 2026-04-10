@@ -22,14 +22,16 @@ from relaykv import (
 
 MODEL_NAME = "Qwen/Qwen2.5-1.5B-Instruct"
 RESULTS_DIR = Path("results/raw/sweeps")
-RESULTS_CSV = RESULTS_DIR / "attention_sweep_layers.csv"
+RESULTS_CSV = RESULTS_DIR / "attention_sweep_scoring_variants_vnorm.csv"
 
 SEQ_LEN_TARGETS = [1024, 4096]
 HOT_WINDOW_VALUES = [128, 256]
 BLOCK_SIZE_VALUES = [128, 256]
 TOP_K_VALUES = [1, 2, 3]
-LAYER_IDXS = [0, 14, 27]
+LAYER_IDXS = [27]
 PROMPT_TYPES = ["prose"]
+SCORING_VARIANTS = ["mean_only", "mean_plus_vnorm"]
+NORM_WEIGHT = 1e-3
 
 
 def ensure_results_dir() -> None:
@@ -82,7 +84,18 @@ def make_prompt_for_target_tokens(target_tokens: int, prompt_type: str) -> str:
         text = candidate
 
 
-def run_once(model, tokenizer, device, seq_len_target: int, hot_window: int, block_size: int, top_k: int, layer_idx: int, prompt_type: str) -> dict:
+def run_once(
+    model,
+    tokenizer,
+    device,
+    seq_len_target: int,
+    hot_window: int,
+    block_size: int,
+    top_k: int,
+    layer_idx: int,
+    prompt_type: str,
+    scoring_variant: str,
+) -> dict:
     prompt = make_prompt_for_target_tokens(seq_len_target, prompt_type)
     inputs = tokenizer(prompt, return_tensors="pt", truncation=True, max_length=seq_len_target)
 
@@ -105,7 +118,12 @@ def run_once(model, tokenizer, device, seq_len_target: int, hot_window: int, blo
     query = layers[layer_idx].keys[:, :, -1:, :]  # [1, heads, 1, head_dim]
     layer_metadata = [m for m in metadata if m.layer_idx == layer_idx]
 
-    scores = score_blocks_with_query(layer_metadata, query[:, :, 0, :])
+    scores = score_blocks_with_query(
+        layer_metadata,
+        query[:, :, 0, :],
+        variant=scoring_variant,
+        norm_weight=NORM_WEIGHT,
+    )
     top_scores = top_k_blocks(scores, k=min(top_k, len(scores)))
 
     retrieved = retrieve_blocks(all_blocks, top_scores)
@@ -150,6 +168,7 @@ def run_once(model, tokenizer, device, seq_len_target: int, hot_window: int, blo
         "seq_len_actual": seq_len,
         "layer_idx": layer_idx,
         "prompt_type": prompt_type,
+        "scoring_variant": scoring_variant,
         "hot_window": hot_window,
         "block_size": block_size,
         "top_k": top_k,
@@ -175,23 +194,25 @@ def main() -> None:
 
     for seq_len_target in SEQ_LEN_TARGETS:
         for prompt_type in PROMPT_TYPES:
-            for hot_window in HOT_WINDOW_VALUES:
-                for block_size in BLOCK_SIZE_VALUES:
-                    for top_k in TOP_K_VALUES:
-                        for layer_idx in LAYER_IDXS:
-                            row = run_once(
-                                model=model,
-                                tokenizer=tokenizer,
-                                device=device,
-                                seq_len_target=seq_len_target,
-                                hot_window=hot_window,
-                                block_size=block_size,
-                                top_k=top_k,
-                                layer_idx=layer_idx,
-                                prompt_type=prompt_type,
-                            )
-                            rows.append(row)
-                            print(row)
+            for scoring_variant in SCORING_VARIANTS:
+                for hot_window in HOT_WINDOW_VALUES:
+                    for block_size in BLOCK_SIZE_VALUES:
+                        for top_k in TOP_K_VALUES:
+                            for layer_idx in LAYER_IDXS:
+                                row = run_once(
+                                    model=model,
+                                    tokenizer=tokenizer,
+                                    device=device,
+                                    seq_len_target=seq_len_target,
+                                    hot_window=hot_window,
+                                    block_size=block_size,
+                                    top_k=top_k,
+                                    layer_idx=layer_idx,
+                                    prompt_type=prompt_type,
+                                    scoring_variant=scoring_variant,
+                                )
+                                rows.append(row)
+                                print(row)
 
     with RESULTS_CSV.open("w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=list(rows[0].keys()))
