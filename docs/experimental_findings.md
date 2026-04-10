@@ -227,6 +227,47 @@ The current prompt-type comparison suggests that:
 
 At the current stage, this should still be treated as an empirical prototype result rather than a broad claim about all prompt distributions.
 
+## Layer Comparison at 4096 Tokens
+
+To understand whether the same coverage-driven trend holds across different depths, RelayKV was also compared across `layer_idx=0`, `14`, and `27` under the same `seq_len=4096`, `prompt_type=prose` setting.
+
+The main pattern remained consistent across all three layers:
+
+- approximation error decreased as effective candidate coverage increased
+- the coverage-driven trend was preserved across shallow, middle, and deep layers
+- absolute approximation difficulty differed substantially by layer
+
+### Coverage vs. Error by Layer
+
+![RelayKV layer comparison](figures/relaykv_layer_compare_4096_prose_v2.png)
+
+**Figure 4.** Mean absolute attention-output difference as a function of candidate coverage ratio for `seq_len=4096` and `prompt_type=prose`, shown for `layer_idx=0`, `14`, and `27`. All three layers retain the same coverage-driven trend, but their absolute difficulty differs substantially.
+
+### Representative Layer Slice
+
+| layer_idx | representative coverage_ratio | representative mean_abs_diff |
+|---:|---:|---:|
+| 0  | 0.0323 | 0.006143569 |
+| 0  | 0.0968 | 0.005720135 |
+| 0  | 0.2000 | 0.004555146 |
+| 14 | 0.0323 | 0.001347543 |
+| 14 | 0.0968 | 0.000514069 |
+| 14 | 0.2000 | 0.000226085 |
+| 27 | 0.0323 | 0.043005638 |
+| 27 | 0.0968 | 0.039616458 |
+| 27 | 0.2000 | 0.033717092 |
+
+### Layer Interpretation
+
+The current layer comparison suggests that:
+
+1. The coverage-driven trend is preserved across multiple depths.
+2. Absolute approximation difficulty varies strongly by layer.
+3. In the current `4096`-token prose setting, `layer_idx=27` is much harder than `layer_idx=0` and `14`.
+4. The relationship between depth and difficulty is not strictly monotonic in a simple shallow-to-deep sense, since `layer_idx=14` appears easier than `layer_idx=0` in this slice.
+
+At the current stage, this should still be treated as an empirical prototype result rather than a broad claim about all layers and all prompts.
+
 ## Interpretation
 
 The current evidence supports a consistent empirical picture across `1024`, `2048`, and `4096` tokens:

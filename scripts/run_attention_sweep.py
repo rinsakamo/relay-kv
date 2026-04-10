@@ -22,14 +22,14 @@ from relaykv import (
 
 MODEL_NAME = "Qwen/Qwen2.5-1.5B-Instruct"
 RESULTS_DIR = Path("results/raw/sweeps")
-RESULTS_CSV = RESULTS_DIR / "attention_sweep_prompt_types.csv"
+RESULTS_CSV = RESULTS_DIR / "attention_sweep_layers.csv"
 
 SEQ_LEN_TARGETS = [1024, 4096]
 HOT_WINDOW_VALUES = [128, 256]
 BLOCK_SIZE_VALUES = [128, 256]
 TOP_K_VALUES = [1, 2, 3]
-LAYER_IDXS = [27]
-PROMPT_TYPES = ["repetitive", "prose", "structured"]
+LAYER_IDXS = [0, 14, 27]
+PROMPT_TYPES = ["prose"]
 
 
 def ensure_results_dir() -> None:

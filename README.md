@@ -96,6 +96,8 @@ RelayKV is built around a simple idea:
 
 RelayKV treats KV cache as a managed memory system rather than a fixed GPU-only artifact. It keeps hot KV close to the GPU, offloads cold KV to CPU memory, and restores only the most relevant candidates for the current query.
 
+In that sense, RelayKV can be viewed as a memory system that keeps a small working memory hot, stores older context in a colder long-term tier, and recalls only the most relevant fragments when needed.
+
 ## What RelayKV Is
 
 RelayKV is a **KV engine**, not a full inference runtime.
