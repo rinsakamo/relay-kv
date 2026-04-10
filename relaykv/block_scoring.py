@@ -51,9 +51,12 @@ def score_blocks_with_query(
         elif variant == "mean_plus_vnorm":
             score_value = mean_score + norm_weight * float(m.v_norm)
 
+        elif variant == "headwise_max_mean":
+            per_head_scores = torch.sum(query * k_mean, dim=-1)  # [1, heads]
+            score_value = torch.max(per_head_scores).item()
+
         else:
             raise ValueError(f"Unsupported scoring variant: {variant}")
-
         scores.append(
             BlockScore(
                 layer_idx=m.layer_idx,

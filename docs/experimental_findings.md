@@ -293,9 +293,26 @@ This should still be treated as a prototype-stage observation rather than a fina
 
 ## Preliminary Note on Scoring Variants
 
-Simple norm-augmented scoring variants (`mean_plus_norm` and `mean_plus_vnorm`) did not change retrieval behavior under the tested settings, suggesting that the current block ranking is dominated by the query–mean-key similarity term.
+Several lightweight scoring variants were tested to see whether small modifications to block ranking would change retrieval behavior.
 
-At the current stage, this is best interpreted as a small negative result: adding lightweight norm terms was not enough to change block selection under the tested setup.
+So far, the following variants were compared against the current baseline:
+
+- `mean_only`
+- `mean_plus_norm`
+- `mean_plus_vnorm`
+- `headwise_max_mean`
+
+Under the inspected settings, the norm-augmented variants (`mean_plus_norm` and `mean_plus_vnorm`) did not change retrieval behavior relative to `mean_only`. This suggests that the current block ranking is not meaningfully affected by simple norm-based adjustments under the tested setup.
+
+A headwise-max aggregation variant (`headwise_max_mean`) was also tested. While an earlier sweep appeared to show a small improvement under one condition, a direct pipeline-level inspection with matched prompt settings did not change block selection relative to `mean_only` in the inspected case. In that pipeline comparison, both variants selected the same top-ranked blocks.
+
+At the current stage, the safest interpretation is:
+
+1. The current top-ranked cold blocks appear relatively stable under several lightweight scoring modifications.
+2. Simple norm-based or headwise-max scoring changes are not yet sufficient to reliably alter retrieval behavior under the inspected setup.
+3. More structurally different scoring strategies may be needed to produce meaningful ranking changes.
+
+This should be treated as a preliminary negative result rather than a final conclusion about scoring design.
 
 ## Recommended Next Analyses
 

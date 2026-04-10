@@ -22,7 +22,7 @@ from relaykv import (
 
 MODEL_NAME = "Qwen/Qwen2.5-1.5B-Instruct"
 RESULTS_DIR = Path("results/raw/sweeps")
-RESULTS_CSV = RESULTS_DIR / "attention_sweep_scoring_variants_vnorm.csv"
+RESULTS_CSV = RESULTS_DIR / "attention_sweep_scoring_variants_headwise.csv"
 
 SEQ_LEN_TARGETS = [1024, 4096]
 HOT_WINDOW_VALUES = [128, 256]
@@ -30,7 +30,7 @@ BLOCK_SIZE_VALUES = [128, 256]
 TOP_K_VALUES = [1, 2, 3]
 LAYER_IDXS = [27]
 PROMPT_TYPES = ["prose"]
-SCORING_VARIANTS = ["mean_only", "mean_plus_vnorm"]
+SCORING_VARIANTS = ["mean_only", "headwise_max_mean"]
 NORM_WEIGHT = 1e-3
 
 
@@ -174,6 +174,9 @@ def run_once(
         "top_k": top_k,
         "num_layer_blocks": len(layer_metadata),
         "num_selected_blocks": len(top_scores),
+        "top_block_ids": [s.block_id for s in top_scores],
+        "top_block_starts": [s.start for s in top_scores],
+        "top_block_ends": [s.end for s in top_scores],
         "cold_k_len": cold_k_len,
         "candidate_k_len": candidate_k_len,
         "full_k_len": full_k_len,

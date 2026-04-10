@@ -42,7 +42,7 @@ def load_model(model_name: str):
     return tokenizer, model, device
 
 
-def make_prompt(target_tokens: int) -> str:
+def make_prompt_for_target_tokens(target_tokens: int, prompt_type: str) -> str:
     base = "RelayKV pipeline test. "
     words = base.split()
     chunks = []
@@ -58,10 +58,12 @@ def run_pipeline(
     block_size: int,
     top_k: int,
     layer_idx: int,
+    scoring_variant: str,
+    prompt_type: str,
 ) -> dict:
     tokenizer, model, device = load_model(model_name)
 
-    prompt = make_prompt(seq_len_target)
+    prompt = make_prompt_for_target_tokens(seq_len_target, prompt_type)
     inputs = tokenizer(
         prompt,
         return_tensors="pt",
@@ -88,7 +90,12 @@ def run_pipeline(
     query = layers[layer_idx].keys[:, :, -1:, :]  # [1, heads, 1, head_dim]
     layer_metadata = [m for m in metadata if m.layer_idx == layer_idx]
 
-    scores = score_blocks_with_query(layer_metadata, query[:, :, 0, :])
+    scores = score_blocks_with_query(
+        layer_metadata,
+        query[:, :, 0, :],
+        variant=scoring_variant,
+        norm_weight=1e-3,
+    )
     top_scores = top_k_blocks(scores, k=min(top_k, len(scores)))
 
     retrieved = retrieve_blocks(all_blocks, top_scores)
@@ -148,6 +155,8 @@ def run_pipeline(
         "working_kv": working_kv.summary(),
         "attention_compare": attention_result.summary(),
         "top_scores": [s.summary() for s in top_scores],
+        "scoring_variant": scoring_variant,
+        "prompt_type": prompt_type,
     }
 
     return summary
@@ -197,7 +206,18 @@ def main() -> None:
         default="relaykv_pipeline_summary.json",
         help="Output JSON filename under results/raw/prototype_checks/",
     )
-
+    parser.add_argument(
+        "--scoring-variant",
+        type=str,
+        default="mean_only",
+        help="Scoring variant",
+    )
+    parser.add_argument(
+        "--prompt-type",
+        type=str,
+        default="prose",
+        help="Prompt type: repetitive, prose, structured",
+    )
     args = parser.parse_args()
 
     ensure_results_dir()
@@ -209,6 +229,8 @@ def main() -> None:
         block_size=args.block_size,
         top_k=args.top_k,
         layer_idx=args.layer_idx,
+        scoring_variant=args.scoring_variant,
+        prompt_type=args.prompt_type,
     )
 
     output_path = RESULTS_DIR / args.output
