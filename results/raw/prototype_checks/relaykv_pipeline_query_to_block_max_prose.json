@@ -5,7 +5,7 @@
   "seq_len_actual": 4096,
   "layer_idx": 27,
   "hot_window": 256,
-  "block_size": 256,
+  "block_size": 128,
   "top_k": 3,
   "cold_range": [
     0,
@@ -16,30 +16,30 @@
     4096
   ],
   "num_layers": 28,
-  "num_all_blocks": 420,
-  "num_layer_blocks": 15,
+  "num_all_blocks": 840,
+  "num_layer_blocks": 30,
   "num_selected_blocks": 3,
   "cold_k_len": 3840,
-  "candidate_k_len": 768,
+  "candidate_k_len": 384,
   "full_k_len": 4096,
-  "working_k_len": 1024,
-  "coverage_ratio": 0.2,
-  "working_ratio": 0.25,
+  "working_k_len": 640,
+  "coverage_ratio": 0.1,
+  "working_ratio": 0.15625,
   "candidate_kv": {
     "layer_idx": 27,
-    "start": 3072,
+    "start": 3328,
     "end": 3840,
-    "length": 768,
+    "length": 512,
     "k_shape": [
       1,
       2,
-      768,
+      384,
       128
     ],
     "v_shape": [
       1,
       2,
-      768,
+      384,
       128
     ],
     "k_device": "cpu",
@@ -48,24 +48,24 @@
   "working_kv": {
     "layer_idx": 27,
     "candidate_range": [
-      3072,
+      3328,
       3840
     ],
     "hot_range": [
       3840,
       4096
     ],
-    "length": 1024,
+    "length": 640,
     "k_shape": [
       1,
       2,
-      1024,
+      640,
       128
     ],
     "v_shape": [
       1,
       2,
-      1024,
+      640,
       128
     ],
     "k_device": "cpu",
@@ -84,31 +84,31 @@
       1,
       128
     ],
-    "mean_abs_diff": 0.023519519716501236,
-    "max_abs_diff": 0.11857795715332031,
-    "l2_diff": 0.5543825030326843
+    "mean_abs_diff": 0.023545723408460617,
+    "max_abs_diff": 0.12161707878112793,
+    "l2_diff": 0.568314790725708
   },
   "top_scores": [
     {
       "layer_idx": 27,
-      "block_id": 14,
-      "start": 3584,
+      "block_id": 29,
+      "start": 3712,
       "end": 3840,
-      "score": 479.0113525390625
+      "score": 267.8247375488281
     },
     {
       "layer_idx": 27,
-      "block_id": 13,
+      "block_id": 28,
+      "start": 3584,
+      "end": 3712,
+      "score": 259.5004577636719
+    },
+    {
+      "layer_idx": 27,
+      "block_id": 26,
       "start": 3328,
-      "end": 3584,
-      "score": 463.05938720703125
-    },
-    {
-      "layer_idx": 27,
-      "block_id": 12,
-      "start": 3072,
-      "end": 3328,
-      "score": 456.608642578125
+      "end": 3456,
+      "score": 257.1667175292969
     }
   ],
   "selected_block_ranks": [
@@ -117,29 +117,29 @@
     2
   ],
   "selected_block_ids": [
-    14,
-    13,
-    12
+    29,
+    28,
+    26
   ],
   "selected_block_scores": [
-    479.0113525390625,
-    463.05938720703125,
-    456.608642578125
+    267.8247375488281,
+    259.5004577636719,
+    257.1667175292969
   ],
   "selected_block_spans": [
     [
-      3584,
+      3712,
       3840
     ],
     [
-      3328,
-      3584
+      3584,
+      3712
     ],
     [
-      3072,
-      3328
+      3328,
+      3456
     ]
   ],
-  "scoring_variant": "mean_only",
+  "scoring_variant": "query_to_block_max",
   "prompt_type": "prose"
 }

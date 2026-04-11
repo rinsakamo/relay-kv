@@ -306,13 +306,34 @@ Under the inspected settings, the norm-augmented variants (`mean_plus_norm` and 
 
 A headwise-max aggregation variant (`headwise_max_mean`) was also tested. While an earlier sweep appeared to show a small improvement under one condition, a direct pipeline-level inspection with matched prompt settings did not change block selection relative to `mean_only` in the inspected case. In that pipeline comparison, both variants selected the same top-ranked blocks.
 
+An additional pipeline-level comparison was then run for a simple peak-augmented variant, `mean_plus_max`, in a harder inspected setting:
+
+- `seq_len=4096`
+- `prompt_type=prose`
+- `layer_idx=27`
+- `block_size=256`
+- `top_k=3`
+
+Under this setting, `mean_plus_max` produced the same selected cold blocks as `mean_plus_norm`:
+
+- selected block ids: `[14, 13, 12]`
+- selected spans: `3584–3840`, `3328–3584`, `3072–3328`
+
+The reconstructed candidate and working KV ranges were also identical, and the attention comparison result matched exactly in this inspected case:
+
+- `mean_abs_diff = 0.023519519716501236`
+
+This additional check further supports the current preliminary interpretation that lightweight scoring modifications are not yet sufficient to change retrieval behavior in the inspected pipeline setting. At least in this case, adding a simple max-style term did not alter ranking, selection, or approximation quality.
+
 At the current stage, the safest interpretation is:
 
 1. The current top-ranked cold blocks appear relatively stable under several lightweight scoring modifications.
-2. Simple norm-based or headwise-max scoring changes are not yet sufficient to reliably alter retrieval behavior under the inspected setup.
+2. Simple norm-based, headwise-max, or mean-plus-max scoring changes are not yet sufficient to reliably alter retrieval behavior under the inspected setup.
 3. More structurally different scoring strategies may be needed to produce meaningful ranking changes.
 
 This should be treated as a preliminary negative result rather than a final conclusion about scoring design.
+
+---
 
 ## Recommended Next Analyses
 

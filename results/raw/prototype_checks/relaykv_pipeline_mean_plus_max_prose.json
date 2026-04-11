@@ -94,21 +94,21 @@
       "block_id": 14,
       "start": 3584,
       "end": 3840,
-      "score": 479.0113525390625
+      "score": 729.1390228271484
     },
     {
       "layer_idx": 27,
       "block_id": 13,
       "start": 3328,
       "end": 3584,
-      "score": 463.05938720703125
+      "score": 705.6466522216797
     },
     {
       "layer_idx": 27,
       "block_id": 12,
       "start": 3072,
       "end": 3328,
-      "score": 456.608642578125
+      "score": 698.1328735351562
     }
   ],
   "selected_block_ranks": [
@@ -122,9 +122,9 @@
     12
   ],
   "selected_block_scores": [
-    479.0113525390625,
-    463.05938720703125,
-    456.608642578125
+    729.1390228271484,
+    705.6466522216797,
+    698.1328735351562
   ],
   "selected_block_spans": [
     [
@@ -140,6 +140,6 @@
       3328
     ]
   ],
-  "scoring_variant": "mean_only",
+  "scoring_variant": "mean_plus_max",
   "prompt_type": "prose"
 }

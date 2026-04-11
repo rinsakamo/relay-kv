@@ -95,10 +95,18 @@ def run_pipeline(
         query[:, :, 0, :],
         variant=scoring_variant,
         norm_weight=1e-3,
+        all_blocks=all_blocks,
     )
-    top_scores = top_k_blocks(scores, k=min(top_k, len(scores)))
 
+    top_scores = top_k_blocks(scores, k=min(top_k, len(scores)))
     retrieved = retrieve_blocks(all_blocks, top_scores)
+
+    selected_summaries = [s.summary() for s in top_scores]
+    selected_block_ranks = list(range(len(selected_summaries)))
+    selected_block_ids = [s["block_id"] for s in selected_summaries]
+    selected_block_scores = [s["score"] for s in selected_summaries]
+    selected_block_spans = [[s["start"], s["end"]] for s in selected_summaries]
+
     candidate_kv = build_candidate_kv(retrieved)
 
     hot_k = hot_kv.keys[layer_idx]
@@ -154,10 +162,14 @@ def run_pipeline(
         "candidate_kv": candidate_kv.summary(),
         "working_kv": working_kv.summary(),
         "attention_compare": attention_result.summary(),
-        "top_scores": [s.summary() for s in top_scores],
+        "top_scores": selected_summaries,
+        "selected_block_ranks": selected_block_ranks,
+        "selected_block_ids": selected_block_ids,
+        "selected_block_scores": selected_block_scores,
+        "selected_block_spans": selected_block_spans,
         "scoring_variant": scoring_variant,
         "prompt_type": prompt_type,
-    }
+}
 
     return summary
 
