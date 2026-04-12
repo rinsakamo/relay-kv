@@ -5,8 +5,8 @@
   "seq_len_actual": 4096,
   "layer_idx": 27,
   "hot_window": 256,
-  "block_size": 128,
-  "top_k": 3,
+  "block_size": 256,
+  "top_k": 4,
   "cold_range": [
     0,
     3840
@@ -16,89 +16,97 @@
     4096
   ],
   "num_layers": 28,
-  "num_all_blocks": 840,
-  "num_layer_blocks": 30,
-  "num_selected_blocks": 3,
+  "num_all_blocks": 420,
+  "num_layer_blocks": 15,
+  "num_selected_blocks": 4,
   "cold_k_len": 3840,
-  "candidate_k_len": 384,
+  "candidate_k_len": 1024,
   "full_k_len": 4096,
-  "working_k_len": 640,
-  "coverage_ratio": 0.1,
-  "working_ratio": 0.15625,
+  "working_k_len": 1280,
+  "coverage_ratio": 0.26666666666666666,
+  "working_ratio": 0.3125,
   "candidate_kv": {
     "layer_idx": 27,
-    "start": 3328,
+    "start": 2816,
     "end": 3840,
-    "length": 512,
-    "range_length": 512,
-    "tensor_length": 384,
+    "length": 1024,
+    "range_length": 1024,
+    "tensor_length": 1024,
     "k_shape": [
       1,
       2,
-      384,
+      1024,
       128
     ],
     "v_shape": [
       1,
       2,
-      384,
+      1024,
       128
     ],
     "k_device": "cpu",
     "v_device": "cpu",
     "selected_spans": [
       [
+        2816,
+        3072
+      ],
+      [
+        3072,
+        3328
+      ],
+      [
         3328,
-        3456
+        3584
       ],
       [
         3584,
-        3712
-      ],
-      [
-        3712,
         3840
       ]
     ],
-    "is_contiguous": false
+    "is_contiguous": true
   },
   "working_kv": {
     "layer_idx": 27,
     "candidate_range": [
-      3328,
+      2816,
       3840
     ],
     "hot_range": [
       3840,
       4096
     ],
-    "length": 640,
-    "candidate_tensor_length": 384,
-    "candidate_is_contiguous": false,
+    "length": 1280,
+    "candidate_tensor_length": 1024,
+    "candidate_is_contiguous": true,
     "candidate_selected_spans": [
       [
+        2816,
+        3072
+      ],
+      [
+        3072,
+        3328
+      ],
+      [
         3328,
-        3456
+        3584
       ],
       [
         3584,
-        3712
-      ],
-      [
-        3712,
         3840
       ]
     ],
     "k_shape": [
       1,
       2,
-      640,
+      1280,
       128
     ],
     "v_shape": [
       1,
       2,
-      640,
+      1280,
       128
     ],
     "k_device": "cpu",
@@ -117,60 +125,74 @@
       1,
       128
     ],
-    "mean_abs_diff": 0.023545723408460617,
-    "max_abs_diff": 0.12161707878112793,
-    "l2_diff": 0.568314790725708
+    "mean_abs_diff": 0.014638587832450867,
+    "max_abs_diff": 0.0784759521484375,
+    "l2_diff": 0.3565591275691986
   },
   "top_scores": [
     {
       "layer_idx": 27,
-      "block_id": 29,
-      "start": 3712,
-      "end": 3840,
-      "score": 486.0889267578125
-    },
-    {
-      "layer_idx": 27,
-      "block_id": 28,
+      "block_id": 14,
       "start": 3584,
-      "end": 3712,
-      "score": 472.59144592285156
+      "end": 3840,
+      "score": 520.7918895874024
     },
     {
       "layer_idx": 27,
-      "block_id": 26,
+      "block_id": 12,
+      "start": 3072,
+      "end": 3328,
+      "score": 498.1622608337402
+    },
+    {
+      "layer_idx": 27,
+      "block_id": 11,
+      "start": 2816,
+      "end": 3072,
+      "score": 497.9725271911621
+    },
+    {
+      "layer_idx": 27,
+      "block_id": 13,
       "start": 3328,
-      "end": 3456,
-      "score": 464.1908119506836
+      "end": 3584,
+      "score": 496.57589895629883
     }
   ],
   "selected_block_ranks": [
     0,
     1,
-    2
+    2,
+    3
   ],
   "selected_block_ids": [
-    29,
-    28,
-    26
+    14,
+    12,
+    11,
+    13
   ],
   "selected_block_scores": [
-    486.0889267578125,
-    472.59144592285156,
-    464.1908119506836
+    520.7918895874024,
+    498.1622608337402,
+    497.9725271911621,
+    496.57589895629883
   ],
   "selected_block_spans": [
     [
-      3712,
+      3584,
       3840
     ],
     [
-      3584,
-      3712
+      3072,
+      3328
+    ],
+    [
+      2816,
+      3072
     ],
     [
       3328,
-      3456
+      3584
     ]
   ],
   "scoring_variant": "mean_plus_norm",

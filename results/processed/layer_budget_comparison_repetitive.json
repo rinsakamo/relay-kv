@@ -1,0 +1,81 @@
+{
+  "prompt_type": "repetitive",
+  "seq_len": 4096,
+  "hot_window": 256,
+  "block_size": 256,
+  "scoring_variant": "mean_plus_norm",
+  "plans": [
+    {
+      "plan": "uniform",
+      "layer0_mean_abs_diff": 1.3280271105031716e-08,
+      "layer14_mean_abs_diff": 0.0006831273203715682,
+      "layer27_mean_abs_diff": 0.030168408527970314,
+      "avg_mean_abs_diff": 0.010283849709537662,
+      "max_mean_abs_diff": 0.030168408527970314,
+      "total_top_k": 9
+    },
+    {
+      "plan": "balanced",
+      "layer0_mean_abs_diff": 1.3280271105031716e-08,
+      "layer14_mean_abs_diff": 0.0010460379999130964,
+      "layer27_mean_abs_diff": 0.027121268212795258,
+      "avg_mean_abs_diff": 0.009389106497659819,
+      "max_mean_abs_diff": 0.027121268212795258,
+      "total_top_k": 9
+    },
+    {
+      "plan": "hard-layer-heavy",
+      "layer0_mean_abs_diff": 1.691904571998748e-08,
+      "layer14_mean_abs_diff": 0.002280730986967683,
+      "layer27_mean_abs_diff": 0.022945856675505638,
+      "avg_mean_abs_diff": 0.00840886819383968,
+      "max_mean_abs_diff": 0.022945856675505638,
+      "total_top_k": 9
+    },
+    {
+      "plan": "mild-heavy",
+      "layer0_mean_abs_diff": 1.691904571998748e-08,
+      "layer14_mean_abs_diff": 0.0010460379999130964,
+      "layer27_mean_abs_diff": 0.024830441921949387,
+      "avg_mean_abs_diff": 0.008625498946969401,
+      "max_mean_abs_diff": 0.024830441921949387,
+      "total_top_k": 9
+    },
+    {
+      "plan": "very-heavy",
+      "layer0_mean_abs_diff": 3.6490632737695705e-08,
+      "layer14_mean_abs_diff": 0.002280730986967683,
+      "layer27_mean_abs_diff": 0.020364562049508095,
+      "avg_mean_abs_diff": 0.007548443175702839,
+      "max_mean_abs_diff": 0.020364562049508095,
+      "total_top_k": 9
+    }
+  ],
+  "saved_layer_files": {
+    "uniform": {
+      "0": "results/raw/prototype_checks/relaykv_layer0_uniform_repetitive.json",
+      "14": "results/raw/prototype_checks/relaykv_layer14_uniform_repetitive.json",
+      "27": "results/raw/prototype_checks/relaykv_layer27_uniform_repetitive.json"
+    },
+    "balanced": {
+      "0": "results/raw/prototype_checks/relaykv_layer0_balanced_repetitive.json",
+      "14": "results/raw/prototype_checks/relaykv_layer14_balanced_repetitive.json",
+      "27": "results/raw/prototype_checks/relaykv_layer27_balanced_repetitive.json"
+    },
+    "hard-layer-heavy": {
+      "0": "results/raw/prototype_checks/relaykv_layer0_hard-layer-heavy_repetitive.json",
+      "14": "results/raw/prototype_checks/relaykv_layer14_hard-layer-heavy_repetitive.json",
+      "27": "results/raw/prototype_checks/relaykv_layer27_hard-layer-heavy_repetitive.json"
+    },
+    "mild-heavy": {
+      "0": "results/raw/prototype_checks/relaykv_layer0_mild-heavy_repetitive.json",
+      "14": "results/raw/prototype_checks/relaykv_layer14_mild-heavy_repetitive.json",
+      "27": "results/raw/prototype_checks/relaykv_layer27_mild-heavy_repetitive.json"
+    },
+    "very-heavy": {
+      "0": "results/raw/prototype_checks/relaykv_layer0_very-heavy_repetitive.json",
+      "14": "results/raw/prototype_checks/relaykv_layer14_very-heavy_repetitive.json",
+      "27": "results/raw/prototype_checks/relaykv_layer27_very-heavy_repetitive.json"
+    }
+  }
+}

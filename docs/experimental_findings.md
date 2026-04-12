@@ -315,6 +315,68 @@ At the current stage, the safest interpretation is:
 3. In the current inspected setting, block granularity appears to affect selection more strongly than the tested scoring variants.
 
 This should be treated as a preliminary negative result rather than a final conclusion about scoring design.
+
+---
+
+## Preliminary Note on Layer-Wise Budget Allocation
+
+A small layer-wise budget comparison was performed under the same total retrieval budget in the inspected `4096 / prose` setting with `block_size=256` and `hot_window=256`, using representative layers `0`, `14`, and `27`.
+
+Three allocation patterns were compared:
+
+- uniform: `(3, 3, 3)`
+- balanced: `(3, 2, 4)`
+- hard-layer-heavy: `(2, 1, 6)`
+
+The hard-layer-heavy allocation produced the best result among the tested plans. Relative to the uniform allocation, it reduced the representative hard-layer error at `layer_idx=27` from `0.023519520` to `0.019254683`, while also improving both the average error (`0.008120650` to `0.007059263`) and the worst-case error.
+
+At the current stage, the safest interpretation is:
+
+1. Uniform per-layer allocation is not necessarily optimal.
+2. Harder layers can benefit more from additional retrieval budget than easier layers.
+3. In the current inspected setting, layer-wise budget allocation appears more promising than the lightweight scoring changes tested so far.
+
+This should still be treated as a prototype-stage result from a small inspected setup rather than a final general conclusion.
+
+---
+
+## Preliminary Note on Layer-Wise Budget Allocation
+
+A small layer-wise budget comparison was performed under the same total retrieval budget in the inspected `4096`-token setting with `block_size=256` and `hot_window=256`, using representative layers `0`, `14`, and `27`.
+
+Five allocation patterns were compared:
+
+- uniform: `(3, 3, 3)`
+- balanced: `(3, 2, 4)`
+- mild-heavy: `(2, 2, 5)`
+- hard-layer-heavy: `(2, 1, 6)`
+- very-heavy: `(1, 1, 7)`
+
+This comparison was run for three prompt styles:
+
+- `repetitive`
+- `prose`
+- `structured`
+
+Across all three inspected prompt styles, the same qualitative pattern was observed: allocating more retrieval budget to the harder deep layer consistently improved approximation quality under the same total budget.
+
+In all three cases, the strongest tested deep-layer bias, `very-heavy (1, 1, 7)`, produced the best result among the tested plans. The main effect was a substantial reduction in the representative hard-layer error at `layer_idx=27`, while the easier middle layer `layer_idx=14` became somewhat worse. Even so, the improvement at the hard layer was large enough to improve both the average error and the worst-case error.
+
+For `prose`, the `very-heavy` allocation reduced the representative hard-layer error at `layer_idx=27` from `0.019356238` to `0.009709065`, while also improving the average error from `0.008483595` to `0.005448804`.
+
+For `structured`, the `very-heavy` allocation reduced the representative hard-layer error at `layer_idx=27` from `0.021780726` to `0.011168486`, while also improving the average error from `0.007499031` to `0.004137125`.
+
+For `repetitive`, the `very-heavy` allocation reduced the representative hard-layer error at `layer_idx=27` from `0.030168409` to `0.020364562`, while also improving the average error from `0.010283850` to `0.007548443`.
+
+At the current stage, the safest interpretation is:
+
+1. Uniform per-layer allocation is not necessarily optimal.
+2. Harder layers can benefit more from additional retrieval budget than easier layers.
+3. In the current inspected setup, layer-wise budget allocation appears more promising than the lightweight scoring changes tested so far.
+4. The observed benefit is not limited to a single inspected prompt style, since the same qualitative pattern was observed for `repetitive`, `prose`, and `structured`.
+5. Among the tested allocations, the strongest tested deep-layer bias, `very-heavy (1, 1, 7)`, performed best in the current inspected setup.
+
+This should still be treated as a prototype-stage result from a small inspected setup rather than a final general conclusion.
 ---
 
 ## Recommended Next Analyses

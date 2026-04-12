@@ -53,6 +53,24 @@ Pipeline and sweep comparisons must use the same prompt generation logic.
 
 ---
 
+## Current block granularity plan
+
+- Main setting: `block_size=256`
+- Ablation / sensitivity setting: `block_size=128`
+
+### Rationale
+
+- `block_size=256` keeps continuity with the current main prototype results and figures.
+- `block_size=128` is useful as a sensitivity check because block selection changes under the inspected setting.
+- However, the observed selection change at `block_size=128` was shared by both `mean_plus_norm` and `query_to_block_max`.
+- At the current stage, this is better interpreted as a block granularity effect than as a scoring-specific effect.
+
+### Current interpretation rule
+
+When a ranking change is observed under `block_size=128`, it should not be attributed to the scoring variant unless the same condition has been checked against the main setting and against at least one comparison variant.
+
+---
+
 ## Standard metrics
 
 ### Primary metric

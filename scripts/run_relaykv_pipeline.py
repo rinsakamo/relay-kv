@@ -43,12 +43,45 @@ def load_model(model_name: str):
 
 
 def make_prompt_for_target_tokens(target_tokens: int, prompt_type: str) -> str:
-    base = "RelayKV pipeline test. "
+    repetitive_unit = (
+        "RelayKV checks recent context retrieval behavior. "
+        "RelayKV checks recent context retrieval behavior. "
+        "RelayKV checks recent context retrieval behavior. "
+    )
+
+    prose_unit = (
+        "RelayKV is a prototype for splitting KV cache into hot and cold regions, "
+        "retrieving a smaller working set, and comparing approximate attention outputs "
+        "against full attention. The current experiments examine how coverage ratio, "
+        "block granularity, and layer difficulty affect approximation quality across "
+        "different sequence lengths and prompt styles. "
+    )
+
+    structured_unit = (
+        "Experiment summary:\n"
+        "- system: RelayKV\n"
+        "- goal: compare approximate attention against full attention\n"
+        "- factors: coverage ratio, block size, hot window, layer index\n"
+        "- observation: harder layers may require larger retrieval budgets\n"
+        "- note: scoring changes and block granularity should be evaluated separately\n"
+    )
+
+    if prompt_type == "repetitive":
+        base = repetitive_unit
+    elif prompt_type == "prose":
+        base = prose_unit
+    elif prompt_type == "structured":
+        base = structured_unit
+    else:
+        raise ValueError(f"Unsupported prompt_type: {prompt_type}")
+
     words = base.split()
     chunks = []
+
     while len(" ".join(chunks).split()) < target_tokens:
         chunks.extend(words)
-    return " ".join(chunks)
+
+    return " ".join(chunks[:target_tokens])
 
 
 def run_pipeline(

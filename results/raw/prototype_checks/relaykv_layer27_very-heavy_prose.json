@@ -1,0 +1,266 @@
+{
+  "model": "Qwen/Qwen2.5-1.5B-Instruct",
+  "device": "cuda",
+  "seq_len_target": 4096,
+  "seq_len_actual": 4096,
+  "layer_idx": 27,
+  "hot_window": 256,
+  "block_size": 256,
+  "top_k": 7,
+  "cold_range": [
+    0,
+    3840
+  ],
+  "hot_range": [
+    3840,
+    4096
+  ],
+  "num_layers": 28,
+  "num_all_blocks": 420,
+  "num_layer_blocks": 15,
+  "num_selected_blocks": 7,
+  "cold_k_len": 3840,
+  "candidate_k_len": 1792,
+  "full_k_len": 4096,
+  "working_k_len": 2048,
+  "coverage_ratio": 0.4666666666666667,
+  "working_ratio": 0.5,
+  "candidate_kv": {
+    "layer_idx": 27,
+    "start": 2048,
+    "end": 3840,
+    "length": 1792,
+    "range_length": 1792,
+    "tensor_length": 1792,
+    "k_shape": [
+      1,
+      2,
+      1792,
+      128
+    ],
+    "v_shape": [
+      1,
+      2,
+      1792,
+      128
+    ],
+    "k_device": "cpu",
+    "v_device": "cpu",
+    "selected_spans": [
+      [
+        2048,
+        2304
+      ],
+      [
+        2304,
+        2560
+      ],
+      [
+        2560,
+        2816
+      ],
+      [
+        2816,
+        3072
+      ],
+      [
+        3072,
+        3328
+      ],
+      [
+        3328,
+        3584
+      ],
+      [
+        3584,
+        3840
+      ]
+    ],
+    "is_contiguous": true
+  },
+  "working_kv": {
+    "layer_idx": 27,
+    "candidate_range": [
+      2048,
+      3840
+    ],
+    "hot_range": [
+      3840,
+      4096
+    ],
+    "length": 2048,
+    "candidate_tensor_length": 1792,
+    "candidate_is_contiguous": true,
+    "candidate_selected_spans": [
+      [
+        2048,
+        2304
+      ],
+      [
+        2304,
+        2560
+      ],
+      [
+        2560,
+        2816
+      ],
+      [
+        2816,
+        3072
+      ],
+      [
+        3072,
+        3328
+      ],
+      [
+        3328,
+        3584
+      ],
+      [
+        3584,
+        3840
+      ]
+    ],
+    "k_shape": [
+      1,
+      2,
+      2048,
+      128
+    ],
+    "v_shape": [
+      1,
+      2,
+      2048,
+      128
+    ],
+    "k_device": "cpu",
+    "v_device": "cpu"
+  },
+  "attention_compare": {
+    "full_output_shape": [
+      1,
+      2,
+      1,
+      128
+    ],
+    "approx_output_shape": [
+      1,
+      2,
+      1,
+      128
+    ],
+    "mean_abs_diff": 0.009709064848721027,
+    "max_abs_diff": 0.04918813705444336,
+    "l2_diff": 0.23751358687877655
+  },
+  "top_scores": [
+    {
+      "layer_idx": 27,
+      "block_id": 14,
+      "start": 3584,
+      "end": 3840,
+      "score": 520.7918895874024
+    },
+    {
+      "layer_idx": 27,
+      "block_id": 12,
+      "start": 3072,
+      "end": 3328,
+      "score": 498.1622608337402
+    },
+    {
+      "layer_idx": 27,
+      "block_id": 11,
+      "start": 2816,
+      "end": 3072,
+      "score": 497.9725271911621
+    },
+    {
+      "layer_idx": 27,
+      "block_id": 13,
+      "start": 3328,
+      "end": 3584,
+      "score": 496.57589895629883
+    },
+    {
+      "layer_idx": 27,
+      "block_id": 8,
+      "start": 2048,
+      "end": 2304,
+      "score": 479.7879428710938
+    },
+    {
+      "layer_idx": 27,
+      "block_id": 10,
+      "start": 2560,
+      "end": 2816,
+      "score": 479.5441845397949
+    },
+    {
+      "layer_idx": 27,
+      "block_id": 9,
+      "start": 2304,
+      "end": 2560,
+      "score": 478.17980596923826
+    }
+  ],
+  "selected_block_ranks": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+  ],
+  "selected_block_ids": [
+    14,
+    12,
+    11,
+    13,
+    8,
+    10,
+    9
+  ],
+  "selected_block_scores": [
+    520.7918895874024,
+    498.1622608337402,
+    497.9725271911621,
+    496.57589895629883,
+    479.7879428710938,
+    479.5441845397949,
+    478.17980596923826
+  ],
+  "selected_block_spans": [
+    [
+      3584,
+      3840
+    ],
+    [
+      3072,
+      3328
+    ],
+    [
+      2816,
+      3072
+    ],
+    [
+      3328,
+      3584
+    ],
+    [
+      2048,
+      2304
+    ],
+    [
+      2560,
+      2816
+    ],
+    [
+      2304,
+      2560
+    ]
+  ],
+  "scoring_variant": "mean_plus_norm",
+  "prompt_type": "prose"
+}

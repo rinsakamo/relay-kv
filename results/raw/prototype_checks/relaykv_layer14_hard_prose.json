@@ -1,0 +1,134 @@
+{
+  "model": "Qwen/Qwen2.5-1.5B-Instruct",
+  "device": "cuda",
+  "seq_len_target": 4096,
+  "seq_len_actual": 4096,
+  "layer_idx": 14,
+  "hot_window": 256,
+  "block_size": 256,
+  "top_k": 1,
+  "cold_range": [
+    0,
+    3840
+  ],
+  "hot_range": [
+    3840,
+    4096
+  ],
+  "num_layers": 28,
+  "num_all_blocks": 420,
+  "num_layer_blocks": 15,
+  "num_selected_blocks": 1,
+  "cold_k_len": 3840,
+  "candidate_k_len": 256,
+  "full_k_len": 4096,
+  "working_k_len": 512,
+  "coverage_ratio": 0.06666666666666667,
+  "working_ratio": 0.125,
+  "candidate_kv": {
+    "layer_idx": 14,
+    "start": 3584,
+    "end": 3840,
+    "length": 256,
+    "range_length": 256,
+    "tensor_length": 256,
+    "k_shape": [
+      1,
+      2,
+      256,
+      128
+    ],
+    "v_shape": [
+      1,
+      2,
+      256,
+      128
+    ],
+    "k_device": "cpu",
+    "v_device": "cpu",
+    "selected_spans": [
+      [
+        3584,
+        3840
+      ]
+    ],
+    "is_contiguous": true
+  },
+  "working_kv": {
+    "layer_idx": 14,
+    "candidate_range": [
+      3584,
+      3840
+    ],
+    "hot_range": [
+      3840,
+      4096
+    ],
+    "length": 512,
+    "candidate_tensor_length": 256,
+    "candidate_is_contiguous": true,
+    "candidate_selected_spans": [
+      [
+        3584,
+        3840
+      ]
+    ],
+    "k_shape": [
+      1,
+      2,
+      512,
+      128
+    ],
+    "v_shape": [
+      1,
+      2,
+      512,
+      128
+    ],
+    "k_device": "cpu",
+    "v_device": "cpu"
+  },
+  "attention_compare": {
+    "full_output_shape": [
+      1,
+      2,
+      1,
+      128
+    ],
+    "approx_output_shape": [
+      1,
+      2,
+      1,
+      128
+    ],
+    "mean_abs_diff": 0.0019200798124074936,
+    "max_abs_diff": 0.030299782752990723,
+    "l2_diff": 0.06520064920186996
+  },
+  "top_scores": [
+    {
+      "layer_idx": 14,
+      "block_id": 14,
+      "start": 3584,
+      "end": 3840,
+      "score": 767.314343383789
+    }
+  ],
+  "selected_block_ranks": [
+    0
+  ],
+  "selected_block_ids": [
+    14
+  ],
+  "selected_block_scores": [
+    767.314343383789
+  ],
+  "selected_block_spans": [
+    [
+      3584,
+      3840
+    ]
+  ],
+  "scoring_variant": "mean_plus_norm",
+  "prompt_type": "prose"
+}

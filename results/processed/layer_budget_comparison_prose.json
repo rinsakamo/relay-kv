@@ -1,0 +1,81 @@
+{
+  "prompt_type": "prose",
+  "seq_len": 4096,
+  "hot_window": 256,
+  "block_size": 256,
+  "scoring_variant": "mean_plus_norm",
+  "plans": [
+    {
+      "plan": "uniform",
+      "layer0_mean_abs_diff": 0.00554503221064806,
+      "layer14_mean_abs_diff": 0.0005495147779583931,
+      "layer27_mean_abs_diff": 0.01935623772442341,
+      "avg_mean_abs_diff": 0.008483594904343287,
+      "max_mean_abs_diff": 0.01935623772442341,
+      "total_top_k": 9
+    },
+    {
+      "plan": "balanced",
+      "layer0_mean_abs_diff": 0.00554503221064806,
+      "layer14_mean_abs_diff": 0.0006909051444381475,
+      "layer27_mean_abs_diff": 0.014638587832450867,
+      "avg_mean_abs_diff": 0.006958175062512358,
+      "max_mean_abs_diff": 0.014638587832450867,
+      "total_top_k": 9
+    },
+    {
+      "plan": "hard-layer-heavy",
+      "layer0_mean_abs_diff": 0.005551706068217754,
+      "layer14_mean_abs_diff": 0.001084384974092245,
+      "layer27_mean_abs_diff": 0.010793138295412064,
+      "avg_mean_abs_diff": 0.005809743112574021,
+      "max_mean_abs_diff": 0.010793138295412064,
+      "total_top_k": 9
+    },
+    {
+      "plan": "mild-heavy",
+      "layer0_mean_abs_diff": 0.005551706068217754,
+      "layer14_mean_abs_diff": 0.0006909051444381475,
+      "layer27_mean_abs_diff": 0.013009377755224705,
+      "avg_mean_abs_diff": 0.006417329655960202,
+      "max_mean_abs_diff": 0.013009377755224705,
+      "total_top_k": 9
+    },
+    {
+      "plan": "very-heavy",
+      "layer0_mean_abs_diff": 0.005552961491048336,
+      "layer14_mean_abs_diff": 0.001084384974092245,
+      "layer27_mean_abs_diff": 0.009709064848721027,
+      "avg_mean_abs_diff": 0.005448803771287203,
+      "max_mean_abs_diff": 0.009709064848721027,
+      "total_top_k": 9
+    }
+  ],
+  "saved_layer_files": {
+    "uniform": {
+      "0": "results/raw/prototype_checks/relaykv_layer0_uniform_prose.json",
+      "14": "results/raw/prototype_checks/relaykv_layer14_uniform_prose.json",
+      "27": "results/raw/prototype_checks/relaykv_layer27_uniform_prose.json"
+    },
+    "balanced": {
+      "0": "results/raw/prototype_checks/relaykv_layer0_balanced_prose.json",
+      "14": "results/raw/prototype_checks/relaykv_layer14_balanced_prose.json",
+      "27": "results/raw/prototype_checks/relaykv_layer27_balanced_prose.json"
+    },
+    "hard-layer-heavy": {
+      "0": "results/raw/prototype_checks/relaykv_layer0_hard-layer-heavy_prose.json",
+      "14": "results/raw/prototype_checks/relaykv_layer14_hard-layer-heavy_prose.json",
+      "27": "results/raw/prototype_checks/relaykv_layer27_hard-layer-heavy_prose.json"
+    },
+    "mild-heavy": {
+      "0": "results/raw/prototype_checks/relaykv_layer0_mild-heavy_prose.json",
+      "14": "results/raw/prototype_checks/relaykv_layer14_mild-heavy_prose.json",
+      "27": "results/raw/prototype_checks/relaykv_layer27_mild-heavy_prose.json"
+    },
+    "very-heavy": {
+      "0": "results/raw/prototype_checks/relaykv_layer0_very-heavy_prose.json",
+      "14": "results/raw/prototype_checks/relaykv_layer14_very-heavy_prose.json",
+      "27": "results/raw/prototype_checks/relaykv_layer27_very-heavy_prose.json"
+    }
+  }
+}

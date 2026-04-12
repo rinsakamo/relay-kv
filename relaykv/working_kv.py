@@ -13,6 +13,9 @@ class WorkingKV:
     hot_end: int
     k: torch.Tensor
     v: torch.Tensor
+    candidate_tensor_length: int
+    candidate_is_contiguous: bool
+    candidate_selected_spans: list[list[int]]
 
     @property
     def length(self) -> int:
@@ -24,6 +27,9 @@ class WorkingKV:
             "candidate_range": [self.candidate_start, self.candidate_end],
             "hot_range": [self.hot_start, self.hot_end],
             "length": self.length,
+            "candidate_tensor_length": self.candidate_tensor_length,
+            "candidate_is_contiguous": self.candidate_is_contiguous,
+            "candidate_selected_spans": self.candidate_selected_spans,
             "k_shape": list(self.k.shape),
             "v_shape": list(self.v.shape),
             "k_device": str(self.k.device),
@@ -60,4 +66,7 @@ def build_working_kv(
         hot_end=hot_end,
         k=k,
         v=v,
+        candidate_tensor_length=int(candidate_kv.k.shape[2]),
+        candidate_is_contiguous=candidate_kv.is_contiguous,
+        candidate_selected_spans=candidate_kv.selected_spans,
     )

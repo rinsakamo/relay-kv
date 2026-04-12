@@ -1,0 +1,777 @@
+{
+  "model": "Qwen/Qwen2.5-1.5B-Instruct",
+  "seq_len_target": 4096,
+  "seq_len_actual": 4096,
+  "prompt_type": "structured",
+  "hot_window": 256,
+  "block_size": 256,
+  "scoring_variant": "mean_plus_norm",
+  "max_new_tokens": 64,
+  "full_generation": {
+    "prompt_tokens": 5050,
+    "generated_tokens": 64,
+    "elapsed_sec": 3.0533048319921363,
+    "tokens_per_sec": 20.960894349432856,
+    "generated_text": " full attention - factors: coverage ratio, block size, hot window, layer index - observation: harder layers may require larger retrieval budgets - note: scoring changes and block granularity should be evaluated separately Experiment summary: - system: RelayKV - goal: compare approximate attention against full attention - factors: coverage ratio, block size,"
+  },
+  "relaykv": {
+    "uniform": {
+      "plan": "uniform",
+      "top_k_spec": {
+        "0": 3,
+        "14": 3,
+        "27": 3
+      },
+      "layers": {
+        "0": {
+          "layer_idx": 0,
+          "top_k": 3,
+          "selected_block_ids": [
+            14,
+            7,
+            12
+          ],
+          "selected_block_spans": [
+            [
+              3584,
+              3840
+            ],
+            [
+              1792,
+              2048
+            ],
+            [
+              3072,
+              3328
+            ]
+          ],
+          "candidate_k_len": 768,
+          "working_k_len": 1024,
+          "coverage_ratio": 0.2,
+          "working_ratio": 0.25,
+          "candidate_kv": {
+            "layer_idx": 0,
+            "start": 1792,
+            "end": 3840,
+            "length": 2048,
+            "range_length": 2048,
+            "tensor_length": 768,
+            "k_shape": [
+              1,
+              2,
+              768,
+              128
+            ],
+            "v_shape": [
+              1,
+              2,
+              768,
+              128
+            ],
+            "k_device": "cpu",
+            "v_device": "cpu",
+            "selected_spans": [
+              [
+                1792,
+                2048
+              ],
+              [
+                3072,
+                3328
+              ],
+              [
+                3584,
+                3840
+              ]
+            ],
+            "is_contiguous": false
+          },
+          "working_kv": {
+            "layer_idx": 0,
+            "candidate_range": [
+              1792,
+              3840
+            ],
+            "hot_range": [
+              3840,
+              4096
+            ],
+            "length": 1024,
+            "candidate_tensor_length": 768,
+            "candidate_is_contiguous": false,
+            "candidate_selected_spans": [
+              [
+                1792,
+                2048
+              ],
+              [
+                3072,
+                3328
+              ],
+              [
+                3584,
+                3840
+              ]
+            ],
+            "k_shape": [
+              1,
+              2,
+              1024,
+              128
+            ],
+            "v_shape": [
+              1,
+              2,
+              1024,
+              128
+            ],
+            "k_device": "cpu",
+            "v_device": "cpu"
+          },
+          "attention_compare": {
+            "full_output_shape": [
+              1,
+              2,
+              1,
+              128
+            ],
+            "approx_output_shape": [
+              1,
+              2,
+              1,
+              128
+            ],
+            "mean_abs_diff": 1.2544658147817245e-06,
+            "max_abs_diff": 1.1563301086425781e-05,
+            "l2_diff": 3.680828012875281e-05
+          }
+        },
+        "14": {
+          "layer_idx": 14,
+          "top_k": 3,
+          "selected_block_ids": [
+            14,
+            13,
+            12
+          ],
+          "selected_block_spans": [
+            [
+              3584,
+              3840
+            ],
+            [
+              3328,
+              3584
+            ],
+            [
+              3072,
+              3328
+            ]
+          ],
+          "candidate_k_len": 768,
+          "working_k_len": 1024,
+          "coverage_ratio": 0.2,
+          "working_ratio": 0.25,
+          "candidate_kv": {
+            "layer_idx": 14,
+            "start": 3072,
+            "end": 3840,
+            "length": 768,
+            "range_length": 768,
+            "tensor_length": 768,
+            "k_shape": [
+              1,
+              2,
+              768,
+              128
+            ],
+            "v_shape": [
+              1,
+              2,
+              768,
+              128
+            ],
+            "k_device": "cpu",
+            "v_device": "cpu",
+            "selected_spans": [
+              [
+                3072,
+                3328
+              ],
+              [
+                3328,
+                3584
+              ],
+              [
+                3584,
+                3840
+              ]
+            ],
+            "is_contiguous": true
+          },
+          "working_kv": {
+            "layer_idx": 14,
+            "candidate_range": [
+              3072,
+              3840
+            ],
+            "hot_range": [
+              3840,
+              4096
+            ],
+            "length": 1024,
+            "candidate_tensor_length": 768,
+            "candidate_is_contiguous": true,
+            "candidate_selected_spans": [
+              [
+                3072,
+                3328
+              ],
+              [
+                3328,
+                3584
+              ],
+              [
+                3584,
+                3840
+              ]
+            ],
+            "k_shape": [
+              1,
+              2,
+              1024,
+              128
+            ],
+            "v_shape": [
+              1,
+              2,
+              1024,
+              128
+            ],
+            "k_device": "cpu",
+            "v_device": "cpu"
+          },
+          "attention_compare": {
+            "full_output_shape": [
+              1,
+              2,
+              1,
+              128
+            ],
+            "approx_output_shape": [
+              1,
+              2,
+              1,
+              128
+            ],
+            "mean_abs_diff": 0.0007151136524043977,
+            "max_abs_diff": 0.004738330841064453,
+            "l2_diff": 0.019683904945850372
+          }
+        },
+        "27": {
+          "layer_idx": 27,
+          "top_k": 3,
+          "selected_block_ids": [
+            14,
+            13,
+            12
+          ],
+          "selected_block_spans": [
+            [
+              3584,
+              3840
+            ],
+            [
+              3328,
+              3584
+            ],
+            [
+              3072,
+              3328
+            ]
+          ],
+          "candidate_k_len": 768,
+          "working_k_len": 1024,
+          "coverage_ratio": 0.2,
+          "working_ratio": 0.25,
+          "candidate_kv": {
+            "layer_idx": 27,
+            "start": 3072,
+            "end": 3840,
+            "length": 768,
+            "range_length": 768,
+            "tensor_length": 768,
+            "k_shape": [
+              1,
+              2,
+              768,
+              128
+            ],
+            "v_shape": [
+              1,
+              2,
+              768,
+              128
+            ],
+            "k_device": "cpu",
+            "v_device": "cpu",
+            "selected_spans": [
+              [
+                3072,
+                3328
+              ],
+              [
+                3328,
+                3584
+              ],
+              [
+                3584,
+                3840
+              ]
+            ],
+            "is_contiguous": true
+          },
+          "working_kv": {
+            "layer_idx": 27,
+            "candidate_range": [
+              3072,
+              3840
+            ],
+            "hot_range": [
+              3840,
+              4096
+            ],
+            "length": 1024,
+            "candidate_tensor_length": 768,
+            "candidate_is_contiguous": true,
+            "candidate_selected_spans": [
+              [
+                3072,
+                3328
+              ],
+              [
+                3328,
+                3584
+              ],
+              [
+                3584,
+                3840
+              ]
+            ],
+            "k_shape": [
+              1,
+              2,
+              1024,
+              128
+            ],
+            "v_shape": [
+              1,
+              2,
+              1024,
+              128
+            ],
+            "k_device": "cpu",
+            "v_device": "cpu"
+          },
+          "attention_compare": {
+            "full_output_shape": [
+              1,
+              2,
+              1,
+              128
+            ],
+            "approx_output_shape": [
+              1,
+              2,
+              1,
+              128
+            ],
+            "mean_abs_diff": 0.021780725568532944,
+            "max_abs_diff": 0.11275959014892578,
+            "l2_diff": 0.5290342569351196
+          }
+        }
+      }
+    },
+    "very-heavy": {
+      "plan": "very-heavy",
+      "top_k_spec": {
+        "0": 1,
+        "14": 1,
+        "27": 7
+      },
+      "layers": {
+        "0": {
+          "layer_idx": 0,
+          "top_k": 1,
+          "selected_block_ids": [
+            14
+          ],
+          "selected_block_spans": [
+            [
+              3584,
+              3840
+            ]
+          ],
+          "candidate_k_len": 256,
+          "working_k_len": 512,
+          "coverage_ratio": 0.06666666666666667,
+          "working_ratio": 0.125,
+          "candidate_kv": {
+            "layer_idx": 0,
+            "start": 3584,
+            "end": 3840,
+            "length": 256,
+            "range_length": 256,
+            "tensor_length": 256,
+            "k_shape": [
+              1,
+              2,
+              256,
+              128
+            ],
+            "v_shape": [
+              1,
+              2,
+              256,
+              128
+            ],
+            "k_device": "cpu",
+            "v_device": "cpu",
+            "selected_spans": [
+              [
+                3584,
+                3840
+              ]
+            ],
+            "is_contiguous": true
+          },
+          "working_kv": {
+            "layer_idx": 0,
+            "candidate_range": [
+              3584,
+              3840
+            ],
+            "hot_range": [
+              3840,
+              4096
+            ],
+            "length": 512,
+            "candidate_tensor_length": 256,
+            "candidate_is_contiguous": true,
+            "candidate_selected_spans": [
+              [
+                3584,
+                3840
+              ]
+            ],
+            "k_shape": [
+              1,
+              2,
+              512,
+              128
+            ],
+            "v_shape": [
+              1,
+              2,
+              512,
+              128
+            ],
+            "k_device": "cpu",
+            "v_device": "cpu"
+          },
+          "attention_compare": {
+            "full_output_shape": [
+              1,
+              2,
+              1,
+              128
+            ],
+            "approx_output_shape": [
+              1,
+              2,
+              1,
+              128
+            ],
+            "mean_abs_diff": 1.207270202030486e-06,
+            "max_abs_diff": 1.1205673217773438e-05,
+            "l2_diff": 3.572182322386652e-05
+          }
+        },
+        "14": {
+          "layer_idx": 14,
+          "top_k": 1,
+          "selected_block_ids": [
+            14
+          ],
+          "selected_block_spans": [
+            [
+              3584,
+              3840
+            ]
+          ],
+          "candidate_k_len": 256,
+          "working_k_len": 512,
+          "coverage_ratio": 0.06666666666666667,
+          "working_ratio": 0.125,
+          "candidate_kv": {
+            "layer_idx": 14,
+            "start": 3584,
+            "end": 3840,
+            "length": 256,
+            "range_length": 256,
+            "tensor_length": 256,
+            "k_shape": [
+              1,
+              2,
+              256,
+              128
+            ],
+            "v_shape": [
+              1,
+              2,
+              256,
+              128
+            ],
+            "k_device": "cpu",
+            "v_device": "cpu",
+            "selected_spans": [
+              [
+                3584,
+                3840
+              ]
+            ],
+            "is_contiguous": true
+          },
+          "working_kv": {
+            "layer_idx": 14,
+            "candidate_range": [
+              3584,
+              3840
+            ],
+            "hot_range": [
+              3840,
+              4096
+            ],
+            "length": 512,
+            "candidate_tensor_length": 256,
+            "candidate_is_contiguous": true,
+            "candidate_selected_spans": [
+              [
+                3584,
+                3840
+              ]
+            ],
+            "k_shape": [
+              1,
+              2,
+              512,
+              128
+            ],
+            "v_shape": [
+              1,
+              2,
+              512,
+              128
+            ],
+            "k_device": "cpu",
+            "v_device": "cpu"
+          },
+          "attention_compare": {
+            "full_output_shape": [
+              1,
+              2,
+              1,
+              128
+            ],
+            "approx_output_shape": [
+              1,
+              2,
+              1,
+              128
+            ],
+            "mean_abs_diff": 0.00124168221373111,
+            "max_abs_diff": 0.00913083553314209,
+            "l2_diff": 0.03486974909901619
+          }
+        },
+        "27": {
+          "layer_idx": 27,
+          "top_k": 7,
+          "selected_block_ids": [
+            14,
+            13,
+            12,
+            11,
+            10,
+            9,
+            8
+          ],
+          "selected_block_spans": [
+            [
+              3584,
+              3840
+            ],
+            [
+              3328,
+              3584
+            ],
+            [
+              3072,
+              3328
+            ],
+            [
+              2816,
+              3072
+            ],
+            [
+              2560,
+              2816
+            ],
+            [
+              2304,
+              2560
+            ],
+            [
+              2048,
+              2304
+            ]
+          ],
+          "candidate_k_len": 1792,
+          "working_k_len": 2048,
+          "coverage_ratio": 0.4666666666666667,
+          "working_ratio": 0.5,
+          "candidate_kv": {
+            "layer_idx": 27,
+            "start": 2048,
+            "end": 3840,
+            "length": 1792,
+            "range_length": 1792,
+            "tensor_length": 1792,
+            "k_shape": [
+              1,
+              2,
+              1792,
+              128
+            ],
+            "v_shape": [
+              1,
+              2,
+              1792,
+              128
+            ],
+            "k_device": "cpu",
+            "v_device": "cpu",
+            "selected_spans": [
+              [
+                2048,
+                2304
+              ],
+              [
+                2304,
+                2560
+              ],
+              [
+                2560,
+                2816
+              ],
+              [
+                2816,
+                3072
+              ],
+              [
+                3072,
+                3328
+              ],
+              [
+                3328,
+                3584
+              ],
+              [
+                3584,
+                3840
+              ]
+            ],
+            "is_contiguous": true
+          },
+          "working_kv": {
+            "layer_idx": 27,
+            "candidate_range": [
+              2048,
+              3840
+            ],
+            "hot_range": [
+              3840,
+              4096
+            ],
+            "length": 2048,
+            "candidate_tensor_length": 1792,
+            "candidate_is_contiguous": true,
+            "candidate_selected_spans": [
+              [
+                2048,
+                2304
+              ],
+              [
+                2304,
+                2560
+              ],
+              [
+                2560,
+                2816
+              ],
+              [
+                2816,
+                3072
+              ],
+              [
+                3072,
+                3328
+              ],
+              [
+                3328,
+                3584
+              ],
+              [
+                3584,
+                3840
+              ]
+            ],
+            "k_shape": [
+              1,
+              2,
+              2048,
+              128
+            ],
+            "v_shape": [
+              1,
+              2,
+              2048,
+              128
+            ],
+            "k_device": "cpu",
+            "v_device": "cpu"
+          },
+          "attention_compare": {
+            "full_output_shape": [
+              1,
+              2,
+              1,
+              128
+            ],
+            "approx_output_shape": [
+              1,
+              2,
+              1,
+              128
+            ],
+            "mean_abs_diff": 0.011168486438691616,
+            "max_abs_diff": 0.0597529411315918,
+            "l2_diff": 0.26929742097854614
+          }
+        }
+      }
+    }
+  }
+}
