@@ -130,6 +130,22 @@ def should_apply_layer14_replacement(
 
     return True
 
+def check_tensor_writeback_ready(
+    *,
+    full_attention_output: torch.Tensor,
+    approx_attention_output: torch.Tensor,
+) -> tuple[bool, str | None]:
+    if full_attention_output.shape != approx_attention_output.shape:
+        return False, "shape_mismatch"
+
+    if full_attention_output.device != approx_attention_output.device:
+        return False, "device_mismatch"
+
+    if full_attention_output.dtype != approx_attention_output.dtype:
+        return False, "dtype_mismatch"
+
+    return True, None
+
 def evaluate_layer14_step(
     *,
     layers,
@@ -193,6 +209,8 @@ def evaluate_layer14_step(
     )
 
     attention_summary = attention_result.summary()
+    full_attention_output = attention_result.full_output
+    approx_attention_output = attention_result.approx_output
 
     candidate_is_contiguous = bool(candidate_kv.summary()["is_contiguous"])
     selected_block_ids = [s.block_id for s in top_scores]
@@ -227,7 +245,9 @@ def evaluate_layer14_step(
         "attention_compare": attention_summary,
         "replacement_ready": True,
         "replacement_gate_passed": replacement_gate_passed,
-        "replacement_applied": replacement_gate_passed,
+        "replacement_selected": replacement_gate_passed,
+        "_full_attention_output": full_attention_output,
+        "_approx_attention_output": approx_attention_output,
     }
 
 
@@ -286,12 +306,79 @@ def run_decode_loop_layer14_assisted_ready(
             and layer14_eval["replacement_gate_passed"]
         )
         replacement_hook_mode = (
-            "dry_run_no_writeback" if replacement_hook_enabled else "disabled"
+            "tensor_writeback_ready_only" if replacement_hook_enabled else "disabled"
         )
 
         layer14_eval["replacement_hook_enabled"] = replacement_hook_enabled
         layer14_eval["replacement_hook_triggered"] = replacement_hook_triggered
         layer14_eval["replacement_hook_mode"] = replacement_hook_mode
+
+        if replacement_hook_triggered:
+            tensor_writeback_ready, tensor_writeback_reason = check_tensor_writeback_ready(
+                full_attention_output=layer14_eval["_full_attention_output"],
+                approx_attention_output=layer14_eval["_approx_attention_output"],
+            )
+
+            layer14_eval["replacement_tensor_writeback_ready"] = tensor_writeback_ready
+            layer14_eval["replacement_tensor_writeback_reason"] = tensor_writeback_reason
+
+        if replacement_hook_triggered:
+            tensor_writeback_ready, tensor_writeback_reason = check_tensor_writeback_ready(
+                full_attention_output=layer14_eval["_full_attention_output"],
+                approx_attention_output=layer14_eval["_approx_attention_output"],
+            )
+
+            layer14_eval["replacement_tensor_writeback_ready"] = tensor_writeback_ready
+            layer14_eval["replacement_tensor_writeback_reason"] = tensor_writeback_reason
+
+            if tensor_writeback_ready:
+                writeback_tensor = layer14_eval["_approx_attention_output"]
+
+                layer14_eval["replacement_writeback_tensor_shape"] = list(writeback_tensor.shape)
+                layer14_eval["replacement_writeback_tensor_device"] = str(writeback_tensor.device)
+                layer14_eval["replacement_writeback_tensor_dtype"] = str(writeback_tensor.dtype)
+
+                layer14_eval["replacement_injection_selected"] = True
+                layer14_eval["replacement_injection_target"] = "layer14_attention_output"
+                layer14_eval["replacement_injection_mode"] = "planned_runtime_injection_only"
+
+                replacement_writeback_applied = True
+                replacement_writeback_mode = "tensor_writeback_ready_only"
+                replacement_fallback_reason = None
+
+                # Future actual tensor injection point:
+                # inject writeback_tensor into the layer-14 decode path here.
+                pass
+            else:
+                layer14_eval["replacement_writeback_tensor_shape"] = None
+                layer14_eval["replacement_writeback_tensor_device"] = None
+                layer14_eval["replacement_writeback_tensor_dtype"] = None
+
+                layer14_eval["replacement_injection_selected"] = False
+                layer14_eval["replacement_injection_target"] = None
+                layer14_eval["replacement_injection_mode"] = "tensor_not_ready"
+
+                replacement_writeback_applied = False
+                replacement_writeback_mode = "tensor_not_ready_fallback"
+                replacement_fallback_reason = tensor_writeback_reason
+        else:
+            layer14_eval["replacement_tensor_writeback_ready"] = False
+            layer14_eval["replacement_tensor_writeback_reason"] = "gate_not_passed"
+            layer14_eval["replacement_writeback_tensor_shape"] = None
+            layer14_eval["replacement_writeback_tensor_device"] = None
+            layer14_eval["replacement_writeback_tensor_dtype"] = None
+
+            layer14_eval["replacement_injection_selected"] = False
+            layer14_eval["replacement_injection_target"] = None
+            layer14_eval["replacement_injection_mode"] = "gate_not_passed"
+
+            replacement_writeback_applied = False
+            replacement_writeback_mode = "gate_not_passed"
+            replacement_fallback_reason = "gate_not_passed"
+
+        layer14_eval["replacement_writeback_applied"] = replacement_writeback_applied
+        layer14_eval["replacement_writeback_mode"] = replacement_writeback_mode
+        layer14_eval["replacement_fallback_reason"] = replacement_fallback_reason
 
         if replacement_hook_triggered:
             # Future actual replacement point:
@@ -303,6 +390,8 @@ def run_decode_loop_layer14_assisted_ready(
         # - compute approx attention output for layer 14
         # - route it into the actual decode path
         # For now we only log that the step is replacement-ready.
+        layer14_eval.pop("_full_attention_output", None)
+        layer14_eval.pop("_approx_attention_output", None)
         step_logs.append(
             {
                 "step_idx": step_idx,
@@ -413,8 +502,9 @@ def main() -> None:
         "decode_policy": {
             "cold_blocks_fixed_from_prefill": True,
             "decode_added_tokens_hot_only": True,
-            "replacement_applied": False,
             "replacement_scope": "layer14_gated_hooked_dry_run",
+            "writeback_stage": "tensor_writeback_ready_only",
+            "injection_stage": "planned_runtime_injection_only",
         },
         "max_new_tokens": args.max_new_tokens,
         "generated_tokens": decode_result["generated_tokens"],
@@ -430,7 +520,19 @@ def main() -> None:
         },
         "replacement_hook": {
             "enabled": args.enable_replacement_hook,
-            "mode": "dry_run_no_writeback",
+            "mode": "tensor_writeback_ready_only",
+            "target_layers": [14],
+        },
+        "replacement_writeback": {
+            "implemented": False,
+            "mode": "tensor_writeback_ready_only",
+            "target_layers": [14],
+            "fallback_to_full_path": True,
+        },
+        "replacement_injection": {
+            "implemented": False,
+            "mode": "planned_runtime_injection_only",
+            "target": "layer14_attention_output",
             "target_layers": [14],
         },
     }

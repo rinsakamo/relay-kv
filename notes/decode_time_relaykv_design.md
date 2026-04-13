@@ -310,7 +310,118 @@ The shadow prototype supports the following near-term implementation stance:
 
 ---
 
-## 7. Retrieval cadence
+## 7. Layer-14 Gated Actual Writeback Plan
+
+### Goal
+
+Move from `layer14_gated_hooked_dry_run` to a first actual writeback path for layer 14 only.
+
+The first objective is not full all-layer assisted decoding, but a minimal and observable replacement path that applies only when the current layer-14 gate passes.
+
+### Scope
+
+First writeback prototype:
+
+- target layer: `14` only
+- prompt style for first test: `prose`
+- decode policy:
+  - cold blocks fixed from prefill
+  - decode-added tokens stay hot-only
+- replacement policy:
+  - gated only
+  - no unconditional replacement
+- fallback policy:
+  - if gate fails, use the full path
+  - if writeback fails, fall back to the full path
+
+### Writeback target
+
+The writeback target for the first prototype should be the **approximate layer-14 attention output**.
+
+Reason:
+
+- this is already the object compared in the shadow+compare stage
+- it aligns with the current full-vs-approx attention comparison logic
+- it keeps the first replacement concept narrow and observable
+
+### Writeback condition
+
+Use the current layer-14 gate as the v1 replacement gate.
+
+Gate passes only if all of the following hold:
+
+- candidate is contiguous
+- exactly one block is selected
+- selected block id is in `{14, 15}`
+- `mean_abs_diff <= 0.002`
+
+### Runtime stages
+
+The implementation should keep these stages separate:
+
+1. `replacement_ready`
+   - working KV and compare outputs are available
+
+2. `replacement_gate_passed`
+   - the step is considered safe enough for replacement
+
+3. `replacement_hook_triggered`
+   - the runtime enters the replacement branch
+
+4. `replacement_writeback_applied`
+   - the approximate output is actually written back into the decode path
+
+This separation should remain explicit in logs.
+
+### First writeback policy
+
+For the first actual writeback prototype:
+
+- apply writeback only for layer 14
+- apply writeback only when the gate passes
+- otherwise keep the full path
+- keep logging for both the gate result and the writeback result
+
+### Fallback policy
+
+If any of the following occurs:
+
+- gate does not pass
+- output shape mismatch
+- tensor device mismatch
+- unexpected runtime error during replacement
+
+then:
+
+- do not apply writeback
+- continue with the full path
+- record the reason in logs
+
+### Required logging
+
+Each decode step should record:
+
+- `replacement_ready`
+- `replacement_gate_passed`
+- `replacement_hook_triggered`
+- `replacement_writeback_applied`
+- `replacement_writeback_mode`
+- `replacement_fallback_reason` if any
+- `attention_compare`
+- selected block ids
+- candidate / working KV sizes
+
+### First success criterion
+
+The first actual writeback prototype is successful if:
+
+- the decode loop completes
+- gate-pass steps are clearly identified
+- writeback is applied only on those steps
+- gate-fail steps stay on the full path
+- logging cleanly distinguishes hook-only vs actual writeback
+
+## 8. Retrieval cadence
 
 A practical design question is whether retrieval should happen at every decode step.
 
@@ -336,7 +447,7 @@ Later test every-2 or every-4-step refresh as a speed-quality tradeoff.
 
 ---
 
-## 8. What to benchmark first
+## 9. What to benchmark first
 
 The first decode-time benchmark should stay small.
 
@@ -360,7 +471,7 @@ Not “beat full generation immediately,” but:
 
 ---
 
-## 9. Minimum observable outputs
+## 10. Minimum observable outputs
 
 The first decode-time prototype should save:
 
@@ -379,7 +490,7 @@ This is more important than making the code elegant in the first version.
 
 ---
 
-## 10. Risks and expected bottlenecks
+## 11. Risks and expected bottlenecks
 
 ### Likely bottlenecks
 - repeated cold block scoring each step
@@ -397,7 +508,7 @@ That is acceptable if it demonstrates:
 
 ---
 
-## 11. Recommended implementation order
+## 12. Recommended implementation order
 
 ### Phase 1
 Build a representative-layer decode-time prototype
@@ -418,7 +529,7 @@ Add cadence / optimization experiments
 
 ---
 
-## 12. Immediate next coding task
+## 13. Immediate next coding task
 
 The next coding task should be:
 
