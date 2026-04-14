@@ -146,6 +146,34 @@ def check_tensor_writeback_ready(
 
     return True, None
 
+def prepare_layer14_actual_injection(
+    *,
+    injection_tensor: torch.Tensor,
+    injection_target: str,
+) -> tuple[bool, str | None]:
+    if injection_target != "layer14_attention_output":
+        return False, "unsupported_injection_target"
+
+    if injection_tensor.ndim != 4:
+        return False, "unexpected_injection_tensor_rank"
+
+    if injection_tensor.shape[-1] != 128:
+        return False, "unexpected_hidden_dim"
+
+    return True, None
+
+def apply_layer14_actual_injection(
+    *,
+    injection_tensor: torch.Tensor,
+    injection_target: str,
+) -> tuple[bool, str | None]:
+    if injection_target != "layer14_attention_output":
+        return False, "unsupported_injection_target"
+
+    # Actual forward-path wiring is not implemented yet.
+    # This helper exists to define the callsite and wiring contract.
+    return False, "not_wired_yet"
+
 def evaluate_layer14_step(
     *,
     layers,
@@ -340,7 +368,40 @@ def run_decode_loop_layer14_assisted_ready(
 
                 layer14_eval["replacement_injection_selected"] = True
                 layer14_eval["replacement_injection_target"] = "layer14_attention_output"
-                layer14_eval["replacement_injection_mode"] = "planned_runtime_injection_only"
+                layer14_eval["replacement_injection_mode"] = "actual_runtime_tensor_selected"
+
+                injection_ready, injection_reason = prepare_layer14_actual_injection(
+                    injection_tensor=writeback_tensor,
+                    injection_target=layer14_eval["replacement_injection_target"],
+                )
+
+                layer14_eval["replacement_injection_ready"] = injection_ready
+                layer14_eval["replacement_injection_ready_reason"] = injection_reason
+
+                layer14_eval["replacement_injection_tensor_shape"] = list(writeback_tensor.shape)
+                layer14_eval["replacement_injection_tensor_device"] = str(writeback_tensor.device)
+                layer14_eval["replacement_injection_tensor_dtype"] = str(writeback_tensor.dtype)
+
+                if injection_ready:
+                    injection_applied, injection_apply_reason = apply_layer14_actual_injection(
+                    injection_tensor=writeback_tensor,
+                    injection_target=layer14_eval["replacement_injection_target"],
+                )
+
+                layer14_eval["replacement_injection_apply_reason"] = injection_apply_reason
+
+                if injection_applied:
+                    layer14_eval["replacement_injection_applied"] = True
+                    layer14_eval["replacement_injection_mode"] = "actual_injection_wired"
+                else:
+                    layer14_eval["replacement_injection_applied"] = False
+                    layer14_eval["replacement_injection_mode"] = "actual_injection_callsite_defined"
+
+                replacement_writeback_applied = True
+                replacement_writeback_mode = "tensor_writeback_ready_only"
+                replacement_fallback_reason = None
+
+                pass
 
                 replacement_writeback_applied = True
                 replacement_writeback_mode = "tensor_writeback_ready_only"
@@ -357,6 +418,14 @@ def run_decode_loop_layer14_assisted_ready(
                 layer14_eval["replacement_injection_selected"] = False
                 layer14_eval["replacement_injection_target"] = None
                 layer14_eval["replacement_injection_mode"] = "tensor_not_ready"
+                layer14_eval["replacement_injection_ready"] = False
+                layer14_eval["replacement_injection_ready_reason"] = "tensor_not_ready"
+                layer14_eval["replacement_injection_apply_reason"] = "tensor_not_ready"
+
+                layer14_eval["replacement_injection_applied"] = False
+                layer14_eval["replacement_injection_tensor_shape"] = None
+                layer14_eval["replacement_injection_tensor_device"] = None
+                layer14_eval["replacement_injection_tensor_dtype"] = None
 
                 replacement_writeback_applied = False
                 replacement_writeback_mode = "tensor_not_ready_fallback"
@@ -371,6 +440,14 @@ def run_decode_loop_layer14_assisted_ready(
             layer14_eval["replacement_injection_selected"] = False
             layer14_eval["replacement_injection_target"] = None
             layer14_eval["replacement_injection_mode"] = "gate_not_passed"
+            layer14_eval["replacement_injection_ready"] = False
+            layer14_eval["replacement_injection_ready_reason"] = "gate_not_passed"
+            layer14_eval["replacement_injection_apply_reason"] = "gate_not_passed"
+
+            layer14_eval["replacement_injection_applied"] = False
+            layer14_eval["replacement_injection_tensor_shape"] = None
+            layer14_eval["replacement_injection_tensor_device"] = None
+            layer14_eval["replacement_injection_tensor_dtype"] = None
 
             replacement_writeback_applied = False
             replacement_writeback_mode = "gate_not_passed"
@@ -504,7 +581,7 @@ def main() -> None:
             "decode_added_tokens_hot_only": True,
             "replacement_scope": "layer14_gated_hooked_dry_run",
             "writeback_stage": "tensor_writeback_ready_only",
-            "injection_stage": "planned_runtime_injection_only",
+            "injection_stage": "actual_injection_callsite_defined",
         },
         "max_new_tokens": args.max_new_tokens,
         "generated_tokens": decode_result["generated_tokens"],
@@ -531,10 +608,10 @@ def main() -> None:
         },
         "replacement_injection": {
             "implemented": False,
-            "mode": "planned_runtime_injection_only",
+            "mode": "actual_injection_callsite_defined",
             "target": "layer14_attention_output",
             "target_layers": [14],
-        },
+        }
     }
 
     output_path = RESULTS_DIR / args.output
