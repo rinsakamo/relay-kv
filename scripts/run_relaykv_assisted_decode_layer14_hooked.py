@@ -28,6 +28,23 @@ from relaykv import (
 
 RESULTS_DIR = Path("results/raw/prototype_checks")
 
+from dataclasses import dataclass
+
+@dataclass
+class Layer14InjectionState:
+    enabled: bool = False
+    injection_tensor: torch.Tensor | None = None
+
+    attn_hook_seen: bool = False
+    attn_last_seen_shape: list[int] | None = None
+    attn_last_seen_dtype: str | None = None
+    attn_last_seen_device: str | None = None
+
+    layer_hook_seen: bool = False
+    layer_last_seen_shape: list[int] | None = None
+    layer_last_seen_dtype: str | None = None
+    layer_last_seen_device: str | None = None
+
 
 def ensure_results_dir() -> None:
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
@@ -174,6 +191,39 @@ def apply_layer14_actual_injection(
     # This helper exists to define the callsite and wiring contract.
     return False, "not_wired_yet"
 
+def make_layer14_attention_probe_hook(state: Layer14InjectionState):
+    def _hook(module, inputs, output):
+        state.attn_hook_seen = True
+
+        if isinstance(output, tuple):
+            tensor = output[0]
+        else:
+            tensor = output
+
+        state.attn_last_seen_shape = list(tensor.shape)
+        state.attn_last_seen_dtype = str(tensor.dtype)
+        state.attn_last_seen_device = str(tensor.device)
+        return output
+
+    return _hook
+
+
+def make_layer14_block_probe_hook(state: Layer14InjectionState):
+    def _hook(module, inputs, output):
+        state.layer_hook_seen = True
+
+        if isinstance(output, tuple):
+            tensor = output[0]
+        else:
+            tensor = output
+
+        state.layer_last_seen_shape = list(tensor.shape)
+        state.layer_last_seen_dtype = str(tensor.dtype)
+        state.layer_last_seen_device = str(tensor.device)
+        return output
+
+    return _hook
+
 def evaluate_layer14_step(
     *,
     layers,
@@ -240,6 +290,25 @@ def evaluate_layer14_step(
     full_attention_output = attention_result.full_output
     approx_attention_output = attention_result.approx_output
 
+    full_shape = list(full_attention_output.shape)
+    approx_shape = list(approx_attention_output.shape)
+
+    full_num_heads = int(full_shape[1]) if len(full_shape) >= 4 else None
+    full_head_dim = int(full_shape[-1]) if len(full_shape) >= 4 else None
+    approx_num_heads = int(approx_shape[1]) if len(approx_shape) >= 4 else None
+    approx_head_dim = int(approx_shape[-1]) if len(approx_shape) >= 4 else None
+
+    full_flattened_last_dim = (
+        int(full_num_heads * full_head_dim)
+        if full_num_heads is not None and full_head_dim is not None
+        else None
+    )
+    approx_flattened_last_dim = (
+        int(approx_num_heads * approx_head_dim)
+        if approx_num_heads is not None and approx_head_dim is not None
+        else None
+    )
+
     candidate_is_contiguous = bool(candidate_kv.summary()["is_contiguous"])
     selected_block_ids = [s.block_id for s in top_scores]
 
@@ -271,6 +340,16 @@ def evaluate_layer14_step(
         "candidate_kv": candidate_kv.summary(),
         "working_kv": working_kv.summary(),
         "attention_compare": attention_summary,
+        "attention_tensor_breakdown": {
+            "full_shape": full_shape,
+            "approx_shape": approx_shape,
+            "full_num_heads": full_num_heads,
+            "full_head_dim": full_head_dim,
+            "full_flattened_last_dim": full_flattened_last_dim,
+            "approx_num_heads": approx_num_heads,
+            "approx_head_dim": approx_head_dim,
+            "approx_flattened_last_dim": approx_flattened_last_dim,
+        },
         "replacement_ready": True,
         "replacement_gate_passed": replacement_gate_passed,
         "replacement_selected": replacement_gate_passed,
@@ -304,7 +383,28 @@ def run_decode_loop_layer14_assisted_ready(
     current_input_ids = input_ids[:, -1:]
     current_attention_mask = attention_mask
 
+    injection_state = Layer14InjectionState()
+
+    layer14_attn_module = model.model.layers[14].self_attn
+    layer14_block_module = model.model.layers[14]
+
+    layer14_attn_probe_handle = layer14_attn_module.register_forward_hook(
+        make_layer14_attention_probe_hook(injection_state)
+    )
+    layer14_block_probe_handle = layer14_block_module.register_forward_hook(
+        make_layer14_block_probe_hook(injection_state)
+    )
+
     for step_idx in range(max_new_tokens):
+        injection_state.attn_hook_seen = False
+        injection_state.attn_last_seen_shape = None
+        injection_state.attn_last_seen_dtype = None
+        injection_state.attn_last_seen_device = None
+
+        injection_state.layer_hook_seen = False
+        injection_state.layer_last_seen_shape = None
+        injection_state.layer_last_seen_dtype = None
+        injection_state.layer_last_seen_device = None
         with torch.no_grad():
             outputs = model(
                 input_ids=current_input_ids,
@@ -350,15 +450,6 @@ def run_decode_loop_layer14_assisted_ready(
             layer14_eval["replacement_tensor_writeback_ready"] = tensor_writeback_ready
             layer14_eval["replacement_tensor_writeback_reason"] = tensor_writeback_reason
 
-        if replacement_hook_triggered:
-            tensor_writeback_ready, tensor_writeback_reason = check_tensor_writeback_ready(
-                full_attention_output=layer14_eval["_full_attention_output"],
-                approx_attention_output=layer14_eval["_approx_attention_output"],
-            )
-
-            layer14_eval["replacement_tensor_writeback_ready"] = tensor_writeback_ready
-            layer14_eval["replacement_tensor_writeback_reason"] = tensor_writeback_reason
-
             if tensor_writeback_ready:
                 writeback_tensor = layer14_eval["_approx_attention_output"]
 
@@ -368,7 +459,6 @@ def run_decode_loop_layer14_assisted_ready(
 
                 layer14_eval["replacement_injection_selected"] = True
                 layer14_eval["replacement_injection_target"] = "layer14_attention_output"
-                layer14_eval["replacement_injection_mode"] = "actual_runtime_tensor_selected"
 
                 injection_ready, injection_reason = prepare_layer14_actual_injection(
                     injection_tensor=writeback_tensor,
@@ -377,39 +467,32 @@ def run_decode_loop_layer14_assisted_ready(
 
                 layer14_eval["replacement_injection_ready"] = injection_ready
                 layer14_eval["replacement_injection_ready_reason"] = injection_reason
-
                 layer14_eval["replacement_injection_tensor_shape"] = list(writeback_tensor.shape)
                 layer14_eval["replacement_injection_tensor_device"] = str(writeback_tensor.device)
                 layer14_eval["replacement_injection_tensor_dtype"] = str(writeback_tensor.dtype)
 
                 if injection_ready:
                     injection_applied, injection_apply_reason = apply_layer14_actual_injection(
-                    injection_tensor=writeback_tensor,
-                    injection_target=layer14_eval["replacement_injection_target"],
-                )
+                        injection_tensor=writeback_tensor,
+                        injection_target=layer14_eval["replacement_injection_target"],
+                    )
+                    layer14_eval["replacement_injection_apply_reason"] = injection_apply_reason
 
-                layer14_eval["replacement_injection_apply_reason"] = injection_apply_reason
-
-                if injection_applied:
-                    layer14_eval["replacement_injection_applied"] = True
-                    layer14_eval["replacement_injection_mode"] = "actual_injection_wired"
+                    if injection_applied:
+                        layer14_eval["replacement_injection_applied"] = True
+                        layer14_eval["replacement_injection_mode"] = "actual_injection_wired"
+                    else:
+                        layer14_eval["replacement_injection_applied"] = False
+                        layer14_eval["replacement_injection_mode"] = "actual_injection_callsite_defined"
                 else:
+                    layer14_eval["replacement_injection_apply_reason"] = injection_reason
                     layer14_eval["replacement_injection_applied"] = False
-                    layer14_eval["replacement_injection_mode"] = "actual_injection_callsite_defined"
+                    layer14_eval["replacement_injection_mode"] = "injection_not_ready"
 
                 replacement_writeback_applied = True
                 replacement_writeback_mode = "tensor_writeback_ready_only"
                 replacement_fallback_reason = None
 
-                pass
-
-                replacement_writeback_applied = True
-                replacement_writeback_mode = "tensor_writeback_ready_only"
-                replacement_fallback_reason = None
-
-                # Future actual tensor injection point:
-                # inject writeback_tensor into the layer-14 decode path here.
-                pass
             else:
                 layer14_eval["replacement_writeback_tensor_shape"] = None
                 layer14_eval["replacement_writeback_tensor_device"] = None
@@ -421,7 +504,6 @@ def run_decode_loop_layer14_assisted_ready(
                 layer14_eval["replacement_injection_ready"] = False
                 layer14_eval["replacement_injection_ready_reason"] = "tensor_not_ready"
                 layer14_eval["replacement_injection_apply_reason"] = "tensor_not_ready"
-
                 layer14_eval["replacement_injection_applied"] = False
                 layer14_eval["replacement_injection_tensor_shape"] = None
                 layer14_eval["replacement_injection_tensor_device"] = None
@@ -430,6 +512,7 @@ def run_decode_loop_layer14_assisted_ready(
                 replacement_writeback_applied = False
                 replacement_writeback_mode = "tensor_not_ready_fallback"
                 replacement_fallback_reason = tensor_writeback_reason
+
         else:
             layer14_eval["replacement_tensor_writeback_ready"] = False
             layer14_eval["replacement_tensor_writeback_reason"] = "gate_not_passed"
@@ -443,7 +526,6 @@ def run_decode_loop_layer14_assisted_ready(
             layer14_eval["replacement_injection_ready"] = False
             layer14_eval["replacement_injection_ready_reason"] = "gate_not_passed"
             layer14_eval["replacement_injection_apply_reason"] = "gate_not_passed"
-
             layer14_eval["replacement_injection_applied"] = False
             layer14_eval["replacement_injection_tensor_shape"] = None
             layer14_eval["replacement_injection_tensor_device"] = None
@@ -453,9 +535,50 @@ def run_decode_loop_layer14_assisted_ready(
             replacement_writeback_mode = "gate_not_passed"
             replacement_fallback_reason = "gate_not_passed"
 
-        layer14_eval["replacement_writeback_applied"] = replacement_writeback_applied
-        layer14_eval["replacement_writeback_mode"] = replacement_writeback_mode
-        layer14_eval["replacement_fallback_reason"] = replacement_fallback_reason
+        layer14_eval["replacement_attn_hook_seen"] = injection_state.attn_hook_seen
+        layer14_eval["replacement_attn_hook_shape"] = injection_state.attn_last_seen_shape
+        layer14_eval["replacement_attn_hook_dtype"] = injection_state.attn_last_seen_dtype
+        layer14_eval["replacement_attn_hook_device"] = injection_state.attn_last_seen_device
+
+        layer14_eval["replacement_layer_hook_seen"] = injection_state.layer_hook_seen
+        layer14_eval["replacement_layer_hook_shape"] = injection_state.layer_last_seen_shape
+        layer14_eval["replacement_layer_hook_dtype"] = injection_state.layer_last_seen_dtype
+        layer14_eval["replacement_layer_hook_device"] = injection_state.layer_last_seen_device
+
+        attn_hook_shape = injection_state.attn_last_seen_shape
+        if attn_hook_shape is not None and len(attn_hook_shape) >= 3:
+            layer14_eval["replacement_attn_hook_hidden_size"] = attn_hook_shape[-1]
+        else:
+            layer14_eval["replacement_attn_hook_hidden_size"] = None
+
+        layer_hook_shape = injection_state.layer_last_seen_shape
+        if layer_hook_shape is not None and len(layer_hook_shape) >= 3:
+            layer14_eval["replacement_layer_hook_hidden_size"] = layer_hook_shape[-1]
+        else:
+            layer14_eval["replacement_layer_hook_hidden_size"] = None
+
+        layer14_eval["replacement_shape_compare"] = {
+            "writeback_tensor_shape": layer14_eval.get("replacement_writeback_tensor_shape"),
+            "attn_hook_output_shape": layer14_eval["replacement_attn_hook_shape"],
+            "layer_hook_output_shape": layer14_eval["replacement_layer_hook_shape"],
+        }
+
+        layer14_eval["replacement_representation_compare"] = {
+            "writeback_device": layer14_eval.get("replacement_writeback_tensor_device"),
+            "writeback_dtype": layer14_eval.get("replacement_writeback_tensor_dtype"),
+            "attn_hook_device": layer14_eval["replacement_attn_hook_device"],
+            "attn_hook_dtype": layer14_eval["replacement_attn_hook_dtype"],
+            "layer_hook_device": layer14_eval["replacement_layer_hook_device"],
+            "layer_hook_dtype": layer14_eval["replacement_layer_hook_dtype"],
+        }
+
+        layer14_eval["replacement_layout_compare"] = {
+            "writeback_num_heads": layer14_eval["attention_tensor_breakdown"]["approx_num_heads"],
+            "writeback_head_dim": layer14_eval["attention_tensor_breakdown"]["approx_head_dim"],
+            "writeback_flattened_last_dim": layer14_eval["attention_tensor_breakdown"]["approx_flattened_last_dim"],
+            "attn_hook_hidden_size": layer14_eval["replacement_attn_hook_hidden_size"],
+            "layer_hook_hidden_size": layer14_eval["replacement_layer_hook_hidden_size"],
+        }
 
         if replacement_hook_triggered:
             # Future actual replacement point:
@@ -495,6 +618,9 @@ def run_decode_loop_layer14_assisted_ready(
     tokens_per_sec = (len(generated_token_ids) / elapsed) if elapsed > 0 else 0.0
     generated_text = tokenizer.decode(generated_token_ids, skip_special_tokens=True)
 
+    layer14_attn_probe_handle.remove()
+    layer14_block_probe_handle.remove()
+
     return {
         "generated_token_ids": generated_token_ids,
         "generated_text": generated_text,
@@ -503,8 +629,7 @@ def run_decode_loop_layer14_assisted_ready(
         "tokens_per_sec": tokens_per_sec,
         "step_logs": step_logs,
     }
-
-
+    
 def main() -> None:
     parser = argparse.ArgumentParser(description="Layer-14 assisted-ready decode prototype.")
     parser.add_argument("--model", type=str, default="Qwen/Qwen2.5-1.5B-Instruct")
@@ -541,6 +666,16 @@ def main() -> None:
     ensure_results_dir()
 
     tokenizer, model, device = load_model(args.model)
+
+    model_config = model.config
+    hidden_size = int(model_config.hidden_size)
+    num_attention_heads = int(model_config.num_attention_heads)
+    num_key_value_heads = int(
+        getattr(model_config, "num_key_value_heads", model_config.num_attention_heads)
+    )
+    head_dim = hidden_size // num_attention_heads
+    kv_hidden_size = num_key_value_heads * head_dim
+
     prompt = make_prompt_for_target_tokens(args.seq_len, args.prompt_type)
 
     prefill_inputs, prefill_outputs = run_prefill(
@@ -569,6 +704,13 @@ def main() -> None:
     summary = {
         "mode": "layer14_assisted_ready_decode_prototype",
         "model": args.model,
+        "model_attention_layout": {
+            "hidden_size": hidden_size,
+            "num_attention_heads": num_attention_heads,
+            "num_key_value_heads": num_key_value_heads,
+            "head_dim": head_dim,
+            "kv_hidden_size": kv_hidden_size,
+        },
         "prompt_type": args.prompt_type,
         "seq_len_target": args.seq_len,
         "seq_len_actual": seq_len_actual,
@@ -581,7 +723,7 @@ def main() -> None:
             "decode_added_tokens_hot_only": True,
             "replacement_scope": "layer14_gated_hooked_dry_run",
             "writeback_stage": "tensor_writeback_ready_only",
-            "injection_stage": "actual_injection_callsite_defined",
+            "injection_stage": "attention_hook_point_verified",
         },
         "max_new_tokens": args.max_new_tokens,
         "generated_tokens": decode_result["generated_tokens"],
@@ -608,7 +750,7 @@ def main() -> None:
         },
         "replacement_injection": {
             "implemented": False,
-            "mode": "actual_injection_callsite_defined",
+            "mode": "attention_hook_point_verified",
             "target": "layer14_attention_output",
             "target_layers": [14],
         }
