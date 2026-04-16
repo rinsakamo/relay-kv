@@ -29,7 +29,6 @@ from relaykv import (
 RESULTS_DIR = Path("results/raw/prototype_checks")
 
 from dataclasses import dataclass
-
 @dataclass
 class Layer14InjectionState:
     enabled: bool = False
@@ -44,6 +43,16 @@ class Layer14InjectionState:
     layer_last_seen_shape: list[int] | None = None
     layer_last_seen_dtype: str | None = None
     layer_last_seen_device: str | None = None
+
+    oproj_pre_hook_seen: bool = False
+    oproj_pre_last_seen_shape: list[int] | None = None
+    oproj_pre_last_seen_dtype: str | None = None
+    oproj_pre_last_seen_device: str | None = None
+
+    oproj_post_hook_seen: bool = False
+    oproj_post_last_seen_shape: list[int] | None = None
+    oproj_post_last_seen_dtype: str | None = None
+    oproj_post_last_seen_device: str | None = None
 
 
 def ensure_results_dir() -> None:
@@ -191,6 +200,44 @@ def apply_layer14_actual_injection(
     # This helper exists to define the callsite and wiring contract.
     return False, "not_wired_yet"
 
+def kv_heads_to_hidden_state_bridge(
+    kv_head_output: torch.Tensor,
+    *,
+    num_attention_heads: int,
+    num_key_value_heads: int,
+) -> torch.Tensor:
+    """
+    kv_head_output: [batch, kv_heads, q_len, head_dim]
+    returns:        [batch, q_len, hidden_size]
+    """
+    if kv_head_output.ndim != 4:
+        raise ValueError(f"Expected 4D kv_head_output, got shape={list(kv_head_output.shape)}")
+
+    batch_size, kv_heads, q_len, head_dim = kv_head_output.shape
+
+    if kv_heads != num_key_value_heads:
+        raise ValueError(
+            f"KV head mismatch: tensor has {kv_heads}, expected {num_key_value_heads}"
+        )
+
+    if num_attention_heads % num_key_value_heads != 0:
+        raise ValueError(
+            f"num_attention_heads={num_attention_heads} must be divisible by "
+            f"num_key_value_heads={num_key_value_heads}"
+        )
+
+    repeat_factor = num_attention_heads // num_key_value_heads
+
+    # [B, kv_heads, Q, D] -> [B, attn_heads, Q, D]
+    expanded = kv_head_output.repeat_interleave(repeat_factor, dim=1)
+
+    # [B, attn_heads, Q, D] -> [B, Q, attn_heads, D]
+    expanded = expanded.permute(0, 2, 1, 3).contiguous()
+
+    # [B, Q, attn_heads, D] -> [B, Q, hidden_size]
+    hidden_state = expanded.view(batch_size, q_len, num_attention_heads * head_dim)
+    return hidden_state
+
 def make_layer14_attention_probe_hook(state: Layer14InjectionState):
     def _hook(module, inputs, output):
         state.attn_hook_seen = True
@@ -220,6 +267,31 @@ def make_layer14_block_probe_hook(state: Layer14InjectionState):
         state.layer_last_seen_shape = list(tensor.shape)
         state.layer_last_seen_dtype = str(tensor.dtype)
         state.layer_last_seen_device = str(tensor.device)
+        return output
+
+    return _hook
+
+def make_layer14_oproj_pre_hook(state: Layer14InjectionState):
+    def _hook(module, inputs):
+        state.oproj_pre_hook_seen = True
+
+        tensor = inputs[0]
+        state.oproj_pre_last_seen_shape = list(tensor.shape)
+        state.oproj_pre_last_seen_dtype = str(tensor.dtype)
+        state.oproj_pre_last_seen_device = str(tensor.device)
+
+    return _hook
+
+
+def make_layer14_oproj_post_hook(state: Layer14InjectionState):
+    def _hook(module, inputs, output):
+        state.oproj_post_hook_seen = True
+
+        tensor = output[0] if isinstance(output, tuple) else output
+        state.oproj_post_last_seen_shape = list(tensor.shape)
+        state.oproj_post_last_seen_dtype = str(tensor.dtype)
+        state.oproj_post_last_seen_device = str(tensor.device)
+
         return output
 
     return _hook
@@ -367,6 +439,8 @@ def run_decode_loop_layer14_assisted_ready(
     max_new_tokens: int,
     hot_window: int,
     block_size: int,
+    num_attention_heads: int,
+    num_key_value_heads: int,
     scoring_variant: str,
     mean_abs_diff_threshold: float,
     enable_replacement_hook: bool = False,
@@ -394,6 +468,24 @@ def run_decode_loop_layer14_assisted_ready(
     layer14_block_probe_handle = layer14_block_module.register_forward_hook(
         make_layer14_block_probe_hook(injection_state)
     )
+    injection_state = Layer14InjectionState()
+
+    layer14_attn_module = model.model.layers[14].self_attn
+    layer14_block_module = model.model.layers[14]
+    layer14_oproj_module = model.model.layers[14].self_attn.o_proj
+
+    layer14_attn_probe_handle = layer14_attn_module.register_forward_hook(
+        make_layer14_attention_probe_hook(injection_state)
+    )
+    layer14_block_probe_handle = layer14_block_module.register_forward_hook(
+        make_layer14_block_probe_hook(injection_state)
+    )
+    layer14_oproj_pre_handle = layer14_oproj_module.register_forward_pre_hook(
+        make_layer14_oproj_pre_hook(injection_state)
+    )
+    layer14_oproj_post_handle = layer14_oproj_module.register_forward_hook(
+        make_layer14_oproj_post_hook(injection_state)
+    )
 
     for step_idx in range(max_new_tokens):
         injection_state.attn_hook_seen = False
@@ -405,6 +497,17 @@ def run_decode_loop_layer14_assisted_ready(
         injection_state.layer_last_seen_shape = None
         injection_state.layer_last_seen_dtype = None
         injection_state.layer_last_seen_device = None
+
+        injection_state.oproj_pre_hook_seen = False
+        injection_state.oproj_pre_last_seen_shape = None
+        injection_state.oproj_pre_last_seen_dtype = None
+        injection_state.oproj_pre_last_seen_device = None
+
+        injection_state.oproj_post_hook_seen = False
+        injection_state.oproj_post_last_seen_shape = None
+        injection_state.oproj_post_last_seen_dtype = None
+        injection_state.oproj_post_last_seen_device = None
+
         with torch.no_grad():
             outputs = model(
                 input_ids=current_input_ids,
@@ -452,6 +555,27 @@ def run_decode_loop_layer14_assisted_ready(
 
             if tensor_writeback_ready:
                 writeback_tensor = layer14_eval["_approx_attention_output"]
+
+                bridge_hidden_state = kv_heads_to_hidden_state_bridge(
+                    writeback_tensor,
+                    num_attention_heads=num_attention_heads,
+                    num_key_value_heads=num_key_value_heads,
+                )
+
+                layer14_eval["replacement_bridge_hidden_state_shape"] = list(
+                    bridge_hidden_state.shape
+                )
+                layer14_eval["replacement_bridge_hidden_state_device"] = str(
+                    bridge_hidden_state.device
+                )
+                layer14_eval["replacement_bridge_hidden_state_dtype"] = str(
+                    bridge_hidden_state.dtype
+                )
+                layer14_eval["replacement_bridge_compare"] = {
+                    "writeback_tensor_shape": list(writeback_tensor.shape),
+                    "bridge_hidden_state_shape": list(bridge_hidden_state.shape),
+                    "expected_hidden_size": num_attention_heads * writeback_tensor.shape[-1],
+                }
 
                 layer14_eval["replacement_writeback_tensor_shape"] = list(writeback_tensor.shape)
                 layer14_eval["replacement_writeback_tensor_device"] = str(writeback_tensor.device)
@@ -509,6 +633,11 @@ def run_decode_loop_layer14_assisted_ready(
                 layer14_eval["replacement_injection_tensor_device"] = None
                 layer14_eval["replacement_injection_tensor_dtype"] = None
 
+                layer14_eval["replacement_bridge_hidden_state_shape"] = None
+                layer14_eval["replacement_bridge_hidden_state_device"] = None
+                layer14_eval["replacement_bridge_hidden_state_dtype"] = None
+                layer14_eval["replacement_bridge_compare"] = None
+
                 replacement_writeback_applied = False
                 replacement_writeback_mode = "tensor_not_ready_fallback"
                 replacement_fallback_reason = tensor_writeback_reason
@@ -531,6 +660,11 @@ def run_decode_loop_layer14_assisted_ready(
             layer14_eval["replacement_injection_tensor_device"] = None
             layer14_eval["replacement_injection_tensor_dtype"] = None
 
+            layer14_eval["replacement_bridge_hidden_state_shape"] = None
+            layer14_eval["replacement_bridge_hidden_state_device"] = None
+            layer14_eval["replacement_bridge_hidden_state_dtype"] = None
+            layer14_eval["replacement_bridge_compare"] = None
+
             replacement_writeback_applied = False
             replacement_writeback_mode = "gate_not_passed"
             replacement_fallback_reason = "gate_not_passed"
@@ -544,6 +678,16 @@ def run_decode_loop_layer14_assisted_ready(
         layer14_eval["replacement_layer_hook_shape"] = injection_state.layer_last_seen_shape
         layer14_eval["replacement_layer_hook_dtype"] = injection_state.layer_last_seen_dtype
         layer14_eval["replacement_layer_hook_device"] = injection_state.layer_last_seen_device
+
+        layer14_eval["replacement_oproj_pre_hook_seen"] = injection_state.oproj_pre_hook_seen
+        layer14_eval["replacement_oproj_pre_hook_shape"] = injection_state.oproj_pre_last_seen_shape
+        layer14_eval["replacement_oproj_pre_hook_dtype"] = injection_state.oproj_pre_last_seen_dtype
+        layer14_eval["replacement_oproj_pre_hook_device"] = injection_state.oproj_pre_last_seen_device
+
+        layer14_eval["replacement_oproj_post_hook_seen"] = injection_state.oproj_post_hook_seen
+        layer14_eval["replacement_oproj_post_hook_shape"] = injection_state.oproj_post_last_seen_shape
+        layer14_eval["replacement_oproj_post_hook_dtype"] = injection_state.oproj_post_last_seen_dtype
+        layer14_eval["replacement_oproj_post_hook_device"] = injection_state.oproj_post_last_seen_device
 
         attn_hook_shape = injection_state.attn_last_seen_shape
         if attn_hook_shape is not None and len(attn_hook_shape) >= 3:
@@ -560,6 +704,8 @@ def run_decode_loop_layer14_assisted_ready(
         layer14_eval["replacement_shape_compare"] = {
             "writeback_tensor_shape": layer14_eval.get("replacement_writeback_tensor_shape"),
             "attn_hook_output_shape": layer14_eval["replacement_attn_hook_shape"],
+            "oproj_pre_hook_input_shape": layer14_eval["replacement_oproj_pre_hook_shape"],
+            "oproj_post_hook_output_shape": layer14_eval["replacement_oproj_post_hook_shape"],
             "layer_hook_output_shape": layer14_eval["replacement_layer_hook_shape"],
         }
 
@@ -568,6 +714,10 @@ def run_decode_loop_layer14_assisted_ready(
             "writeback_dtype": layer14_eval.get("replacement_writeback_tensor_dtype"),
             "attn_hook_device": layer14_eval["replacement_attn_hook_device"],
             "attn_hook_dtype": layer14_eval["replacement_attn_hook_dtype"],
+            "oproj_pre_hook_device": layer14_eval["replacement_oproj_pre_hook_device"],
+            "oproj_pre_hook_dtype": layer14_eval["replacement_oproj_pre_hook_dtype"],
+            "oproj_post_hook_device": layer14_eval["replacement_oproj_post_hook_device"],
+            "oproj_post_hook_dtype": layer14_eval["replacement_oproj_post_hook_dtype"],
             "layer_hook_device": layer14_eval["replacement_layer_hook_device"],
             "layer_hook_dtype": layer14_eval["replacement_layer_hook_dtype"],
         }
@@ -620,6 +770,8 @@ def run_decode_loop_layer14_assisted_ready(
 
     layer14_attn_probe_handle.remove()
     layer14_block_probe_handle.remove()
+    layer14_oproj_pre_handle.remove()
+    layer14_oproj_post_handle.remove()
 
     return {
         "generated_token_ids": generated_token_ids,
@@ -699,6 +851,8 @@ def main() -> None:
         scoring_variant=args.scoring_variant,
         mean_abs_diff_threshold=args.mean_abs_diff_threshold,
         enable_replacement_hook=args.enable_replacement_hook,
+        num_attention_heads=num_attention_heads,
+        num_key_value_heads=num_key_value_heads,
     )
 
     summary = {
@@ -723,7 +877,7 @@ def main() -> None:
             "decode_added_tokens_hot_only": True,
             "replacement_scope": "layer14_gated_hooked_dry_run",
             "writeback_stage": "tensor_writeback_ready_only",
-            "injection_stage": "attention_hook_point_verified",
+            "injection_stage": "kv_head_bridge_ready",
         },
         "max_new_tokens": args.max_new_tokens,
         "generated_tokens": decode_result["generated_tokens"],
@@ -750,7 +904,7 @@ def main() -> None:
         },
         "replacement_injection": {
             "implemented": False,
-            "mode": "attention_hook_point_verified",
+            "mode": "kv_head_bridge_ready",
             "target": "layer14_attention_output",
             "target_layers": [14],
         }
