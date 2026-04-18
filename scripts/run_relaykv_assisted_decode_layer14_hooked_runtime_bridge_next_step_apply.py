@@ -28,6 +28,13 @@ from relaykv import (
 
 RESULTS_DIR = Path("results/raw/prototype_checks")
 
+GATE_POLICIES: dict[str, tuple[int, ...]] = {
+    "strict": (14, 15),
+    "medium": (3, 14, 15),
+    "relaxed": (2, 3, 14, 15),
+    "medium_2048": (6, 7, 14, 15),
+}
+
 from dataclasses import dataclass
 @dataclass
 class Layer14InjectionState:
@@ -35,6 +42,9 @@ class Layer14InjectionState:
     injection_tensor: torch.Tensor | None = None
     injection_target: str | None = None
     oproj_pre_hook_replaced: bool = False
+    pending_source_step_idx: int | None = None
+    consumed_source_step_idx: int | None = None
+    consumed_on_this_step: bool = False
 
     attn_hook_seen: bool = False
     attn_last_seen_shape: list[int] | None = None
@@ -143,6 +153,7 @@ def should_apply_layer14_replacement(
     candidate_is_contiguous: bool,
     mean_abs_diff: float,
     mean_abs_diff_threshold: float,
+    allowed_block_ids: tuple[int, ...],
 ) -> bool:
     if not candidate_is_contiguous:
         return False
@@ -150,7 +161,7 @@ def should_apply_layer14_replacement(
     if len(selected_block_ids) != 1:
         return False
 
-    if selected_block_ids[0] not in (2, 3, 14, 15):
+    if selected_block_ids[0] not in allowed_block_ids:
         return False
 
     if mean_abs_diff > mean_abs_diff_threshold:
@@ -333,6 +344,9 @@ def make_layer14_oproj_pre_hook(state: Layer14InjectionState):
             replacement = state.injection_tensor
 
             state.oproj_pre_hook_replaced = True
+            state.consumed_on_this_step = True
+            state.consumed_source_step_idx = state.pending_source_step_idx
+
             state.oproj_pre_last_seen_shape = list(replacement.shape)
             state.oproj_pre_last_seen_dtype = str(replacement.dtype)
             state.oproj_pre_last_seen_device = str(replacement.device)
@@ -340,6 +354,7 @@ def make_layer14_oproj_pre_hook(state: Layer14InjectionState):
             state.enabled = False
             state.injection_tensor = None
             state.injection_target = None
+            state.pending_source_step_idx = None
 
             return (replacement,) + tuple(inputs[1:])
 
@@ -367,6 +382,7 @@ def evaluate_layer14_step(
     hot_window: int,
     block_size: int,
     scoring_variant: str,
+    allowed_block_ids: tuple[int, ...],
     norm_weight: float = 1e-3,
     mean_abs_diff_threshold: float = 0.002,
 ) -> dict[str, Any]:
@@ -454,6 +470,7 @@ def evaluate_layer14_step(
         candidate_is_contiguous=candidate_is_contiguous,
         mean_abs_diff=float(attention_summary["mean_abs_diff"]),
         mean_abs_diff_threshold=mean_abs_diff_threshold,
+        allowed_block_ids=allowed_block_ids,
     )
 
     cold_k_len = split.cold_range[1] - split.cold_range[0]
@@ -508,6 +525,7 @@ def run_decode_loop_layer14_assisted_ready(
     num_key_value_heads: int,
     scoring_variant: str,
     mean_abs_diff_threshold: float,
+    allowed_block_ids: tuple[int, ...],
     enable_replacement_hook: bool = False,
 ) -> dict[str, Any]:
     input_ids = prefill_inputs["input_ids"]
@@ -554,6 +572,8 @@ def run_decode_loop_layer14_assisted_ready(
 
     for step_idx in range(max_new_tokens):
         injection_state.oproj_pre_hook_replaced = False
+        injection_state.consumed_on_this_step = False
+        injection_state.consumed_source_step_idx = None
 
         injection_state.attn_hook_seen = False
         injection_state.attn_last_seen_shape = None
@@ -584,6 +604,12 @@ def run_decode_loop_layer14_assisted_ready(
             )
 
         logits = outputs.logits[:, -1, :]
+
+        topk_vals, topk_idx = torch.topk(logits, k=5, dim=-1)
+
+        step_top5_token_ids = topk_idx[0].tolist()
+        step_top5_logits = [float(x) for x in topk_vals[0].tolist()]
+
         next_token_id = int(torch.argmax(logits, dim=-1).item())
         generated_token_ids.append(next_token_id)
 
@@ -595,6 +621,7 @@ def run_decode_loop_layer14_assisted_ready(
             hot_window=hot_window,
             block_size=block_size,
             scoring_variant=scoring_variant,
+            allowed_block_ids=allowed_block_ids,
             mean_abs_diff_threshold=mean_abs_diff_threshold,
         )
 
@@ -610,6 +637,9 @@ def run_decode_loop_layer14_assisted_ready(
         layer14_eval["replacement_hook_enabled"] = replacement_hook_enabled
         layer14_eval["replacement_hook_triggered"] = replacement_hook_triggered
         layer14_eval["replacement_hook_mode"] = replacement_hook_mode
+
+        layer14_eval["replacement_next_step_apply_armed"] = False
+        layer14_eval["replacement_next_step_apply_pending_source_step_idx"] = None
 
         if replacement_hook_triggered:
             tensor_writeback_ready, tensor_writeback_reason = check_tensor_writeback_ready(
@@ -728,7 +758,16 @@ def run_decode_loop_layer14_assisted_ready(
                     injection_state.enabled = True
                     injection_state.injection_tensor = runtime_bridge_hidden_state
                     injection_state.injection_target = layer14_eval["replacement_injection_target"]
+                    injection_state.pending_source_step_idx = step_idx
 
+                    layer14_eval["replacement_next_step_apply_armed"] = True
+                    layer14_eval["replacement_next_step_apply_pending_source_step_idx"] = step_idx
+
+                    injection_applied, injection_apply_reason = apply_layer14_actual_injection(
+                        injection_tensor=runtime_bridge_hidden_state,
+                        injection_target=layer14_eval["replacement_injection_target"],
+                    )
+                    
                     layer14_eval["replacement_injection_apply_reason"] = "armed_for_next_step"
                     layer14_eval["replacement_injection_applied"] = False
                     layer14_eval["replacement_injection_mode"] = "armed_for_next_step"
@@ -816,6 +855,8 @@ def run_decode_loop_layer14_assisted_ready(
         layer14_eval["replacement_oproj_pre_hook_dtype"] = injection_state.oproj_pre_last_seen_dtype
         layer14_eval["replacement_oproj_pre_hook_device"] = injection_state.oproj_pre_last_seen_device
         layer14_eval["replacement_oproj_pre_hook_replaced"] = injection_state.oproj_pre_hook_replaced
+        layer14_eval["replacement_next_step_apply_consumed"] = injection_state.consumed_on_this_step
+        layer14_eval["replacement_next_step_apply_source_step_idx"] = injection_state.consumed_source_step_idx
 
         layer14_eval["replacement_oproj_post_hook_seen"] = injection_state.oproj_post_hook_seen
         layer14_eval["replacement_oproj_post_hook_shape"] = injection_state.oproj_post_last_seen_shape
@@ -879,6 +920,8 @@ def run_decode_loop_layer14_assisted_ready(
             {
                 "step_idx": step_idx,
                 "generated_token_id": next_token_id,
+                "top5_token_ids": step_top5_token_ids,
+                "top5_logits": step_top5_logits,
                 "layer14": layer14_eval,
             }
         )
@@ -945,8 +988,16 @@ def main() -> None:
         action="store_true",
         help="Enable dry-run replacement hook for gate-passed layer-14 steps.",
     )
-
+    parser.add_argument(
+        "--gate-policy",
+        type=str,
+        default="relaxed",
+        choices=["strict", "medium", "relaxed", "medium_2048"],
+        help="Gate policy for allowed selected block ids.",
+    )
     args = parser.parse_args()
+
+    allowed_block_ids = GATE_POLICIES[args.gate_policy]
 
     ensure_results_dir()
 
@@ -986,6 +1037,7 @@ def main() -> None:
         enable_replacement_hook=args.enable_replacement_hook,
         num_attention_heads=num_attention_heads,
         num_key_value_heads=num_key_value_heads,
+        allowed_block_ids=allowed_block_ids,
     )
 
     summary = {
@@ -1019,10 +1071,11 @@ def main() -> None:
         "tokens_per_sec": decode_result["tokens_per_sec"],
         "step_logs": decode_result["step_logs"],
         "replacement_gate": {
+            "policy_name": args.gate_policy,
             "mean_abs_diff_threshold": args.mean_abs_diff_threshold,
             "require_contiguous_candidate": True,
             "require_single_block": True,
-            "allowed_block_ids": [14, 15],
+            "allowed_block_ids": list(allowed_block_ids),
         },
         "replacement_hook": {
             "enabled": args.enable_replacement_hook,

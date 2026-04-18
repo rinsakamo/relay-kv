@@ -1,0 +1,74 @@
+[
+  {
+    "prompt_type": "prose",
+    "first_consumed_step": 3,
+    "first_divergence_step": 5,
+    "divergence_lag": 2,
+    "divergence_step_top1_apply": 6529,
+    "divergence_step_top1_baseline": 279,
+    "divergence_step_top5_apply": [
+      6529,
+      2504,
+      53103,
+      3239,
+      6500
+    ],
+    "divergence_step_top5_baseline": [
+      279,
+      6529,
+      323,
+      264,
+      9342
+    ],
+    "top5_overlap_count": 1,
+    "same_top5_set": false
+  },
+  {
+    "prompt_type": "repetitive",
+    "first_consumed_step": 2,
+    "first_divergence_step": 5,
+    "divergence_lag": 3,
+    "divergence_step_top1_apply": 13,
+    "divergence_step_top1_baseline": 82707,
+    "divergence_step_top5_apply": [
+      13,
+      7709,
+      2266,
+      3213,
+      46172
+    ],
+    "divergence_step_top5_baseline": [
+      82707,
+      13,
+      42,
+      7709,
+      49
+    ],
+    "top5_overlap_count": 2,
+    "same_top5_set": false
+  },
+  {
+    "prompt_type": "structured",
+    "first_consumed_step": 5,
+    "first_divergence_step": 6,
+    "divergence_lag": 1,
+    "divergence_step_top1_apply": 11,
+    "divergence_step_top1_baseline": 220,
+    "divergence_step_top5_apply": [
+      11,
+      1154,
+      10191,
+      220,
+      5795
+    ],
+    "divergence_step_top5_baseline": [
+      220,
+      481,
+      7465,
+      2503,
+      1465
+    ],
+    "top5_overlap_count": 1,
+    "same_top5_set": false
+  }
+]
