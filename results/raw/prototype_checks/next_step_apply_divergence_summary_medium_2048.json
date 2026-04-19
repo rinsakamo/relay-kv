@@ -1,0 +1,101 @@
+[
+  {
+    "seq_len": 2048,
+    "gate_policy": "medium_2048",
+    "prompt_type": "prose",
+    "first_consumed_step": 2,
+    "first_divergence_step": 2,
+    "divergence_lag": 0,
+    "divergence_step_top1_apply": 323,
+    "divergence_step_top1_baseline": 26297,
+    "divergence_step_top5_apply": [
+      323,
+      46172,
+      279,
+      374,
+      264
+    ],
+    "divergence_step_top5_baseline": [
+      26297,
+      13,
+      323,
+      9429,
+      279
+    ],
+    "top5_overlap_count": 2,
+    "same_top5_set": false,
+    "top5_change_type": "rank_flip_partial_overlap",
+    "top5_union_count": 8,
+    "top5_jaccard": 0.25,
+    "top1_changed": true,
+    "apply_top1_in_baseline_top5": true,
+    "baseline_top1_in_apply_top5": false,
+    "change_subtype": "one_sided_retention"
+  },
+  {
+    "seq_len": 2048,
+    "gate_policy": "medium_2048",
+    "prompt_type": "repetitive",
+    "first_consumed_step": 5,
+    "first_divergence_step": 6,
+    "divergence_lag": 1,
+    "divergence_step_top1_apply": 220,
+    "divergence_step_top1_baseline": 330,
+    "divergence_step_top5_apply": [
+      220,
+      13,
+      198,
+      330,
+      314
+    ],
+    "divergence_step_top5_baseline": [
+      330,
+      198,
+      17,
+      220,
+      16
+    ],
+    "top5_overlap_count": 3,
+    "same_top5_set": false,
+    "top5_change_type": "rank_flip_partial_overlap",
+    "top5_union_count": 7,
+    "top5_jaccard": 0.42857142857142855,
+    "top1_changed": true,
+    "apply_top1_in_baseline_top5": true,
+    "baseline_top1_in_apply_top5": true,
+    "change_subtype": "mutual_retention"
+  },
+  {
+    "seq_len": 2048,
+    "gate_policy": "medium_2048",
+    "prompt_type": "structured",
+    "first_consumed_step": 1,
+    "first_divergence_step": 1,
+    "divergence_lag": 0,
+    "divergence_step_top1_apply": 25156,
+    "divergence_step_top1_baseline": 15750,
+    "divergence_step_top5_apply": [
+      25156,
+      8651,
+      9429,
+      481,
+      9342
+    ],
+    "divergence_step_top5_baseline": [
+      15750,
+      13617,
+      1231,
+      25,
+      9342
+    ],
+    "top5_overlap_count": 1,
+    "same_top5_set": false,
+    "top5_change_type": "candidate_shift",
+    "top5_union_count": 9,
+    "top5_jaccard": 0.1111111111111111,
+    "top1_changed": true,
+    "apply_top1_in_baseline_top5": false,
+    "baseline_top1_in_apply_top5": false,
+    "change_subtype": "mutual_drop"
+  }
+]

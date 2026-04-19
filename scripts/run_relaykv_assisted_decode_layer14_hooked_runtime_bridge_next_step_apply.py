@@ -154,17 +154,28 @@ def should_apply_layer14_replacement(
     mean_abs_diff: float,
     mean_abs_diff_threshold: float,
     allowed_block_ids: tuple[int, ...],
+    top_block_score: float | None,
+    second_block_score: float | None,
+    min_score_margin: float,
 ) -> bool:
     if not candidate_is_contiguous:
         return False
-
     if len(selected_block_ids) != 1:
         return False
-
     if selected_block_ids[0] not in allowed_block_ids:
         return False
-
     if mean_abs_diff > mean_abs_diff_threshold:
+        return False
+
+    if top_block_score is None:
+        return False
+
+    score_margin = (
+        top_block_score - second_block_score
+        if second_block_score is not None
+        else top_block_score
+    )
+    if score_margin < min_score_margin:
         return False
 
     return True
@@ -385,6 +396,7 @@ def evaluate_layer14_step(
     allowed_block_ids: tuple[int, ...],
     norm_weight: float = 1e-3,
     mean_abs_diff_threshold: float = 0.002,
+    min_score_margin: float = 0.01,
 ) -> dict[str, Any]:
     """
     Fixed-prefill-style step evaluation for layer 14 only.
@@ -417,8 +429,18 @@ def evaluate_layer14_step(
         norm_weight=norm_weight,
         all_blocks=all_blocks,
     )
+
+    gate_top_scores = top_k_blocks(scores, k=min(2, len(scores)))
     top_scores = top_k_blocks(scores, k=min(top_k, len(scores)))
     retrieved = retrieve_blocks(all_blocks, top_scores)
+
+    top_block_score = float(gate_top_scores[0].score) if len(gate_top_scores) >= 1 else None
+    second_block_score = float(gate_top_scores[1].score) if len(gate_top_scores) >= 2 else None
+    score_margin = (
+        top_block_score - second_block_score
+        if top_block_score is not None and second_block_score is not None
+        else top_block_score
+    )
 
     candidate_kv = build_candidate_kv(retrieved)
 
@@ -471,6 +493,21 @@ def evaluate_layer14_step(
         mean_abs_diff=float(attention_summary["mean_abs_diff"]),
         mean_abs_diff_threshold=mean_abs_diff_threshold,
         allowed_block_ids=allowed_block_ids,
+        top_block_score=top_block_score,
+        second_block_score=second_block_score,
+        min_score_margin=min_score_margin,
+    )
+
+    print(
+        f"[gate] "
+        f"selected_block_ids={selected_block_ids} "
+        f"gate_top_block_ids={[s.block_id for s in gate_top_scores]} "
+        f"top_block_score={top_block_score} "
+        f"second_block_score={second_block_score} "
+        f"score_margin={score_margin} "
+        f"min_score_margin={min_score_margin} "
+        f"mean_abs_diff={float(attention_summary['mean_abs_diff']):.6f} "
+        f"gate_passed={replacement_gate_passed}"
     )
 
     cold_k_len = split.cold_range[1] - split.cold_range[0]
@@ -487,6 +524,12 @@ def evaluate_layer14_step(
         "selected_block_ids": selected_block_ids,
         "selected_block_spans": [[s.start, s.end] for s in top_scores],
         "selected_block_scores": [float(s.score) for s in top_scores],
+        "gate_top_block_ids": [s.block_id for s in gate_top_scores],
+        "gate_top_block_scores": [float(s.score) for s in gate_top_scores],
+        "top_block_score": top_block_score,
+        "second_block_score": second_block_score,
+        "score_margin": score_margin,
+        "min_score_margin": min_score_margin,
         "candidate_k_len": candidate_k_len,
         "working_k_len": working_k_len,
         "coverage_ratio": coverage_ratio,
@@ -525,6 +568,8 @@ def run_decode_loop_layer14_assisted_ready(
     num_key_value_heads: int,
     scoring_variant: str,
     mean_abs_diff_threshold: float,
+    min_score_margin: float,
+    min_gate_step: int,
     allowed_block_ids: tuple[int, ...],
     enable_replacement_hook: bool = False,
 ) -> dict[str, Any]:
@@ -623,7 +668,25 @@ def run_decode_loop_layer14_assisted_ready(
             scoring_variant=scoring_variant,
             allowed_block_ids=allowed_block_ids,
             mean_abs_diff_threshold=mean_abs_diff_threshold,
+            min_score_margin=min_score_margin,
         )
+        layer14_eval["replacement_gate_passed_raw"] = layer14_eval["replacement_gate_passed"]
+        layer14_eval["replacement_gate_suppressed_by_min_step"] = step_idx < min_gate_step
+
+        if step_idx < min_gate_step:
+            layer14_eval["replacement_gate_passed"] = False
+
+            print(
+                f"[gate-step] "
+                f"step_idx={step_idx} "
+                f"min_gate_step={min_gate_step} "
+                f"suppressed_by_min_step={step_idx < min_gate_step} "
+                f"raw_gate_passed={layer14_eval['replacement_gate_passed_raw']} "
+                f"final_gate_passed={layer14_eval['replacement_gate_passed']} "
+                f"selected_block_ids={layer14_eval['selected_block_ids']} "
+                f"gate_top_block_ids={layer14_eval.get('gate_top_block_ids')} "
+                f"score_margin={layer14_eval.get('score_margin')}"
+            )
 
         replacement_hook_enabled = enable_replacement_hook
         replacement_hook_triggered = (
@@ -984,6 +1047,18 @@ def main() -> None:
         help="Gate threshold for applying layer-14 replacement candidates.",
     )
     parser.add_argument(
+        "--min-score-margin",
+        type=float,
+        default=0.01,
+        help="Minimum margin between top-1 and top-2 block scores for gate pass.",
+    )
+    parser.add_argument(
+        "--min-gate-step",
+        type=int,
+        default=0,
+        help="Do not allow replacement gate to pass before this decode step index.",
+    )
+    parser.add_argument(
         "--enable-replacement-hook",
         action="store_true",
         help="Enable dry-run replacement hook for gate-passed layer-14 steps.",
@@ -1034,6 +1109,8 @@ def main() -> None:
         block_size=args.block_size,
         scoring_variant=args.scoring_variant,
         mean_abs_diff_threshold=args.mean_abs_diff_threshold,
+        min_score_margin=args.min_score_margin,
+        min_gate_step=args.min_gate_step,
         enable_replacement_hook=args.enable_replacement_hook,
         num_attention_heads=num_attention_heads,
         num_key_value_heads=num_key_value_heads,
@@ -1073,6 +1150,8 @@ def main() -> None:
         "replacement_gate": {
             "policy_name": args.gate_policy,
             "mean_abs_diff_threshold": args.mean_abs_diff_threshold,
+            "min_score_margin": args.min_score_margin,
+            "min_gate_step": args.min_gate_step,
             "require_contiguous_candidate": True,
             "require_single_block": True,
             "allowed_block_ids": list(allowed_block_ids),
