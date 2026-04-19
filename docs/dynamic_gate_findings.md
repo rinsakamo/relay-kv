@@ -172,3 +172,20 @@ Under the tested gated settings:
 
 This supports the view that `min_gate_step` acts as a practical temporal safety bias:
 it is highly effective for early-sensitive conditions, while introducing little or moderate side effect elsewhere.
+
+## Dry-Run Divergence Predictor
+
+A simple dry-run predictor was tested using:
+
+- `score_margin < 10`
+- `mean_abs_diff > 1e-4`
+
+In the best structured setting
+(`seq_len=2048`, `min_score_margin=50`, `min_gate_step=2`):
+
+- predictor danger steps: `[9, 11]`
+- first divergence: `step 10`
+
+This means the predictor successfully flagged the pre-divergence step (`step 9`) while avoiding earlier low-margin but stable steps (`steps 7 and 8`).
+
+This suggests that the predictor is better interpreted as a **post-injection hazard detector** than as a replacement for the gating rule itself.

@@ -570,9 +570,12 @@ def run_decode_loop_layer14_assisted_ready(
     mean_abs_diff_threshold: float,
     min_score_margin: float,
     min_gate_step: int,
+    predictor_score_margin_threshold: float,
+    predictor_mean_abs_diff_threshold: float,
     allowed_block_ids: tuple[int, ...],
     enable_replacement_hook: bool = False,
 ) -> dict[str, Any]:
+
     input_ids = prefill_inputs["input_ids"]
     attention_mask = prefill_inputs["attention_mask"]
     past_key_values = prefill_outputs.past_key_values
@@ -672,6 +675,45 @@ def run_decode_loop_layer14_assisted_ready(
         )
         layer14_eval["replacement_gate_passed_raw"] = layer14_eval["replacement_gate_passed"]
         layer14_eval["replacement_gate_suppressed_by_min_step"] = step_idx < min_gate_step
+
+        current_mean_abs_diff = (
+            layer14_eval.get("attention_compare", {}).get("mean_abs_diff")
+        )
+        current_score_margin = layer14_eval.get("score_margin")
+
+        predictor_danger = (
+            current_score_margin is not None
+            and current_mean_abs_diff is not None
+            and current_score_margin < predictor_score_margin_threshold
+            and current_mean_abs_diff > predictor_mean_abs_diff_threshold
+        )
+
+        layer14_eval["predictor_score_margin_threshold"] = predictor_score_margin_threshold
+        layer14_eval["predictor_mean_abs_diff_threshold"] = predictor_mean_abs_diff_threshold
+        layer14_eval["predictor_danger"] = predictor_danger
+
+        predictor_would_block = predictor_danger
+        layer14_eval["predictor_would_block"] = predictor_would_block
+        layer14_eval["predictor_gate_overlap"] = (
+            predictor_would_block and layer14_eval["replacement_gate_passed"]
+        )
+        print(
+            f"[predictor-block] "
+            f"step_idx={step_idx} "
+            f"gate_passed={layer14_eval['replacement_gate_passed']} "
+            f"predictor_danger={predictor_danger} "
+            f"would_block={predictor_would_block}"
+        )
+
+        print(
+            f"[predictor] "
+            f"step_idx={step_idx} "
+            f"score_margin={current_score_margin} "
+            f"mean_abs_diff={current_mean_abs_diff} "
+            f"margin_th={predictor_score_margin_threshold} "
+            f"mad_th={predictor_mean_abs_diff_threshold} "
+            f"danger={predictor_danger}"
+        )
 
         if step_idx < min_gate_step:
             layer14_eval["replacement_gate_passed"] = False
@@ -1059,6 +1101,18 @@ def main() -> None:
         help="Do not allow replacement gate to pass before this decode step index.",
     )
     parser.add_argument(
+        "--predictor-score-margin-threshold",
+        type=float,
+        default=10.0,
+        help="Dry-run predictor threshold: danger if score_margin is below this value.",
+    )
+    parser.add_argument(
+        "--predictor-mean-abs-diff-threshold",
+        type=float,
+        default=1e-4,
+        help="Dry-run predictor threshold: danger if mean_abs_diff is above this value.",
+    )
+    parser.add_argument(
         "--enable-replacement-hook",
         action="store_true",
         help="Enable dry-run replacement hook for gate-passed layer-14 steps.",
@@ -1111,6 +1165,8 @@ def main() -> None:
         mean_abs_diff_threshold=args.mean_abs_diff_threshold,
         min_score_margin=args.min_score_margin,
         min_gate_step=args.min_gate_step,
+        predictor_score_margin_threshold=args.predictor_score_margin_threshold,
+        predictor_mean_abs_diff_threshold=args.predictor_mean_abs_diff_threshold,
         enable_replacement_hook=args.enable_replacement_hook,
         num_attention_heads=num_attention_heads,
         num_key_value_heads=num_key_value_heads,
@@ -1172,7 +1228,13 @@ def main() -> None:
             "mode": "runtime_bridge_ready_next_step_apply",
             "target": "layer14_oproj_input",
             "target_layers": [14],
-        }
+        },
+        "predictor": {
+            "enabled": True,
+            "mode": "dry_run_only",
+            "score_margin_threshold": args.predictor_score_margin_threshold,
+            "mean_abs_diff_threshold": args.predictor_mean_abs_diff_threshold,
+        },
     }
 
     output_path = RESULTS_DIR / args.output
