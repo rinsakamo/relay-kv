@@ -387,6 +387,23 @@ def make_layer14_oproj_post_hook(state: Layer14InjectionState):
 
     return _hook
 
+
+def predictor_block_requested_steps(data: dict) -> list[int]:
+    return [
+        step["step_idx"]
+        for step in data["step_logs"]
+        if step.get("layer14", {}).get("predictor_block_requested") is True
+    ]
+
+
+def predictor_effective_block_steps(data: dict) -> list[int]:
+    return [
+        step["step_idx"]
+        for step in data["step_logs"]
+        if step.get("layer14", {}).get("predictor_effective_block") is True
+    ]
+
+
 def evaluate_layer14_step(
     *,
     layers,
@@ -574,6 +591,7 @@ def run_decode_loop_layer14_assisted_ready(
     predictor_mean_abs_diff_threshold: float,
     allowed_block_ids: tuple[int, ...],
     enable_replacement_hook: bool = False,
+    enable_predictor_block: bool = False,
 ) -> dict[str, Any]:
 
     input_ids = prefill_inputs["input_ids"]
@@ -692,11 +710,35 @@ def run_decode_loop_layer14_assisted_ready(
         layer14_eval["predictor_mean_abs_diff_threshold"] = predictor_mean_abs_diff_threshold
         layer14_eval["predictor_danger"] = predictor_danger
 
+        # --- predictor signals ---
         predictor_would_block = predictor_danger
         layer14_eval["predictor_would_block"] = predictor_would_block
+
+        # raw gate overlap (for analysis)
         layer14_eval["predictor_gate_overlap"] = (
-            predictor_would_block and layer14_eval["replacement_gate_passed"]
+            predictor_would_block and layer14_eval["replacement_gate_passed_raw"]
         )
+
+        # --- NEW: split semantics ---
+        layer14_eval["predictor_block_requested"] = (
+            enable_predictor_block and predictor_danger
+        )
+
+        layer14_eval["predictor_effective_block"] = (
+            enable_predictor_block
+            and predictor_danger
+            and layer14_eval["replacement_gate_passed_raw"]
+        )
+
+        # --- apply effective block only ---
+        if layer14_eval["predictor_effective_block"]:
+            layer14_eval["replacement_gate_passed"] = False
+
+        # --- keep backward compatibility (optional) ---
+        layer14_eval["replacement_gate_blocked_by_predictor"] = (
+            layer14_eval["predictor_block_requested"]
+        )
+
         print(
             f"[predictor-block] "
             f"step_idx={step_idx} "
@@ -713,6 +755,16 @@ def run_decode_loop_layer14_assisted_ready(
             f"margin_th={predictor_score_margin_threshold} "
             f"mad_th={predictor_mean_abs_diff_threshold} "
             f"danger={predictor_danger}"
+        )
+
+        print(
+            f"[gate-final] "
+            f"step_idx={step_idx} "
+            f"raw_gate_passed={layer14_eval['replacement_gate_passed_raw']} "
+            f"suppressed_by_min_step={step_idx < min_gate_step} "
+            f"predictor_danger={predictor_danger} "
+            f"blocked_by_predictor={layer14_eval['replacement_gate_blocked_by_predictor']} "
+            f"final_gate_passed={layer14_eval['replacement_gate_passed']}"
         )
 
         if step_idx < min_gate_step:
@@ -1118,6 +1170,11 @@ def main() -> None:
         help="Enable dry-run replacement hook for gate-passed layer-14 steps.",
     )
     parser.add_argument(
+        "--enable-predictor-block",
+        action="store_true",
+        help="If set, predictor_danger blocks replacement gate at runtime.",
+    )
+    parser.add_argument(
         "--gate-policy",
         type=str,
         default="relaxed",
@@ -1168,6 +1225,7 @@ def main() -> None:
         predictor_score_margin_threshold=args.predictor_score_margin_threshold,
         predictor_mean_abs_diff_threshold=args.predictor_mean_abs_diff_threshold,
         enable_replacement_hook=args.enable_replacement_hook,
+        enable_predictor_block=args.enable_predictor_block,
         num_attention_heads=num_attention_heads,
         num_key_value_heads=num_key_value_heads,
         allowed_block_ids=allowed_block_ids,
@@ -1231,7 +1289,13 @@ def main() -> None:
         },
         "predictor": {
             "enabled": True,
-            "mode": "dry_run_only",
+            "mode": (
+                "effective_block_on_raw_gate_pass_only"
+                if args.enable_predictor_block
+                else "dry_run_only"
+            ),
+            "blocks_gate_when_enabled": args.enable_predictor_block,
+            "effective_block_requires_raw_gate_pass": True,
             "score_margin_threshold": args.predictor_score_margin_threshold,
             "mean_abs_diff_threshold": args.predictor_mean_abs_diff_threshold,
         },

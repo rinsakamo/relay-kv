@@ -12,7 +12,8 @@ def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser()
     p.add_argument("--seq-len", type=int, required=True)
     p.add_argument("--gate-policy", type=str, required=True)
-    p.add_argument("--name-suffix", type=str, default="")
+    p.add_argument("--apply-name-suffix", type=str, default="")
+    p.add_argument("--baseline-name-suffix", type=str, default="")
     p.add_argument(
         "--prompt-types",
         nargs="+",
@@ -27,12 +28,39 @@ def load_json(path: Path) -> dict:
 
 
 def resolve_existing_path(candidates: list[Path]) -> Path:
+    if not candidates:
+        raise FileNotFoundError("No matching file found. Candidate list is empty.")
+
     for path in candidates:
         if path.exists():
             return path
+
     raise FileNotFoundError(
         "No matching file found. Tried:\n" + "\n".join(str(p) for p in candidates)
     )
+
+
+def build_candidates(
+    *,
+    prompt: str,
+    mode: str,   # "apply" or "baseline"
+    suffix: str,
+    gate_policy: str,
+    seq_len: int,
+) -> list[Path]:
+    if suffix:
+        return [
+            BASE / f"{prompt}_{mode}_next_step_apply_{suffix}.json",
+            BASE / f"{prompt}_{mode}_next_step_apply_{suffix}_v2.json",
+            BASE / f"{prompt}_{mode}_next_step_apply_{suffix}_v5.json",
+        ]
+
+    return [
+        BASE / f"{prompt}_{mode}_next_step_apply_{gate_policy}_v2.json",
+        BASE / f"{prompt}_{mode}_next_step_apply_{gate_policy}_{seq_len}_v2.json",
+        BASE / f"{prompt}_{mode}_next_step_apply_{gate_policy}.json",
+        BASE / f"{prompt}_{mode}_next_step_apply_{gate_policy}_{seq_len}.json",
+    ]
 
 
 def first_consumed_step(apply_data: dict) -> int | None:
@@ -58,12 +86,49 @@ def step_by_idx(data: dict, step_idx: int | None) -> dict | None:
     return None
 
 
-def gate_pass_steps(data: dict) -> list[int]:
+def raw_gate_pass_steps(data: dict) -> list[int]:
+    return [
+        step["step_idx"]
+        for step in data["step_logs"]
+        if step.get("layer14", {}).get("replacement_gate_passed_raw") is True
+    ]
+
+
+def final_gate_pass_steps(data: dict) -> list[int]:
     return [
         step["step_idx"]
         for step in data["step_logs"]
         if step.get("layer14", {}).get("replacement_gate_passed") is True
     ]
+
+
+def predictor_danger_steps(data: dict) -> list[int]:
+    return [
+        step["step_idx"]
+        for step in data["step_logs"]
+        if step.get("layer14", {}).get("predictor_danger") is True
+    ]
+
+
+def predictor_block_requested_steps(data: dict) -> list[int]:
+    return [
+        step["step_idx"]
+        for step in data["step_logs"]
+        if step.get("layer14", {}).get("predictor_block_requested") is True
+    ]
+
+
+def predictor_effective_block_steps(data: dict) -> list[int]:
+    return [
+        step["step_idx"]
+        for step in data["step_logs"]
+        if step.get("layer14", {}).get("predictor_effective_block") is True
+    ]
+
+
+def first_predictor_danger_step(data: dict) -> int | None:
+    steps = predictor_danger_steps(data)
+    return steps[0] if steps else None
 
 
 def layer14_metric(step: dict | None, key: str):
@@ -104,35 +169,32 @@ def classify_top5_change(
 
 def main() -> None:
     args = parse_args()
+    if not args.prompt_types:
+        raise ValueError("prompt_types is empty")
     rows: list[dict] = []
 
     for prompt in args.prompt_types:
-        suffix = args.name_suffix.strip()
+        apply_suffix = args.apply_name_suffix.strip()
+        baseline_suffix = args.baseline_name_suffix.strip()
 
-        if suffix:
-            apply_candidates = [
-                BASE / f"{prompt}_apply_next_step_apply_{suffix}.json",
-                BASE / f"{prompt}_apply_next_step_apply_{suffix}_v2.json",
-                BASE / f"{prompt}_apply_next_step_apply_{suffix}_v5.json",
-            ]
-            baseline_candidates = [
-                BASE / f"{prompt}_baseline_next_step_apply_{suffix}.json",
-                BASE / f"{prompt}_baseline_next_step_apply_{suffix}_v2.json",
-                BASE / f"{prompt}_baseline_next_step_apply_{suffix}_v5.json",
-            ]
-        else:
-            apply_candidates = [
-                BASE / f"{prompt}_apply_next_step_apply_{args.gate_policy}_v2.json",
-                BASE / f"{prompt}_apply_next_step_apply_{args.gate_policy}_{args.seq_len}_v2.json",
-                BASE / f"{prompt}_apply_next_step_apply_{args.gate_policy}.json",
-                BASE / f"{prompt}_apply_next_step_apply_{args.gate_policy}_{args.seq_len}.json",
-            ]
-            baseline_candidates = [
-                BASE / f"{prompt}_baseline_next_step_apply_{args.gate_policy}_v2.json",
-                BASE / f"{prompt}_baseline_next_step_apply_{args.gate_policy}_{args.seq_len}_v2.json",
-                BASE / f"{prompt}_baseline_next_step_apply_{args.gate_policy}.json",
-                BASE / f"{prompt}_baseline_next_step_apply_{args.gate_policy}_{args.seq_len}.json",
-            ]
+        apply_candidates = build_candidates(
+            prompt=prompt,
+            mode="apply",
+            suffix=apply_suffix,
+            gate_policy=args.gate_policy,
+            seq_len=args.seq_len,
+        )
+        baseline_candidates = build_candidates(
+            prompt=prompt,
+            mode="baseline",
+            suffix=baseline_suffix,
+            gate_policy=args.gate_policy,
+            seq_len=args.seq_len,
+        )
+
+        print(f"[candidate-build] prompt={prompt}")
+        print(f"  apply_candidates={apply_candidates}")
+        print(f"  baseline_candidates={baseline_candidates}")
 
         apply_path = resolve_existing_path(apply_candidates)
         baseline_path = resolve_existing_path(baseline_candidates)
@@ -145,16 +207,34 @@ def main() -> None:
         gate_info = apply_data.get("replacement_gate", {})
         min_score_margin = gate_info.get("min_score_margin")
         min_gate_step = gate_info.get("min_gate_step")
-        passed_steps = gate_pass_steps(apply_data)
+
+        raw_passed_steps = raw_gate_pass_steps(apply_data)
+        final_passed_steps = final_gate_pass_steps(apply_data)
+        predictor_steps = predictor_danger_steps(apply_data)
+        predictor_req_steps = predictor_block_requested_steps(apply_data)
+        predictor_eff_steps = predictor_effective_block_steps(apply_data)
 
         fc = first_consumed_step(apply_data)
         fd = first_divergence_step(apply_data, baseline_data)
+        fpd = first_predictor_danger_step(apply_data)
+
+        matched_all_generated_tokens = (fd is None)
 
         apply_div = step_by_idx(apply_data, fd)
         baseline_div = step_by_idx(baseline_data, fd)
 
         pre_div_step = (fd - 1) if fd is not None and fd > 0 else None
         pre_div_apply = step_by_idx(apply_data, pre_div_step)
+
+        predictor_precedes_divergence = (
+            fpd is not None and fd is not None and fpd < fd
+            if fd is not None else None
+        )
+        predictor_hits_pre_div_step = (
+            pre_div_apply is not None
+            and pre_div_apply.get("layer14", {}).get("predictor_danger") is True
+            if fd is not None else None
+        )
 
         apply_top5 = apply_div.get("top5_token_ids") if apply_div is not None else None
         baseline_top5 = baseline_div.get("top5_token_ids") if baseline_div is not None else None
@@ -218,7 +298,16 @@ def main() -> None:
                 "prompt_type": prompt,
                 "min_score_margin": min_score_margin,
                 "min_gate_step": min_gate_step,
-                "gate_pass_steps": passed_steps,
+                "raw_gate_pass_steps": raw_passed_steps,
+                "final_gate_pass_steps": final_passed_steps,
+                "predictor_danger_steps": predictor_steps,
+                "predictor_block_requested_steps": predictor_req_steps,
+                "predictor_effective_block_steps": predictor_eff_steps,
+                "predictor_effective_block_count": len(predictor_eff_steps),
+                "matched_all_generated_tokens": matched_all_generated_tokens,
+                "predictor_first_danger_step": fpd,
+                "predictor_precedes_divergence": predictor_precedes_divergence,
+                "predictor_hits_pre_div_step": predictor_hits_pre_div_step,
                 "first_consumed_step": fc,
                 "first_divergence_step": fd,
                 "divergence_lag": divergence_lag,
@@ -249,7 +338,8 @@ def main() -> None:
                 "apply_top1_in_baseline_top5": apply_top1_in_baseline_top5,
                 "baseline_top1_in_apply_top5": baseline_top1_in_apply_top5,
                 "change_subtype": change_subtype,
-                "name_suffix": suffix if suffix else None,
+                "apply_name_suffix": apply_suffix if apply_suffix else None,
+                "baseline_name_suffix": baseline_suffix if baseline_suffix else None,
 
             }
         )
@@ -260,7 +350,16 @@ def main() -> None:
         "prompt_type",
         "min_score_margin",
         "min_gate_step",
-        "gate_pass_steps",
+        "raw_gate_pass_steps",
+        "final_gate_pass_steps",
+        "predictor_danger_steps",
+        "predictor_block_requested_steps",
+        "predictor_effective_block_steps",
+        "predictor_effective_block_count",
+        "matched_all_generated_tokens",
+        "predictor_first_danger_step",
+        "predictor_precedes_divergence",
+        "predictor_hits_pre_div_step",
         "first_consumed_step",
         "first_divergence_step",
         "divergence_lag",
@@ -280,7 +379,8 @@ def main() -> None:
         "apply_top1_in_baseline_top5",
         "baseline_top1_in_apply_top5",
         "change_subtype",
-        "name_suffix",
+        "apply_name_suffix",
+        "baseline_name_suffix",
     ]
 
     print("\t".join(headers))

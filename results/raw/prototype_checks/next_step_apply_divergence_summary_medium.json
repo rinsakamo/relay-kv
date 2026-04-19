@@ -1,26 +1,136 @@
 [
   {
-    "seq_len": 1024,
+    "seq_len": 4096,
     "gate_policy": "medium",
-    "prompt_type": "prose",
-    "first_consumed_step": 3,
-    "first_divergence_step": 5,
-    "divergence_lag": 2,
-    "divergence_step_top1_apply": 6529,
-    "divergence_step_top1_baseline": 279,
+    "prompt_type": "structured",
+    "min_score_margin": 20.0,
+    "min_gate_step": 7,
+    "raw_gate_pass_steps": [
+      3,
+      4,
+      5,
+      8,
+      9,
+      10,
+      11,
+      12
+    ],
+    "final_gate_pass_steps": [
+      8,
+      9,
+      10,
+      11,
+      12
+    ],
+    "predictor_danger_steps": [
+      2,
+      6
+    ],
+    "predictor_block_requested_steps": [
+      2,
+      6
+    ],
+    "predictor_effective_block_steps": [],
+    "predictor_effective_block_count": 0,
+    "matched_all_generated_tokens": false,
+    "predictor_first_danger_step": 2,
+    "predictor_precedes_divergence": false,
+    "predictor_hits_pre_div_step": false,
+    "first_consumed_step": 9,
+    "first_divergence_step": 0,
+    "divergence_lag": -9,
+    "pre_div_step": null,
+    "pre_div_mean_abs_diff": null,
+    "pre_div_score_margin": null,
+    "div_step_mean_abs_diff": 0.00891085620969534,
+    "div_step_score_margin": 144.52218960189816,
+    "divergence_step_top1_apply": 2480,
+    "divergence_step_top1_baseline": 2348,
     "divergence_step_top5_apply": [
+      2480,
       6529,
-      2504,
-      53103,
-      3239,
-      6500
+      279,
+      7225,
+      678
     ],
     "divergence_step_top5_baseline": [
-      279,
-      6529,
-      323,
-      264,
-      9342
+      2348,
+      13,
+      11,
+      481,
+      198
+    ],
+    "top5_overlap_count": 0,
+    "same_top5_set": false,
+    "top5_change_type": "candidate_shift",
+    "top5_union_count": 10,
+    "top5_jaccard": 0.0,
+    "top1_changed": true,
+    "apply_top1_in_baseline_top5": false,
+    "baseline_top1_in_apply_top5": false,
+    "change_subtype": "mutual_drop",
+    "apply_name_suffix": "medium_margin20_mingate7_predictor_block_4096",
+    "baseline_name_suffix": null
+  },
+  {
+    "seq_len": 4096,
+    "gate_policy": "medium",
+    "prompt_type": "prose",
+    "min_score_margin": 20.0,
+    "min_gate_step": 7,
+    "raw_gate_pass_steps": [
+      1,
+      2,
+      4,
+      5,
+      7,
+      8,
+      10,
+      13,
+      15
+    ],
+    "final_gate_pass_steps": [
+      7,
+      8,
+      10,
+      13,
+      15
+    ],
+    "predictor_danger_steps": [
+      14
+    ],
+    "predictor_block_requested_steps": [
+      14
+    ],
+    "predictor_effective_block_steps": [],
+    "predictor_effective_block_count": 0,
+    "matched_all_generated_tokens": false,
+    "predictor_first_danger_step": 14,
+    "predictor_precedes_divergence": false,
+    "predictor_hits_pre_div_step": false,
+    "first_consumed_step": 8,
+    "first_divergence_step": 0,
+    "divergence_lag": -8,
+    "pre_div_step": null,
+    "pre_div_mean_abs_diff": null,
+    "pre_div_score_margin": null,
+    "div_step_mean_abs_diff": 0.0037552888970822096,
+    "div_step_score_margin": 93.91912749862666,
+    "divergence_step_top1_apply": 16275,
+    "divergence_step_top1_baseline": 20961,
+    "divergence_step_top5_apply": [
+      16275,
+      2348,
+      13,
+      3941,
+      11
+    ],
+    "divergence_step_top5_baseline": [
+      20961,
+      448,
+      525,
+      13,
+      47995
     ],
     "top5_overlap_count": 1,
     "same_top5_set": false,
@@ -28,65 +138,55 @@
     "top5_union_count": 9,
     "top5_jaccard": 0.1111111111111111,
     "top1_changed": true,
-    "apply_top1_in_baseline_top5": true,
+    "apply_top1_in_baseline_top5": false,
     "baseline_top1_in_apply_top5": false,
-    "change_subtype": "one_sided_retention"
+    "change_subtype": "mutual_drop",
+    "apply_name_suffix": "medium_margin20_mingate7_predictor_block_4096",
+    "baseline_name_suffix": null
   },
   {
-    "seq_len": 1024,
+    "seq_len": 4096,
     "gate_policy": "medium",
     "prompt_type": "repetitive",
-    "first_consumed_step": 2,
-    "first_divergence_step": 5,
-    "divergence_lag": 3,
-    "divergence_step_top1_apply": 13,
-    "divergence_step_top1_baseline": 82707,
+    "min_score_margin": 20.0,
+    "min_gate_step": 7,
+    "raw_gate_pass_steps": [],
+    "final_gate_pass_steps": [],
+    "predictor_danger_steps": [
+      11
+    ],
+    "predictor_block_requested_steps": [
+      11
+    ],
+    "predictor_effective_block_steps": [],
+    "predictor_effective_block_count": 0,
+    "matched_all_generated_tokens": false,
+    "predictor_first_danger_step": 11,
+    "predictor_precedes_divergence": false,
+    "predictor_hits_pre_div_step": false,
+    "first_consumed_step": null,
+    "first_divergence_step": 4,
+    "divergence_lag": null,
+    "pre_div_step": 3,
+    "pre_div_mean_abs_diff": 0.00499975960701704,
+    "pre_div_score_margin": 44.13598793029786,
+    "div_step_mean_abs_diff": 0.002813813742250204,
+    "div_step_score_margin": 10.218862487792933,
+    "divergence_step_top1_apply": 3213,
+    "divergence_step_top1_baseline": 46172,
     "divergence_step_top5_apply": [
-      13,
-      7709,
-      2266,
       3213,
-      46172
-    ],
-    "divergence_step_top5_baseline": [
-      82707,
-      13,
-      42,
       7709,
-      49
-    ],
-    "top5_overlap_count": 2,
-    "same_top5_set": false,
-    "top5_change_type": "rank_flip_partial_overlap",
-    "top5_union_count": 8,
-    "top5_jaccard": 0.25,
-    "top1_changed": true,
-    "apply_top1_in_baseline_top5": true,
-    "baseline_top1_in_apply_top5": false,
-    "change_subtype": "one_sided_retention"
-  },
-  {
-    "seq_len": 1024,
-    "gate_policy": "medium",
-    "prompt_type": "structured",
-    "first_consumed_step": 5,
-    "first_divergence_step": 6,
-    "divergence_lag": 1,
-    "divergence_step_top1_apply": 11,
-    "divergence_step_top1_baseline": 220,
-    "divergence_step_top5_apply": [
-      11,
-      1154,
-      10191,
-      220,
-      5795
+      46172,
+      34290,
+      12341
     ],
     "divergence_step_top5_baseline": [
+      46172,
+      31851,
       220,
-      481,
-      7465,
-      2503,
-      1465
+      2266,
+      6512
     ],
     "top5_overlap_count": 1,
     "same_top5_set": false,
@@ -96,6 +196,8 @@
     "top1_changed": true,
     "apply_top1_in_baseline_top5": false,
     "baseline_top1_in_apply_top5": true,
-    "change_subtype": "one_sided_retention"
+    "change_subtype": "one_sided_retention",
+    "apply_name_suffix": "medium_margin20_mingate7_predictor_block_4096",
+    "baseline_name_suffix": null
   }
 ]
