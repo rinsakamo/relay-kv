@@ -151,3 +151,24 @@ RelayKV should not be framed purely as block selection. A better abstraction is:
 - **temporal routing**: when to apply them
 
 The structured result shows that temporal gating can transform divergence from an early destructive candidate shift into a delayed same-set rank flip.
+
+### Repetitive / 2048 / `min_score_margin=30` / `min_gate_step=2`
+
+- gate pass steps: `[12]`
+- first divergence: `step 13`
+- divergence lag: `1`
+- divergence type: `rank_flip_partial_overlap`
+- top-5 overlap: `2/5`
+
+At this setting, repetitive prompts become strongly conservative: only one gated step is allowed, and divergence appears one step later. The resulting change is weaker than candidate shift but less stable than the prose case, remaining in a partial-overlap regime.
+
+### Cross-Style Summary
+
+Under the tested gated settings:
+
+- **prose** remains largely unchanged and already stable
+- **repetitive** becomes strongly conservative, with only a single gated step
+- **structured** benefits the most from temporal suppression, shifting from early candidate-shift behavior to delayed same-set rank-flip behavior
+
+This supports the view that `min_gate_step` acts as a practical temporal safety bias:
+it is highly effective for early-sensitive conditions, while introducing little or moderate side effect elsewhere.
