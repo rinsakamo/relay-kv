@@ -96,3 +96,58 @@ A better framing is:
   - low `score_margin`
   can predict future divergence.
 - Connect temporal gating back to retrieval policy design.
+
+## Focused Single-Style Results
+
+### Prose / 2048 / `min_score_margin=30` / `min_gate_step=2`
+
+- gate pass steps: `[2, 3, 5, 6, 8]`
+- first divergence: `step 3`
+- divergence lag: `0`
+- pre-divergence step: `2`
+- pre-divergence mean abs diff: `8.87e-4`
+- pre-divergence score margin: `30.17`
+- divergence-step mean abs diff: `1.75e-5`
+- divergence-step score margin: `33.73`
+- divergence type: `rank_flip_partial_overlap`
+- top-5 overlap: `4/5`
+- top-5 Jaccard: `0.667`
+- change subtype: `mutual_retention`
+
+This condition remains stable in the sense that divergence is limited to a high-overlap rank-flip-like change. Adding `min_gate_step=2` does not materially change the prose behavior, which suggests low side effect on already stable prompt styles.
+
+### Structured / 2048 / `min_score_margin=50` / `min_gate_step=2`
+
+- gate pass steps: `[2, 12]`
+- first divergence: `step 10`
+- divergence lag: `7`
+- pre-divergence step: `9`
+- pre-divergence mean abs diff: `2.13e-4`
+- pre-divergence score margin: `3.87`
+- divergence-step mean abs diff: `1.17e-5`
+- divergence-step score margin: `4.79`
+- divergence type: `rank_flip_same_set`
+- top-5 overlap: `5/5`
+- top-5 Jaccard: `1.0`
+- change subtype: `mutual_retention`
+
+This is a major improvement over the earlier structured setting, where divergence happened at step 1 with candidate-shift behavior. With temporal suppression, structured divergence becomes delayed and non-destructive.
+
+### Practical Interpretation
+
+These focused results support the following view:
+
+- `min_score_margin` provides **spatial confidence**
+- `min_gate_step` provides **temporal safety**
+- both are required for stable behavior
+
+Most importantly, structured instability appears to be caused primarily by **early unsafe application timing**, not merely by prompt style itself.
+
+### Implication for RelayKV
+
+RelayKV should not be framed purely as block selection. A better abstraction is:
+
+- **spatial routing**: which KV blocks to use
+- **temporal routing**: when to apply them
+
+The structured result shows that temporal gating can transform divergence from an early destructive candidate shift into a delayed same-set rank flip.

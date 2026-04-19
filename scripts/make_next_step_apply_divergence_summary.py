@@ -12,6 +12,12 @@ def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser()
     p.add_argument("--seq-len", type=int, required=True)
     p.add_argument("--gate-policy", type=str, required=True)
+    p.add_argument("--name-suffix", type=str, default="")
+    p.add_argument(
+        "--prompt-types",
+        nargs="+",
+        default=["prose", "repetitive", "structured"],
+    )
     return p.parse_args()
 
 
@@ -51,6 +57,30 @@ def step_by_idx(data: dict, step_idx: int | None) -> dict | None:
             return step
     return None
 
+
+def gate_pass_steps(data: dict) -> list[int]:
+    return [
+        step["step_idx"]
+        for step in data["step_logs"]
+        if step.get("layer14", {}).get("replacement_gate_passed") is True
+    ]
+
+
+def layer14_metric(step: dict | None, key: str):
+    if step is None:
+        return None
+    return step.get("layer14", {}).get(key)
+
+
+def layer14_mean_abs_diff(step: dict | None):
+    if step is None:
+        return None
+    return (
+        step.get("layer14", {})
+        .get("attention_compare", {})
+        .get("mean_abs_diff")
+    )
+
 def classify_top5_change(
     apply_top5: list[int] | None,
     baseline_top5: list[int] | None,
@@ -76,19 +106,33 @@ def main() -> None:
     args = parse_args()
     rows: list[dict] = []
 
-    for prompt in PROMPTS:
-        apply_candidates = [
-            BASE / f"{prompt}_apply_next_step_apply_{args.gate_policy}_v2.json",
-            BASE / f"{prompt}_apply_next_step_apply_{args.gate_policy}_{args.seq_len}_v2.json",
-            BASE / f"{prompt}_apply_next_step_apply_{args.gate_policy}.json",
-            BASE / f"{prompt}_apply_next_step_apply_{args.gate_policy}_{args.seq_len}.json",
-        ]
-        baseline_candidates = [
-            BASE / f"{prompt}_baseline_next_step_apply_{args.gate_policy}_v2.json",
-            BASE / f"{prompt}_baseline_next_step_apply_{args.gate_policy}_{args.seq_len}_v2.json",
-            BASE / f"{prompt}_baseline_next_step_apply_{args.gate_policy}.json",
-            BASE / f"{prompt}_baseline_next_step_apply_{args.gate_policy}_{args.seq_len}.json",
-        ]
+    for prompt in args.prompt_types:
+        suffix = args.name_suffix.strip()
+
+        if suffix:
+            apply_candidates = [
+                BASE / f"{prompt}_apply_next_step_apply_{suffix}.json",
+                BASE / f"{prompt}_apply_next_step_apply_{suffix}_v2.json",
+                BASE / f"{prompt}_apply_next_step_apply_{suffix}_v5.json",
+            ]
+            baseline_candidates = [
+                BASE / f"{prompt}_baseline_next_step_apply_{suffix}.json",
+                BASE / f"{prompt}_baseline_next_step_apply_{suffix}_v2.json",
+                BASE / f"{prompt}_baseline_next_step_apply_{suffix}_v5.json",
+            ]
+        else:
+            apply_candidates = [
+                BASE / f"{prompt}_apply_next_step_apply_{args.gate_policy}_v2.json",
+                BASE / f"{prompt}_apply_next_step_apply_{args.gate_policy}_{args.seq_len}_v2.json",
+                BASE / f"{prompt}_apply_next_step_apply_{args.gate_policy}.json",
+                BASE / f"{prompt}_apply_next_step_apply_{args.gate_policy}_{args.seq_len}.json",
+            ]
+            baseline_candidates = [
+                BASE / f"{prompt}_baseline_next_step_apply_{args.gate_policy}_v2.json",
+                BASE / f"{prompt}_baseline_next_step_apply_{args.gate_policy}_{args.seq_len}_v2.json",
+                BASE / f"{prompt}_baseline_next_step_apply_{args.gate_policy}.json",
+                BASE / f"{prompt}_baseline_next_step_apply_{args.gate_policy}_{args.seq_len}.json",
+            ]
 
         apply_path = resolve_existing_path(apply_candidates)
         baseline_path = resolve_existing_path(baseline_candidates)
@@ -98,11 +142,19 @@ def main() -> None:
         apply_data = load_json(apply_path)
         baseline_data = load_json(baseline_path)
 
+        gate_info = apply_data.get("replacement_gate", {})
+        min_score_margin = gate_info.get("min_score_margin")
+        min_gate_step = gate_info.get("min_gate_step")
+        passed_steps = gate_pass_steps(apply_data)
+
         fc = first_consumed_step(apply_data)
         fd = first_divergence_step(apply_data, baseline_data)
 
         apply_div = step_by_idx(apply_data, fd)
         baseline_div = step_by_idx(baseline_data, fd)
+
+        pre_div_step = (fd - 1) if fd is not None and fd > 0 else None
+        pre_div_apply = step_by_idx(apply_data, pre_div_step)
 
         apply_top5 = apply_div.get("top5_token_ids") if apply_div is not None else None
         baseline_top5 = baseline_div.get("top5_token_ids") if baseline_div is not None else None
@@ -164,9 +216,17 @@ def main() -> None:
                 "seq_len": args.seq_len,
                 "gate_policy": args.gate_policy,
                 "prompt_type": prompt,
+                "min_score_margin": min_score_margin,
+                "min_gate_step": min_gate_step,
+                "gate_pass_steps": passed_steps,
                 "first_consumed_step": fc,
                 "first_divergence_step": fd,
                 "divergence_lag": divergence_lag,
+                "pre_div_step": pre_div_step,
+                "pre_div_mean_abs_diff": layer14_mean_abs_diff(pre_div_apply),
+                "pre_div_score_margin": layer14_metric(pre_div_apply, "score_margin"),
+                "div_step_mean_abs_diff": layer14_mean_abs_diff(apply_div),
+                "div_step_score_margin": layer14_metric(apply_div, "score_margin"),
                 "divergence_step_top1_apply": (
                     apply_div["generated_token_id"] if apply_div is not None else None
                 ),
@@ -189,6 +249,8 @@ def main() -> None:
                 "apply_top1_in_baseline_top5": apply_top1_in_baseline_top5,
                 "baseline_top1_in_apply_top5": baseline_top1_in_apply_top5,
                 "change_subtype": change_subtype,
+                "name_suffix": suffix if suffix else None,
+
             }
         )
 
@@ -196,9 +258,17 @@ def main() -> None:
         "seq_len",
         "gate_policy",
         "prompt_type",
+        "min_score_margin",
+        "min_gate_step",
+        "gate_pass_steps",
         "first_consumed_step",
         "first_divergence_step",
         "divergence_lag",
+        "pre_div_step",
+        "pre_div_mean_abs_diff",
+        "pre_div_score_margin",
+        "div_step_mean_abs_diff",
+        "div_step_score_margin",
         "divergence_step_top1_apply",
         "divergence_step_top1_baseline",
         "top5_overlap_count",
@@ -210,6 +280,7 @@ def main() -> None:
         "apply_top1_in_baseline_top5",
         "baseline_top1_in_apply_top5",
         "change_subtype",
+        "name_suffix",
     ]
 
     print("\t".join(headers))
