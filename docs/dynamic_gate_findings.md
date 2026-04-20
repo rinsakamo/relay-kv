@@ -189,3 +189,60 @@ In the best structured setting
 This means the predictor successfully flagged the pre-divergence step (`step 9`) while avoiding earlier low-margin but stable steps (`steps 7 and 8`).
 
 This suggests that the predictor is better interpreted as a **post-injection hazard detector** than as a replacement for the gating rule itself.
+
+---
+
+## Current phase closure
+
+We close the current phase at the point where the core behavior of the dynamic gate is sufficiently understood. At 2048, a provisional cross-style policy candidate is already visible, while successful runs indicate that the main success factor is temporal routing rather than predictor-based control. In contrast, 4096 is not yet in a gate-policy tuning phase; it first requires sanity checks on the baseline/apply comparison setup. 7
+
+## Main conclusions from the dynamic-gate phase
+
+### Provisional common policy at 2048
+
+For `medium_2048`, the current provisional common policy candidate is:
+
+- `min_score_margin = 20`
+- `min_gate_step = 7`
+
+### Failure is dominated by timing, not block identity
+
+The best current explanation is that instability is governed more by when a block is applied than by which block is selected. In condensed form:
+
+- block 7 is not unsafe
+- early block 7 is unsafe
+- late block 7 is safe
+
+### Predictor is currently auxiliary
+
+The predictor now supports separate observation of requested vs. effective blocking. However, in successful runs it does not act as the primary control mechanism. At this phase, it is better interpreted as an auxiliary hazard-observation component rather than the main driver of stability. 8
+
+## Known constraints at the end of this phase
+
+The known constraints at this point are:
+
+- early steps are risky
+- temporal routing is dominant
+- the predictor remains auxiliary
+- 4096 requires comparison sanity checks before policy tuning
+- retrieval metrics, fixed GPU live KV budget, and a recent/anchor/retrieval three-tier design are not yet introduced. 9
+
+## Treatment of 4096 results
+
+In this phase, 4096 should not be treated as a target for further dynamic-gate tuning. It should instead be treated as a sanity-check target for the comparison setup. The required checks are:
+
+- step-0 token/top5 agreement
+- generated token count
+- `step_logs` length
+- baseline file pairing correctness. 10
+
+## Transition to the fast-track plan
+
+The next phase shifts the experimental subject away from dynamic-gate micro-tuning and toward memory/retrieval architecture. The next primary design axes are:
+
+- fixed GPU live KV budget
+- recent/anchor/retrieval three-tier memory design
+- retrieval quality metrics
+- coarse-to-fine retrieval
+
+This phase transition should begin once the 2048 representative success case is fixed, the divergence summary is stable in its current form, 4096 is explicitly treated as a sanity-check target, and the present phase conclusion is documented as temporal-routing-dominant. 11
