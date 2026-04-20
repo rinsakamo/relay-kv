@@ -1,0 +1,4398 @@
+{
+  "mode": "layer14_assisted_ready_decode_prototype",
+  "model": "Qwen/Qwen2.5-1.5B-Instruct",
+  "model_attention_layout": {
+    "hidden_size": 1536,
+    "num_attention_heads": 12,
+    "num_key_value_heads": 2,
+    "head_dim": 128,
+    "kv_hidden_size": 256
+  },
+  "prompt_type": "repetitive",
+  "seq_len_target": 4096,
+  "seq_len_actual": 4096,
+  "hot_window": 256,
+  "block_size": 256,
+  "scoring_variant": "mean_plus_norm",
+  "assisted_target_layers": [
+    14
+  ],
+  "decode_policy": {
+    "cold_blocks_fixed_from_prefill": true,
+    "decode_added_tokens_hot_only": true,
+    "replacement_scope": "layer14_gated_hooked_dry_run",
+    "writeback_stage": "tensor_writeback_ready_only",
+    "injection_stage": "runtime_bridge_ready_next_step_apply"
+  },
+  "max_new_tokens": 16,
+  "generated_tokens": 16,
+  "generated_text": ".. Relay. recent context context retrieval.. {  context behavior. (",
+  "elapsed_sec": 2.5530796610037214,
+  "tokens_per_sec": 6.266941155181087,
+  "step_logs": [
+    {
+      "step_idx": 0,
+      "generated_token_id": 13,
+      "top5_token_ids": [
+        13,
+        7709,
+        11,
+        374,
+        151643
+      ],
+      "top5_logits": [
+        20.28125,
+        17.5,
+        15.1875,
+        15.171875,
+        14.9765625
+      ],
+      "layer14": {
+        "layer_idx": 14,
+        "top_k": 1,
+        "selected_block_ids": [
+          15
+        ],
+        "selected_block_spans": [
+          [
+            3840,
+            3841
+          ]
+        ],
+        "selected_block_scores": [
+          496.21001039123536
+        ],
+        "gate_top_block_ids": [
+          15,
+          14
+        ],
+        "gate_top_block_scores": [
+          496.21001039123536,
+          391.40976666259763
+        ],
+        "top_block_score": 496.21001039123536,
+        "second_block_score": 391.40976666259763,
+        "score_margin": 104.80024372863772,
+        "min_score_margin": 20.0,
+        "candidate_k_len": 1,
+        "working_k_len": 257,
+        "coverage_ratio": 0.0002603488674824265,
+        "working_ratio": 0.06272882597022211,
+        "candidate_kv": {
+          "layer_idx": 14,
+          "start": 3840,
+          "end": 3841,
+          "length": 1,
+          "range_length": 1,
+          "tensor_length": 1,
+          "k_shape": [
+            1,
+            2,
+            1,
+            128
+          ],
+          "v_shape": [
+            1,
+            2,
+            1,
+            128
+          ],
+          "k_device": "cpu",
+          "v_device": "cpu",
+          "selected_spans": [
+            [
+              3840,
+              3841
+            ]
+          ],
+          "is_contiguous": true
+        },
+        "working_kv": {
+          "layer_idx": 14,
+          "candidate_range": [
+            3840,
+            3841
+          ],
+          "hot_range": [
+            3841,
+            4097
+          ],
+          "length": 257,
+          "candidate_tensor_length": 1,
+          "candidate_is_contiguous": true,
+          "candidate_selected_spans": [
+            [
+              3840,
+              3841
+            ]
+          ],
+          "k_shape": [
+            1,
+            2,
+            257,
+            128
+          ],
+          "v_shape": [
+            1,
+            2,
+            257,
+            128
+          ],
+          "k_device": "cpu",
+          "v_device": "cpu"
+        },
+        "attention_compare": {
+          "full_output_shape": [
+            1,
+            2,
+            1,
+            128
+          ],
+          "approx_output_shape": [
+            1,
+            2,
+            1,
+            128
+          ],
+          "mean_abs_diff": 0.07242929190397263,
+          "max_abs_diff": 0.3979160785675049,
+          "l2_diff": 1.5018298625946045
+        },
+        "attention_tensor_breakdown": {
+          "full_shape": [
+            1,
+            2,
+            1,
+            128
+          ],
+          "approx_shape": [
+            1,
+            2,
+            1,
+            128
+          ],
+          "full_num_heads": 2,
+          "full_head_dim": 128,
+          "full_flattened_last_dim": 256,
+          "approx_num_heads": 2,
+          "approx_head_dim": 128,
+          "approx_flattened_last_dim": 256
+        },
+        "replacement_ready": true,
+        "replacement_gate_passed": false,
+        "replacement_selected": false,
+        "replacement_gate_passed_raw": false,
+        "replacement_gate_suppressed_by_min_step": true,
+        "predictor_score_margin_threshold": 10.0,
+        "predictor_mean_abs_diff_threshold": 0.0001,
+        "predictor_danger": false,
+        "predictor_would_block": false,
+        "predictor_gate_overlap": false,
+        "predictor_block_requested": false,
+        "predictor_effective_block": false,
+        "replacement_gate_blocked_by_predictor": false,
+        "replacement_hook_enabled": false,
+        "replacement_hook_triggered": false,
+        "replacement_hook_mode": "disabled",
+        "replacement_next_step_apply_armed": false,
+        "replacement_next_step_apply_pending_source_step_idx": null,
+        "replacement_tensor_writeback_ready": false,
+        "replacement_tensor_writeback_reason": "gate_not_passed",
+        "replacement_writeback_tensor_shape": null,
+        "replacement_writeback_tensor_device": null,
+        "replacement_writeback_tensor_dtype": null,
+        "replacement_injection_selected": false,
+        "replacement_injection_target": null,
+        "replacement_injection_mode": "gate_not_passed",
+        "replacement_injection_ready": false,
+        "replacement_injection_ready_reason": "gate_not_passed",
+        "replacement_injection_apply_reason": "gate_not_passed",
+        "replacement_injection_applied": false,
+        "replacement_injection_tensor_shape": null,
+        "replacement_injection_tensor_device": null,
+        "replacement_injection_tensor_dtype": null,
+        "replacement_bridge_hidden_state_shape": null,
+        "replacement_bridge_hidden_state_device": null,
+        "replacement_bridge_hidden_state_dtype": null,
+        "replacement_bridge_runtime_shape": null,
+        "replacement_bridge_runtime_device": null,
+        "replacement_bridge_runtime_dtype": null,
+        "replacement_bridge_runtime_reason": null,
+        "replacement_bridge_compare": null,
+        "replacement_attn_hook_seen": true,
+        "replacement_attn_hook_shape": [
+          1,
+          1,
+          1536
+        ],
+        "replacement_attn_hook_dtype": "torch.float16",
+        "replacement_attn_hook_device": "cuda:0",
+        "replacement_layer_hook_seen": true,
+        "replacement_layer_hook_shape": [
+          1,
+          1,
+          1536
+        ],
+        "replacement_layer_hook_dtype": "torch.float16",
+        "replacement_layer_hook_device": "cuda:0",
+        "replacement_oproj_pre_hook_seen": true,
+        "replacement_oproj_pre_hook_shape": [
+          1,
+          1,
+          1536
+        ],
+        "replacement_oproj_pre_hook_dtype": "torch.float16",
+        "replacement_oproj_pre_hook_device": "cuda:0",
+        "replacement_oproj_pre_hook_replaced": false,
+        "replacement_next_step_apply_consumed": false,
+        "replacement_next_step_apply_source_step_idx": null,
+        "replacement_oproj_post_hook_seen": true,
+        "replacement_oproj_post_hook_shape": [
+          1,
+          1,
+          1536
+        ],
+        "replacement_oproj_post_hook_dtype": "torch.float16",
+        "replacement_oproj_post_hook_device": "cuda:0",
+        "replacement_attn_hook_hidden_size": 1536,
+        "replacement_layer_hook_hidden_size": 1536,
+        "replacement_shape_compare": {
+          "writeback_tensor_shape": null,
+          "attn_hook_output_shape": [
+            1,
+            1,
+            1536
+          ],
+          "oproj_pre_hook_input_shape": [
+            1,
+            1,
+            1536
+          ],
+          "oproj_post_hook_output_shape": [
+            1,
+            1,
+            1536
+          ],
+          "layer_hook_output_shape": [
+            1,
+            1,
+            1536
+          ]
+        },
+        "replacement_representation_compare": {
+          "writeback_device": null,
+          "writeback_dtype": null,
+          "attn_hook_device": "cuda:0",
+          "attn_hook_dtype": "torch.float16",
+          "oproj_pre_hook_device": "cuda:0",
+          "oproj_pre_hook_dtype": "torch.float16",
+          "oproj_post_hook_device": "cuda:0",
+          "oproj_post_hook_dtype": "torch.float16",
+          "layer_hook_device": "cuda:0",
+          "layer_hook_dtype": "torch.float16"
+        },
+        "replacement_layout_compare": {
+          "writeback_num_heads": 2,
+          "writeback_head_dim": 128,
+          "writeback_flattened_last_dim": 256,
+          "attn_hook_hidden_size": 1536,
+          "layer_hook_hidden_size": 1536
+        }
+      }
+    },
+    {
+      "step_idx": 1,
+      "generated_token_id": 13,
+      "top5_token_ids": [
+        13,
+        7709,
+        220,
+        374,
+        11
+      ],
+      "top5_logits": [
+        19.5625,
+        16.3125,
+        16.078125,
+        15.7265625,
+        15.2734375
+      ],
+      "layer14": {
+        "layer_idx": 14,
+        "top_k": 1,
+        "selected_block_ids": [
+          15
+        ],
+        "selected_block_spans": [
+          [
+            3840,
+            3842
+          ]
+        ],
+        "selected_block_scores": [
+          391.94452659606935
+        ],
+        "gate_top_block_ids": [
+          15,
+          14
+        ],
+        "gate_top_block_scores": [
+          391.94452659606935,
+          348.00766705322263
+        ],
+        "top_block_score": 391.94452659606935,
+        "second_block_score": 348.00766705322263,
+        "score_margin": 43.93685954284672,
+        "min_score_margin": 20.0,
+        "candidate_k_len": 2,
+        "working_k_len": 258,
+        "coverage_ratio": 0.0005205622071837585,
+        "working_ratio": 0.0629575402635432,
+        "candidate_kv": {
+          "layer_idx": 14,
+          "start": 3840,
+          "end": 3842,
+          "length": 2,
+          "range_length": 2,
+          "tensor_length": 2,
+          "k_shape": [
+            1,
+            2,
+            2,
+            128
+          ],
+          "v_shape": [
+            1,
+            2,
+            2,
+            128
+          ],
+          "k_device": "cpu",
+          "v_device": "cpu",
+          "selected_spans": [
+            [
+              3840,
+              3842
+            ]
+          ],
+          "is_contiguous": true
+        },
+        "working_kv": {
+          "layer_idx": 14,
+          "candidate_range": [
+            3840,
+            3842
+          ],
+          "hot_range": [
+            3842,
+            4098
+          ],
+          "length": 258,
+          "candidate_tensor_length": 2,
+          "candidate_is_contiguous": true,
+          "candidate_selected_spans": [
+            [
+              3840,
+              3842
+            ]
+          ],
+          "k_shape": [
+            1,
+            2,
+            258,
+            128
+          ],
+          "v_shape": [
+            1,
+            2,
+            258,
+            128
+          ],
+          "k_device": "cpu",
+          "v_device": "cpu"
+        },
+        "attention_compare": {
+          "full_output_shape": [
+            1,
+            2,
+            1,
+            128
+          ],
+          "approx_output_shape": [
+            1,
+            2,
+            1,
+            128
+          ],
+          "mean_abs_diff": 0.014179423451423645,
+          "max_abs_diff": 0.10464715957641602,
+          "l2_diff": 0.41145384311676025
+        },
+        "attention_tensor_breakdown": {
+          "full_shape": [
+            1,
+            2,
+            1,
+            128
+          ],
+          "approx_shape": [
+            1,
+            2,
+            1,
+            128
+          ],
+          "full_num_heads": 2,
+          "full_head_dim": 128,
+          "full_flattened_last_dim": 256,
+          "approx_num_heads": 2,
+          "approx_head_dim": 128,
+          "approx_flattened_last_dim": 256
+        },
+        "replacement_ready": true,
+        "replacement_gate_passed": false,
+        "replacement_selected": false,
+        "replacement_gate_passed_raw": false,
+        "replacement_gate_suppressed_by_min_step": true,
+        "predictor_score_margin_threshold": 10.0,
+        "predictor_mean_abs_diff_threshold": 0.0001,
+        "predictor_danger": false,
+        "predictor_would_block": false,
+        "predictor_gate_overlap": false,
+        "predictor_block_requested": false,
+        "predictor_effective_block": false,
+        "replacement_gate_blocked_by_predictor": false,
+        "replacement_hook_enabled": false,
+        "replacement_hook_triggered": false,
+        "replacement_hook_mode": "disabled",
+        "replacement_next_step_apply_armed": false,
+        "replacement_next_step_apply_pending_source_step_idx": null,
+        "replacement_tensor_writeback_ready": false,
+        "replacement_tensor_writeback_reason": "gate_not_passed",
+        "replacement_writeback_tensor_shape": null,
+        "replacement_writeback_tensor_device": null,
+        "replacement_writeback_tensor_dtype": null,
+        "replacement_injection_selected": false,
+        "replacement_injection_target": null,
+        "replacement_injection_mode": "gate_not_passed",
+        "replacement_injection_ready": false,
+        "replacement_injection_ready_reason": "gate_not_passed",
+        "replacement_injection_apply_reason": "gate_not_passed",
+        "replacement_injection_applied": false,
+        "replacement_injection_tensor_shape": null,
+        "replacement_injection_tensor_device": null,
+        "replacement_injection_tensor_dtype": null,
+        "replacement_bridge_hidden_state_shape": null,
+        "replacement_bridge_hidden_state_device": null,
+        "replacement_bridge_hidden_state_dtype": null,
+        "replacement_bridge_runtime_shape": null,
+        "replacement_bridge_runtime_device": null,
+        "replacement_bridge_runtime_dtype": null,
+        "replacement_bridge_runtime_reason": null,
+        "replacement_bridge_compare": null,
+        "replacement_attn_hook_seen": true,
+        "replacement_attn_hook_shape": [
+          1,
+          1,
+          1536
+        ],
+        "replacement_attn_hook_dtype": "torch.float16",
+        "replacement_attn_hook_device": "cuda:0",
+        "replacement_layer_hook_seen": true,
+        "replacement_layer_hook_shape": [
+          1,
+          1,
+          1536
+        ],
+        "replacement_layer_hook_dtype": "torch.float16",
+        "replacement_layer_hook_device": "cuda:0",
+        "replacement_oproj_pre_hook_seen": true,
+        "replacement_oproj_pre_hook_shape": [
+          1,
+          1,
+          1536
+        ],
+        "replacement_oproj_pre_hook_dtype": "torch.float16",
+        "replacement_oproj_pre_hook_device": "cuda:0",
+        "replacement_oproj_pre_hook_replaced": false,
+        "replacement_next_step_apply_consumed": false,
+        "replacement_next_step_apply_source_step_idx": null,
+        "replacement_oproj_post_hook_seen": true,
+        "replacement_oproj_post_hook_shape": [
+          1,
+          1,
+          1536
+        ],
+        "replacement_oproj_post_hook_dtype": "torch.float16",
+        "replacement_oproj_post_hook_device": "cuda:0",
+        "replacement_attn_hook_hidden_size": 1536,
+        "replacement_layer_hook_hidden_size": 1536,
+        "replacement_shape_compare": {
+          "writeback_tensor_shape": null,
+          "attn_hook_output_shape": [
+            1,
+            1,
+            1536
+          ],
+          "oproj_pre_hook_input_shape": [
+            1,
+            1,
+            1536
+          ],
+          "oproj_post_hook_output_shape": [
+            1,
+            1,
+            1536
+          ],
+          "layer_hook_output_shape": [
+            1,
+            1,
+            1536
+          ]
+        },
+        "replacement_representation_compare": {
+          "writeback_device": null,
+          "writeback_dtype": null,
+          "attn_hook_device": "cuda:0",
+          "attn_hook_dtype": "torch.float16",
+          "oproj_pre_hook_device": "cuda:0",
+          "oproj_pre_hook_dtype": "torch.float16",
+          "oproj_post_hook_device": "cuda:0",
+          "oproj_post_hook_dtype": "torch.float16",
+          "layer_hook_device": "cuda:0",
+          "layer_hook_dtype": "torch.float16"
+        },
+        "replacement_layout_compare": {
+          "writeback_num_heads": 2,
+          "writeback_head_dim": 128,
+          "writeback_flattened_last_dim": 256,
+          "attn_hook_hidden_size": 1536,
+          "layer_hook_hidden_size": 1536
+        }
+      }
+    },
+    {
+      "step_idx": 2,
+      "generated_token_id": 46172,
+      "top5_token_ids": [
+        46172,
+        151643,
+        31851,
+        220,
+        6512
+      ],
+      "top5_logits": [
+        19.5625,
+        14.9453125,
+        14.921875,
+        13.484375,
+        13.0859375
+      ],
+      "layer14": {
+        "layer_idx": 14,
+        "top_k": 1,
+        "selected_block_ids": [
+          15
+        ],
+        "selected_block_spans": [
+          [
+            3840,
+            3843
+          ]
+        ],
+        "selected_block_scores": [
+          354.0458764305115
+        ],
+        "gate_top_block_ids": [
+          15,
+          14
+        ],
+        "gate_top_block_scores": [
+          354.0458764305115,
+          337.5860056762695
+        ],
+        "top_block_score": 354.0458764305115,
+        "second_block_score": 337.5860056762695,
+        "score_margin": 16.45987075424199,
+        "min_score_margin": 20.0,
+        "candidate_k_len": 3,
+        "working_k_len": 259,
+        "coverage_ratio": 0.00078064012490242,
+        "working_ratio": 0.06318614296169797,
+        "candidate_kv": {
+          "layer_idx": 14,
+          "start": 3840,
+          "end": 3843,
+          "length": 3,
+          "range_length": 3,
+          "tensor_length": 3,
+          "k_shape": [
+            1,
+            2,
+            3,
+            128
+          ],
+          "v_shape": [
+            1,
+            2,
+            3,
+            128
+          ],
+          "k_device": "cpu",
+          "v_device": "cpu",
+          "selected_spans": [
+            [
+              3840,
+              3843
+            ]
+          ],
+          "is_contiguous": true
+        },
+        "working_kv": {
+          "layer_idx": 14,
+          "candidate_range": [
+            3840,
+            3843
+          ],
+          "hot_range": [
+            3843,
+            4099
+          ],
+          "length": 259,
+          "candidate_tensor_length": 3,
+          "candidate_is_contiguous": true,
+          "candidate_selected_spans": [
+            [
+              3840,
+              3843
+            ]
+          ],
+          "k_shape": [
+            1,
+            2,
+            259,
+            128
+          ],
+          "v_shape": [
+            1,
+            2,
+            259,
+            128
+          ],
+          "k_device": "cpu",
+          "v_device": "cpu"
+        },
+        "attention_compare": {
+          "full_output_shape": [
+            1,
+            2,
+            1,
+            128
+          ],
+          "approx_output_shape": [
+            1,
+            2,
+            1,
+            128
+          ],
+          "mean_abs_diff": 0.006405494175851345,
+          "max_abs_diff": 0.05059966444969177,
+          "l2_diff": 0.18326285481452942
+        },
+        "attention_tensor_breakdown": {
+          "full_shape": [
+            1,
+            2,
+            1,
+            128
+          ],
+          "approx_shape": [
+            1,
+            2,
+            1,
+            128
+          ],
+          "full_num_heads": 2,
+          "full_head_dim": 128,
+          "full_flattened_last_dim": 256,
+          "approx_num_heads": 2,
+          "approx_head_dim": 128,
+          "approx_flattened_last_dim": 256
+        },
+        "replacement_ready": true,
+        "replacement_gate_passed": false,
+        "replacement_selected": false,
+        "replacement_gate_passed_raw": false,
+        "replacement_gate_suppressed_by_min_step": true,
+        "predictor_score_margin_threshold": 10.0,
+        "predictor_mean_abs_diff_threshold": 0.0001,
+        "predictor_danger": false,
+        "predictor_would_block": false,
+        "predictor_gate_overlap": false,
+        "predictor_block_requested": false,
+        "predictor_effective_block": false,
+        "replacement_gate_blocked_by_predictor": false,
+        "replacement_hook_enabled": false,
+        "replacement_hook_triggered": false,
+        "replacement_hook_mode": "disabled",
+        "replacement_next_step_apply_armed": false,
+        "replacement_next_step_apply_pending_source_step_idx": null,
+        "replacement_tensor_writeback_ready": false,
+        "replacement_tensor_writeback_reason": "gate_not_passed",
+        "replacement_writeback_tensor_shape": null,
+        "replacement_writeback_tensor_device": null,
+        "replacement_writeback_tensor_dtype": null,
+        "replacement_injection_selected": false,
+        "replacement_injection_target": null,
+        "replacement_injection_mode": "gate_not_passed",
+        "replacement_injection_ready": false,
+        "replacement_injection_ready_reason": "gate_not_passed",
+        "replacement_injection_apply_reason": "gate_not_passed",
+        "replacement_injection_applied": false,
+        "replacement_injection_tensor_shape": null,
+        "replacement_injection_tensor_device": null,
+        "replacement_injection_tensor_dtype": null,
+        "replacement_bridge_hidden_state_shape": null,
+        "replacement_bridge_hidden_state_device": null,
+        "replacement_bridge_hidden_state_dtype": null,
+        "replacement_bridge_runtime_shape": null,
+        "replacement_bridge_runtime_device": null,
+        "replacement_bridge_runtime_dtype": null,
+        "replacement_bridge_runtime_reason": null,
+        "replacement_bridge_compare": null,
+        "replacement_attn_hook_seen": true,
+        "replacement_attn_hook_shape": [
+          1,
+          1,
+          1536
+        ],
+        "replacement_attn_hook_dtype": "torch.float16",
+        "replacement_attn_hook_device": "cuda:0",
+        "replacement_layer_hook_seen": true,
+        "replacement_layer_hook_shape": [
+          1,
+          1,
+          1536
+        ],
+        "replacement_layer_hook_dtype": "torch.float16",
+        "replacement_layer_hook_device": "cuda:0",
+        "replacement_oproj_pre_hook_seen": true,
+        "replacement_oproj_pre_hook_shape": [
+          1,
+          1,
+          1536
+        ],
+        "replacement_oproj_pre_hook_dtype": "torch.float16",
+        "replacement_oproj_pre_hook_device": "cuda:0",
+        "replacement_oproj_pre_hook_replaced": false,
+        "replacement_next_step_apply_consumed": false,
+        "replacement_next_step_apply_source_step_idx": null,
+        "replacement_oproj_post_hook_seen": true,
+        "replacement_oproj_post_hook_shape": [
+          1,
+          1,
+          1536
+        ],
+        "replacement_oproj_post_hook_dtype": "torch.float16",
+        "replacement_oproj_post_hook_device": "cuda:0",
+        "replacement_attn_hook_hidden_size": 1536,
+        "replacement_layer_hook_hidden_size": 1536,
+        "replacement_shape_compare": {
+          "writeback_tensor_shape": null,
+          "attn_hook_output_shape": [
+            1,
+            1,
+            1536
+          ],
+          "oproj_pre_hook_input_shape": [
+            1,
+            1,
+            1536
+          ],
+          "oproj_post_hook_output_shape": [
+            1,
+            1,
+            1536
+          ],
+          "layer_hook_output_shape": [
+            1,
+            1,
+            1536
+          ]
+        },
+        "replacement_representation_compare": {
+          "writeback_device": null,
+          "writeback_dtype": null,
+          "attn_hook_device": "cuda:0",
+          "attn_hook_dtype": "torch.float16",
+          "oproj_pre_hook_device": "cuda:0",
+          "oproj_pre_hook_dtype": "torch.float16",
+          "oproj_post_hook_device": "cuda:0",
+          "oproj_post_hook_dtype": "torch.float16",
+          "layer_hook_device": "cuda:0",
+          "layer_hook_dtype": "torch.float16"
+        },
+        "replacement_layout_compare": {
+          "writeback_num_heads": 2,
+          "writeback_head_dim": 128,
+          "writeback_flattened_last_dim": 256,
+          "attn_hook_hidden_size": 1536,
+          "layer_hook_hidden_size": 1536
+        }
+      }
+    },
+    {
+      "step_idx": 3,
+      "generated_token_id": 13,
+      "top5_token_ids": [
+        13,
+        7709,
+        12341,
+        220,
+        46172
+      ],
+      "top5_logits": [
+        18.546875,
+        17.546875,
+        15.3828125,
+        14.328125,
+        13.9296875
+      ],
+      "layer14": {
+        "layer_idx": 14,
+        "top_k": 1,
+        "selected_block_ids": [
+          15
+        ],
+        "selected_block_spans": [
+          [
+            3840,
+            3844
+          ]
+        ],
+        "selected_block_scores": [
+          339.28302876281737
+        ],
+        "gate_top_block_ids": [
+          15,
+          14
+        ],
+        "gate_top_block_scores": [
+          339.28302876281737,
+          295.1470408325195
+        ],
+        "top_block_score": 339.28302876281737,
+        "second_block_score": 295.1470408325195,
+        "score_margin": 44.13598793029786,
+        "min_score_margin": 20.0,
+        "candidate_k_len": 4,
+        "working_k_len": 260,
+        "coverage_ratio": 0.001040582726326743,
+        "working_ratio": 0.06341463414634146,
+        "candidate_kv": {
+          "layer_idx": 14,
+          "start": 3840,
+          "end": 3844,
+          "length": 4,
+          "range_length": 4,
+          "tensor_length": 4,
+          "k_shape": [
+            1,
+            2,
+            4,
+            128
+          ],
+          "v_shape": [
+            1,
+            2,
+            4,
+            128
+          ],
+          "k_device": "cpu",
+          "v_device": "cpu",
+          "selected_spans": [
+            [
+              3840,
+              3844
+            ]
+          ],
+          "is_contiguous": true
+        },
+        "working_kv": {
+          "layer_idx": 14,
+          "candidate_range": [
+            3840,
+            3844
+          ],
+          "hot_range": [
+            3844,
+            4100
+          ],
+          "length": 260,
+          "candidate_tensor_length": 4,
+          "candidate_is_contiguous": true,
+          "candidate_selected_spans": [
+            [
+              3840,
+              3844
+            ]
+          ],
+          "k_shape": [
+            1,
+            2,
+            260,
+            128
+          ],
+          "v_shape": [
+            1,
+            2,
+            260,
+            128
+          ],
+          "k_device": "cpu",
+          "v_device": "cpu"
+        },
+        "attention_compare": {
+          "full_output_shape": [
+            1,
+            2,
+            1,
+            128
+          ],
+          "approx_output_shape": [
+            1,
+            2,
+            1,
+            128
+          ],
+          "mean_abs_diff": 0.00499975960701704,
+          "max_abs_diff": 0.04192367196083069,
+          "l2_diff": 0.14014671742916107
+        },
+        "attention_tensor_breakdown": {
+          "full_shape": [
+            1,
+            2,
+            1,
+            128
+          ],
+          "approx_shape": [
+            1,
+            2,
+            1,
+            128
+          ],
+          "full_num_heads": 2,
+          "full_head_dim": 128,
+          "full_flattened_last_dim": 256,
+          "approx_num_heads": 2,
+          "approx_head_dim": 128,
+          "approx_flattened_last_dim": 256
+        },
+        "replacement_ready": true,
+        "replacement_gate_passed": false,
+        "replacement_selected": false,
+        "replacement_gate_passed_raw": false,
+        "replacement_gate_suppressed_by_min_step": true,
+        "predictor_score_margin_threshold": 10.0,
+        "predictor_mean_abs_diff_threshold": 0.0001,
+        "predictor_danger": false,
+        "predictor_would_block": false,
+        "predictor_gate_overlap": false,
+        "predictor_block_requested": false,
+        "predictor_effective_block": false,
+        "replacement_gate_blocked_by_predictor": false,
+        "replacement_hook_enabled": false,
+        "replacement_hook_triggered": false,
+        "replacement_hook_mode": "disabled",
+        "replacement_next_step_apply_armed": false,
+        "replacement_next_step_apply_pending_source_step_idx": null,
+        "replacement_tensor_writeback_ready": false,
+        "replacement_tensor_writeback_reason": "gate_not_passed",
+        "replacement_writeback_tensor_shape": null,
+        "replacement_writeback_tensor_device": null,
+        "replacement_writeback_tensor_dtype": null,
+        "replacement_injection_selected": false,
+        "replacement_injection_target": null,
+        "replacement_injection_mode": "gate_not_passed",
+        "replacement_injection_ready": false,
+        "replacement_injection_ready_reason": "gate_not_passed",
+        "replacement_injection_apply_reason": "gate_not_passed",
+        "replacement_injection_applied": false,
+        "replacement_injection_tensor_shape": null,
+        "replacement_injection_tensor_device": null,
+        "replacement_injection_tensor_dtype": null,
+        "replacement_bridge_hidden_state_shape": null,
+        "replacement_bridge_hidden_state_device": null,
+        "replacement_bridge_hidden_state_dtype": null,
+        "replacement_bridge_runtime_shape": null,
+        "replacement_bridge_runtime_device": null,
+        "replacement_bridge_runtime_dtype": null,
+        "replacement_bridge_runtime_reason": null,
+        "replacement_bridge_compare": null,
+        "replacement_attn_hook_seen": true,
+        "replacement_attn_hook_shape": [
+          1,
+          1,
+          1536
+        ],
+        "replacement_attn_hook_dtype": "torch.float16",
+        "replacement_attn_hook_device": "cuda:0",
+        "replacement_layer_hook_seen": true,
+        "replacement_layer_hook_shape": [
+          1,
+          1,
+          1536
+        ],
+        "replacement_layer_hook_dtype": "torch.float16",
+        "replacement_layer_hook_device": "cuda:0",
+        "replacement_oproj_pre_hook_seen": true,
+        "replacement_oproj_pre_hook_shape": [
+          1,
+          1,
+          1536
+        ],
+        "replacement_oproj_pre_hook_dtype": "torch.float16",
+        "replacement_oproj_pre_hook_device": "cuda:0",
+        "replacement_oproj_pre_hook_replaced": false,
+        "replacement_next_step_apply_consumed": false,
+        "replacement_next_step_apply_source_step_idx": null,
+        "replacement_oproj_post_hook_seen": true,
+        "replacement_oproj_post_hook_shape": [
+          1,
+          1,
+          1536
+        ],
+        "replacement_oproj_post_hook_dtype": "torch.float16",
+        "replacement_oproj_post_hook_device": "cuda:0",
+        "replacement_attn_hook_hidden_size": 1536,
+        "replacement_layer_hook_hidden_size": 1536,
+        "replacement_shape_compare": {
+          "writeback_tensor_shape": null,
+          "attn_hook_output_shape": [
+            1,
+            1,
+            1536
+          ],
+          "oproj_pre_hook_input_shape": [
+            1,
+            1,
+            1536
+          ],
+          "oproj_post_hook_output_shape": [
+            1,
+            1,
+            1536
+          ],
+          "layer_hook_output_shape": [
+            1,
+            1,
+            1536
+          ]
+        },
+        "replacement_representation_compare": {
+          "writeback_device": null,
+          "writeback_dtype": null,
+          "attn_hook_device": "cuda:0",
+          "attn_hook_dtype": "torch.float16",
+          "oproj_pre_hook_device": "cuda:0",
+          "oproj_pre_hook_dtype": "torch.float16",
+          "oproj_post_hook_device": "cuda:0",
+          "oproj_post_hook_dtype": "torch.float16",
+          "layer_hook_device": "cuda:0",
+          "layer_hook_dtype": "torch.float16"
+        },
+        "replacement_layout_compare": {
+          "writeback_num_heads": 2,
+          "writeback_head_dim": 128,
+          "writeback_flattened_last_dim": 256,
+          "attn_hook_hidden_size": 1536,
+          "layer_hook_hidden_size": 1536
+        }
+      }
+    },
+    {
+      "step_idx": 4,
+      "generated_token_id": 3213,
+      "top5_token_ids": [
+        3213,
+        7709,
+        46172,
+        34290,
+        12341
+      ],
+      "top5_logits": [
+        17.265625,
+        17.078125,
+        17.0,
+        14.984375,
+        14.875
+      ],
+      "layer14": {
+        "layer_idx": 14,
+        "top_k": 1,
+        "selected_block_ids": [
+          14
+        ],
+        "selected_block_spans": [
+          [
+            3584,
+            3840
+          ]
+        ],
+        "selected_block_scores": [
+          317.50501202392576
+        ],
+        "gate_top_block_ids": [
+          14,
+          13
+        ],
+        "gate_top_block_scores": [
+          317.50501202392576,
+          307.2861495361328
+        ],
+        "top_block_score": 317.50501202392576,
+        "second_block_score": 307.2861495361328,
+        "score_margin": 10.218862487792933,
+        "min_score_margin": 20.0,
+        "candidate_k_len": 256,
+        "working_k_len": 512,
+        "coverage_ratio": 0.06657997399219766,
+        "working_ratio": 0.12484759814679347,
+        "candidate_kv": {
+          "layer_idx": 14,
+          "start": 3584,
+          "end": 3840,
+          "length": 256,
+          "range_length": 256,
+          "tensor_length": 256,
+          "k_shape": [
+            1,
+            2,
+            256,
+            128
+          ],
+          "v_shape": [
+            1,
+            2,
+            256,
+            128
+          ],
+          "k_device": "cpu",
+          "v_device": "cpu",
+          "selected_spans": [
+            [
+              3584,
+              3840
+            ]
+          ],
+          "is_contiguous": true
+        },
+        "working_kv": {
+          "layer_idx": 14,
+          "candidate_range": [
+            3584,
+            3840
+          ],
+          "hot_range": [
+            3845,
+            4101
+          ],
+          "length": 512,
+          "candidate_tensor_length": 256,
+          "candidate_is_contiguous": true,
+          "candidate_selected_spans": [
+            [
+              3584,
+              3840
+            ]
+          ],
+          "k_shape": [
+            1,
+            2,
+            512,
+            128
+          ],
+          "v_shape": [
+            1,
+            2,
+            512,
+            128
+          ],
+          "k_device": "cpu",
+          "v_device": "cpu"
+        },
+        "attention_compare": {
+          "full_output_shape": [
+            1,
+            2,
+            1,
+            128
+          ],
+          "approx_output_shape": [
+            1,
+            2,
+            1,
+            128
+          ],
+          "mean_abs_diff": 0.002813813742250204,
+          "max_abs_diff": 0.030571818351745605,
+          "l2_diff": 0.07919260114431381
+        },
+        "attention_tensor_breakdown": {
+          "full_shape": [
+            1,
+            2,
+            1,
+            128
+          ],
+          "approx_shape": [
+            1,
+            2,
+            1,
+            128
+          ],
+          "full_num_heads": 2,
+          "full_head_dim": 128,
+          "full_flattened_last_dim": 256,
+          "approx_num_heads": 2,
+          "approx_head_dim": 128,
+          "approx_flattened_last_dim": 256
+        },
+        "replacement_ready": true,
+        "replacement_gate_passed": false,
+        "replacement_selected": false,
+        "replacement_gate_passed_raw": false,
+        "replacement_gate_suppressed_by_min_step": true,
+        "predictor_score_margin_threshold": 10.0,
+        "predictor_mean_abs_diff_threshold": 0.0001,
+        "predictor_danger": false,
+        "predictor_would_block": false,
+        "predictor_gate_overlap": false,
+        "predictor_block_requested": false,
+        "predictor_effective_block": false,
+        "replacement_gate_blocked_by_predictor": false,
+        "replacement_hook_enabled": false,
+        "replacement_hook_triggered": false,
+        "replacement_hook_mode": "disabled",
+        "replacement_next_step_apply_armed": false,
+        "replacement_next_step_apply_pending_source_step_idx": null,
+        "replacement_tensor_writeback_ready": false,
+        "replacement_tensor_writeback_reason": "gate_not_passed",
+        "replacement_writeback_tensor_shape": null,
+        "replacement_writeback_tensor_device": null,
+        "replacement_writeback_tensor_dtype": null,
+        "replacement_injection_selected": false,
+        "replacement_injection_target": null,
+        "replacement_injection_mode": "gate_not_passed",
+        "replacement_injection_ready": false,
+        "replacement_injection_ready_reason": "gate_not_passed",
+        "replacement_injection_apply_reason": "gate_not_passed",
+        "replacement_injection_applied": false,
+        "replacement_injection_tensor_shape": null,
+        "replacement_injection_tensor_device": null,
+        "replacement_injection_tensor_dtype": null,
+        "replacement_bridge_hidden_state_shape": null,
+        "replacement_bridge_hidden_state_device": null,
+        "replacement_bridge_hidden_state_dtype": null,
+        "replacement_bridge_runtime_shape": null,
+        "replacement_bridge_runtime_device": null,
+        "replacement_bridge_runtime_dtype": null,
+        "replacement_bridge_runtime_reason": null,
+        "replacement_bridge_compare": null,
+        "replacement_attn_hook_seen": true,
+        "replacement_attn_hook_shape": [
+          1,
+          1,
+          1536
+        ],
+        "replacement_attn_hook_dtype": "torch.float16",
+        "replacement_attn_hook_device": "cuda:0",
+        "replacement_layer_hook_seen": true,
+        "replacement_layer_hook_shape": [
+          1,
+          1,
+          1536
+        ],
+        "replacement_layer_hook_dtype": "torch.float16",
+        "replacement_layer_hook_device": "cuda:0",
+        "replacement_oproj_pre_hook_seen": true,
+        "replacement_oproj_pre_hook_shape": [
+          1,
+          1,
+          1536
+        ],
+        "replacement_oproj_pre_hook_dtype": "torch.float16",
+        "replacement_oproj_pre_hook_device": "cuda:0",
+        "replacement_oproj_pre_hook_replaced": false,
+        "replacement_next_step_apply_consumed": false,
+        "replacement_next_step_apply_source_step_idx": null,
+        "replacement_oproj_post_hook_seen": true,
+        "replacement_oproj_post_hook_shape": [
+          1,
+          1,
+          1536
+        ],
+        "replacement_oproj_post_hook_dtype": "torch.float16",
+        "replacement_oproj_post_hook_device": "cuda:0",
+        "replacement_attn_hook_hidden_size": 1536,
+        "replacement_layer_hook_hidden_size": 1536,
+        "replacement_shape_compare": {
+          "writeback_tensor_shape": null,
+          "attn_hook_output_shape": [
+            1,
+            1,
+            1536
+          ],
+          "oproj_pre_hook_input_shape": [
+            1,
+            1,
+            1536
+          ],
+          "oproj_post_hook_output_shape": [
+            1,
+            1,
+            1536
+          ],
+          "layer_hook_output_shape": [
+            1,
+            1,
+            1536
+          ]
+        },
+        "replacement_representation_compare": {
+          "writeback_device": null,
+          "writeback_dtype": null,
+          "attn_hook_device": "cuda:0",
+          "attn_hook_dtype": "torch.float16",
+          "oproj_pre_hook_device": "cuda:0",
+          "oproj_pre_hook_dtype": "torch.float16",
+          "oproj_post_hook_device": "cuda:0",
+          "oproj_post_hook_dtype": "torch.float16",
+          "layer_hook_device": "cuda:0",
+          "layer_hook_dtype": "torch.float16"
+        },
+        "replacement_layout_compare": {
+          "writeback_num_heads": 2,
+          "writeback_head_dim": 128,
+          "writeback_flattened_last_dim": 256,
+          "attn_hook_hidden_size": 1536,
+          "layer_hook_hidden_size": 1536
+        }
+      }
+    },
+    {
+      "step_idx": 5,
+      "generated_token_id": 2266,
+      "top5_token_ids": [
+        2266,
+        13,
+        3213,
+        271,
+        46172
+      ],
+      "top5_logits": [
+        18.8125,
+        16.0,
+        15.328125,
+        14.828125,
+        14.6640625
+      ],
+      "layer14": {
+        "layer_idx": 14,
+        "top_k": 1,
+        "selected_block_ids": [
+          15
+        ],
+        "selected_block_spans": [
+          [
+            3840,
+            3846
+          ]
+        ],
+        "selected_block_scores": [
+          261.27337376403807
+        ],
+        "gate_top_block_ids": [
+          15,
+          14
+        ],
+        "gate_top_block_scores": [
+          261.27337376403807,
+          251.2152171020508
+        ],
+        "top_block_score": 261.27337376403807,
+        "second_block_score": 251.2152171020508,
+        "score_margin": 10.058156661987283,
+        "min_score_margin": 20.0,
+        "candidate_k_len": 6,
+        "working_k_len": 262,
+        "coverage_ratio": 0.0015600624024961,
+        "working_ratio": 0.06387128230131643,
+        "candidate_kv": {
+          "layer_idx": 14,
+          "start": 3840,
+          "end": 3846,
+          "length": 6,
+          "range_length": 6,
+          "tensor_length": 6,
+          "k_shape": [
+            1,
+            2,
+            6,
+            128
+          ],
+          "v_shape": [
+            1,
+            2,
+            6,
+            128
+          ],
+          "k_device": "cpu",
+          "v_device": "cpu",
+          "selected_spans": [
+            [
+              3840,
+              3846
+            ]
+          ],
+          "is_contiguous": true
+        },
+        "working_kv": {
+          "layer_idx": 14,
+          "candidate_range": [
+            3840,
+            3846
+          ],
+          "hot_range": [
+            3846,
+            4102
+          ],
+          "length": 262,
+          "candidate_tensor_length": 6,
+          "candidate_is_contiguous": true,
+          "candidate_selected_spans": [
+            [
+              3840,
+              3846
+            ]
+          ],
+          "k_shape": [
+            1,
+            2,
+            262,
+            128
+          ],
+          "v_shape": [
+            1,
+            2,
+            262,
+            128
+          ],
+          "k_device": "cpu",
+          "v_device": "cpu"
+        },
+        "attention_compare": {
+          "full_output_shape": [
+            1,
+            2,
+            1,
+            128
+          ],
+          "approx_output_shape": [
+            1,
+            2,
+            1,
+            128
+          ],
+          "mean_abs_diff": 0.0001428422110620886,
+          "max_abs_diff": 0.00128936767578125,
+          "l2_diff": 0.0038874305319041014
+        },
+        "attention_tensor_breakdown": {
+          "full_shape": [
+            1,
+            2,
+            1,
+            128
+          ],
+          "approx_shape": [
+            1,
+            2,
+            1,
+            128
+          ],
+          "full_num_heads": 2,
+          "full_head_dim": 128,
+          "full_flattened_last_dim": 256,
+          "approx_num_heads": 2,
+          "approx_head_dim": 128,
+          "approx_flattened_last_dim": 256
+        },
+        "replacement_ready": true,
+        "replacement_gate_passed": false,
+        "replacement_selected": false,
+        "replacement_gate_passed_raw": false,
+        "replacement_gate_suppressed_by_min_step": true,
+        "predictor_score_margin_threshold": 10.0,
+        "predictor_mean_abs_diff_threshold": 0.0001,
+        "predictor_danger": false,
+        "predictor_would_block": false,
+        "predictor_gate_overlap": false,
+        "predictor_block_requested": false,
+        "predictor_effective_block": false,
+        "replacement_gate_blocked_by_predictor": false,
+        "replacement_hook_enabled": false,
+        "replacement_hook_triggered": false,
+        "replacement_hook_mode": "disabled",
+        "replacement_next_step_apply_armed": false,
+        "replacement_next_step_apply_pending_source_step_idx": null,
+        "replacement_tensor_writeback_ready": false,
+        "replacement_tensor_writeback_reason": "gate_not_passed",
+        "replacement_writeback_tensor_shape": null,
+        "replacement_writeback_tensor_device": null,
+        "replacement_writeback_tensor_dtype": null,
+        "replacement_injection_selected": false,
+        "replacement_injection_target": null,
+        "replacement_injection_mode": "gate_not_passed",
+        "replacement_injection_ready": false,
+        "replacement_injection_ready_reason": "gate_not_passed",
+        "replacement_injection_apply_reason": "gate_not_passed",
+        "replacement_injection_applied": false,
+        "replacement_injection_tensor_shape": null,
+        "replacement_injection_tensor_device": null,
+        "replacement_injection_tensor_dtype": null,
+        "replacement_bridge_hidden_state_shape": null,
+        "replacement_bridge_hidden_state_device": null,
+        "replacement_bridge_hidden_state_dtype": null,
+        "replacement_bridge_runtime_shape": null,
+        "replacement_bridge_runtime_device": null,
+        "replacement_bridge_runtime_dtype": null,
+        "replacement_bridge_runtime_reason": null,
+        "replacement_bridge_compare": null,
+        "replacement_attn_hook_seen": true,
+        "replacement_attn_hook_shape": [
+          1,
+          1,
+          1536
+        ],
+        "replacement_attn_hook_dtype": "torch.float16",
+        "replacement_attn_hook_device": "cuda:0",
+        "replacement_layer_hook_seen": true,
+        "replacement_layer_hook_shape": [
+          1,
+          1,
+          1536
+        ],
+        "replacement_layer_hook_dtype": "torch.float16",
+        "replacement_layer_hook_device": "cuda:0",
+        "replacement_oproj_pre_hook_seen": true,
+        "replacement_oproj_pre_hook_shape": [
+          1,
+          1,
+          1536
+        ],
+        "replacement_oproj_pre_hook_dtype": "torch.float16",
+        "replacement_oproj_pre_hook_device": "cuda:0",
+        "replacement_oproj_pre_hook_replaced": false,
+        "replacement_next_step_apply_consumed": false,
+        "replacement_next_step_apply_source_step_idx": null,
+        "replacement_oproj_post_hook_seen": true,
+        "replacement_oproj_post_hook_shape": [
+          1,
+          1,
+          1536
+        ],
+        "replacement_oproj_post_hook_dtype": "torch.float16",
+        "replacement_oproj_post_hook_device": "cuda:0",
+        "replacement_attn_hook_hidden_size": 1536,
+        "replacement_layer_hook_hidden_size": 1536,
+        "replacement_shape_compare": {
+          "writeback_tensor_shape": null,
+          "attn_hook_output_shape": [
+            1,
+            1,
+            1536
+          ],
+          "oproj_pre_hook_input_shape": [
+            1,
+            1,
+            1536
+          ],
+          "oproj_post_hook_output_shape": [
+            1,
+            1,
+            1536
+          ],
+          "layer_hook_output_shape": [
+            1,
+            1,
+            1536
+          ]
+        },
+        "replacement_representation_compare": {
+          "writeback_device": null,
+          "writeback_dtype": null,
+          "attn_hook_device": "cuda:0",
+          "attn_hook_dtype": "torch.float16",
+          "oproj_pre_hook_device": "cuda:0",
+          "oproj_pre_hook_dtype": "torch.float16",
+          "oproj_post_hook_device": "cuda:0",
+          "oproj_post_hook_dtype": "torch.float16",
+          "layer_hook_device": "cuda:0",
+          "layer_hook_dtype": "torch.float16"
+        },
+        "replacement_layout_compare": {
+          "writeback_num_heads": 2,
+          "writeback_head_dim": 128,
+          "writeback_flattened_last_dim": 256,
+          "attn_hook_hidden_size": 1536,
+          "layer_hook_hidden_size": 1536
+        }
+      }
+    },
+    {
+      "step_idx": 6,
+      "generated_token_id": 2266,
+      "top5_token_ids": [
+        2266,
+        56370,
+        11,
+        13,
+        374
+      ],
+      "top5_logits": [
+        17.828125,
+        17.796875,
+        16.703125,
+        16.625,
+        14.953125
+      ],
+      "layer14": {
+        "layer_idx": 14,
+        "top_k": 1,
+        "selected_block_ids": [
+          15
+        ],
+        "selected_block_spans": [
+          [
+            3840,
+            3847
+          ]
+        ],
+        "selected_block_scores": [
+          320.37708641815186
+        ],
+        "gate_top_block_ids": [
+          15,
+          14
+        ],
+        "gate_top_block_scores": [
+          320.37708641815186,
+          303.3929819946289
+        ],
+        "top_block_score": 320.37708641815186,
+        "second_block_score": 303.3929819946289,
+        "score_margin": 16.98410442352298,
+        "min_score_margin": 20.0,
+        "candidate_k_len": 7,
+        "working_k_len": 263,
+        "coverage_ratio": 0.001819599688068625,
+        "working_ratio": 0.06409943943456008,
+        "candidate_kv": {
+          "layer_idx": 14,
+          "start": 3840,
+          "end": 3847,
+          "length": 7,
+          "range_length": 7,
+          "tensor_length": 7,
+          "k_shape": [
+            1,
+            2,
+            7,
+            128
+          ],
+          "v_shape": [
+            1,
+            2,
+            7,
+            128
+          ],
+          "k_device": "cpu",
+          "v_device": "cpu",
+          "selected_spans": [
+            [
+              3840,
+              3847
+            ]
+          ],
+          "is_contiguous": true
+        },
+        "working_kv": {
+          "layer_idx": 14,
+          "candidate_range": [
+            3840,
+            3847
+          ],
+          "hot_range": [
+            3847,
+            4103
+          ],
+          "length": 263,
+          "candidate_tensor_length": 7,
+          "candidate_is_contiguous": true,
+          "candidate_selected_spans": [
+            [
+              3840,
+              3847
+            ]
+          ],
+          "k_shape": [
+            1,
+            2,
+            263,
+            128
+          ],
+          "v_shape": [
+            1,
+            2,
+            263,
+            128
+          ],
+          "k_device": "cpu",
+          "v_device": "cpu"
+        },
+        "attention_compare": {
+          "full_output_shape": [
+            1,
+            2,
+            1,
+            128
+          ],
+          "approx_output_shape": [
+            1,
+            2,
+            1,
+            128
+          ],
+          "mean_abs_diff": 6.557893357239664e-07,
+          "max_abs_diff": 4.5299530029296875e-06,
+          "l2_diff": 1.662310205574613e-05
+        },
+        "attention_tensor_breakdown": {
+          "full_shape": [
+            1,
+            2,
+            1,
+            128
+          ],
+          "approx_shape": [
+            1,
+            2,
+            1,
+            128
+          ],
+          "full_num_heads": 2,
+          "full_head_dim": 128,
+          "full_flattened_last_dim": 256,
+          "approx_num_heads": 2,
+          "approx_head_dim": 128,
+          "approx_flattened_last_dim": 256
+        },
+        "replacement_ready": true,
+        "replacement_gate_passed": false,
+        "replacement_selected": false,
+        "replacement_gate_passed_raw": false,
+        "replacement_gate_suppressed_by_min_step": true,
+        "predictor_score_margin_threshold": 10.0,
+        "predictor_mean_abs_diff_threshold": 0.0001,
+        "predictor_danger": false,
+        "predictor_would_block": false,
+        "predictor_gate_overlap": false,
+        "predictor_block_requested": false,
+        "predictor_effective_block": false,
+        "replacement_gate_blocked_by_predictor": false,
+        "replacement_hook_enabled": false,
+        "replacement_hook_triggered": false,
+        "replacement_hook_mode": "disabled",
+        "replacement_next_step_apply_armed": false,
+        "replacement_next_step_apply_pending_source_step_idx": null,
+        "replacement_tensor_writeback_ready": false,
+        "replacement_tensor_writeback_reason": "gate_not_passed",
+        "replacement_writeback_tensor_shape": null,
+        "replacement_writeback_tensor_device": null,
+        "replacement_writeback_tensor_dtype": null,
+        "replacement_injection_selected": false,
+        "replacement_injection_target": null,
+        "replacement_injection_mode": "gate_not_passed",
+        "replacement_injection_ready": false,
+        "replacement_injection_ready_reason": "gate_not_passed",
+        "replacement_injection_apply_reason": "gate_not_passed",
+        "replacement_injection_applied": false,
+        "replacement_injection_tensor_shape": null,
+        "replacement_injection_tensor_device": null,
+        "replacement_injection_tensor_dtype": null,
+        "replacement_bridge_hidden_state_shape": null,
+        "replacement_bridge_hidden_state_device": null,
+        "replacement_bridge_hidden_state_dtype": null,
+        "replacement_bridge_runtime_shape": null,
+        "replacement_bridge_runtime_device": null,
+        "replacement_bridge_runtime_dtype": null,
+        "replacement_bridge_runtime_reason": null,
+        "replacement_bridge_compare": null,
+        "replacement_attn_hook_seen": true,
+        "replacement_attn_hook_shape": [
+          1,
+          1,
+          1536
+        ],
+        "replacement_attn_hook_dtype": "torch.float16",
+        "replacement_attn_hook_device": "cuda:0",
+        "replacement_layer_hook_seen": true,
+        "replacement_layer_hook_shape": [
+          1,
+          1,
+          1536
+        ],
+        "replacement_layer_hook_dtype": "torch.float16",
+        "replacement_layer_hook_device": "cuda:0",
+        "replacement_oproj_pre_hook_seen": true,
+        "replacement_oproj_pre_hook_shape": [
+          1,
+          1,
+          1536
+        ],
+        "replacement_oproj_pre_hook_dtype": "torch.float16",
+        "replacement_oproj_pre_hook_device": "cuda:0",
+        "replacement_oproj_pre_hook_replaced": false,
+        "replacement_next_step_apply_consumed": false,
+        "replacement_next_step_apply_source_step_idx": null,
+        "replacement_oproj_post_hook_seen": true,
+        "replacement_oproj_post_hook_shape": [
+          1,
+          1,
+          1536
+        ],
+        "replacement_oproj_post_hook_dtype": "torch.float16",
+        "replacement_oproj_post_hook_device": "cuda:0",
+        "replacement_attn_hook_hidden_size": 1536,
+        "replacement_layer_hook_hidden_size": 1536,
+        "replacement_shape_compare": {
+          "writeback_tensor_shape": null,
+          "attn_hook_output_shape": [
+            1,
+            1,
+            1536
+          ],
+          "oproj_pre_hook_input_shape": [
+            1,
+            1,
+            1536
+          ],
+          "oproj_post_hook_output_shape": [
+            1,
+            1,
+            1536
+          ],
+          "layer_hook_output_shape": [
+            1,
+            1,
+            1536
+          ]
+        },
+        "replacement_representation_compare": {
+          "writeback_device": null,
+          "writeback_dtype": null,
+          "attn_hook_device": "cuda:0",
+          "attn_hook_dtype": "torch.float16",
+          "oproj_pre_hook_device": "cuda:0",
+          "oproj_pre_hook_dtype": "torch.float16",
+          "oproj_post_hook_device": "cuda:0",
+          "oproj_post_hook_dtype": "torch.float16",
+          "layer_hook_device": "cuda:0",
+          "layer_hook_dtype": "torch.float16"
+        },
+        "replacement_layout_compare": {
+          "writeback_num_heads": 2,
+          "writeback_head_dim": 128,
+          "writeback_flattened_last_dim": 256,
+          "attn_hook_hidden_size": 1536,
+          "layer_hook_hidden_size": 1536
+        }
+      }
+    },
+    {
+      "step_idx": 7,
+      "generated_token_id": 56370,
+      "top5_token_ids": [
+        56370,
+        17179,
+        13,
+        48224,
+        10759
+      ],
+      "top5_logits": [
+        21.953125,
+        16.609375,
+        16.0625,
+        15.640625,
+        15.3359375
+      ],
+      "layer14": {
+        "layer_idx": 14,
+        "top_k": 1,
+        "selected_block_ids": [
+          15
+        ],
+        "selected_block_spans": [
+          [
+            3840,
+            3848
+          ]
+        ],
+        "selected_block_scores": [
+          316.9351520767212
+        ],
+        "gate_top_block_ids": [
+          15,
+          14
+        ],
+        "gate_top_block_scores": [
+          316.9351520767212,
+          301.8723521118164
+        ],
+        "top_block_score": 316.9351520767212,
+        "second_block_score": 301.8723521118164,
+        "score_margin": 15.062799964904798,
+        "min_score_margin": 20.0,
+        "candidate_k_len": 8,
+        "working_k_len": 264,
+        "coverage_ratio": 0.002079002079002079,
+        "working_ratio": 0.06432748538011696,
+        "candidate_kv": {
+          "layer_idx": 14,
+          "start": 3840,
+          "end": 3848,
+          "length": 8,
+          "range_length": 8,
+          "tensor_length": 8,
+          "k_shape": [
+            1,
+            2,
+            8,
+            128
+          ],
+          "v_shape": [
+            1,
+            2,
+            8,
+            128
+          ],
+          "k_device": "cpu",
+          "v_device": "cpu",
+          "selected_spans": [
+            [
+              3840,
+              3848
+            ]
+          ],
+          "is_contiguous": true
+        },
+        "working_kv": {
+          "layer_idx": 14,
+          "candidate_range": [
+            3840,
+            3848
+          ],
+          "hot_range": [
+            3848,
+            4104
+          ],
+          "length": 264,
+          "candidate_tensor_length": 8,
+          "candidate_is_contiguous": true,
+          "candidate_selected_spans": [
+            [
+              3840,
+              3848
+            ]
+          ],
+          "k_shape": [
+            1,
+            2,
+            264,
+            128
+          ],
+          "v_shape": [
+            1,
+            2,
+            264,
+            128
+          ],
+          "k_device": "cpu",
+          "v_device": "cpu"
+        },
+        "attention_compare": {
+          "full_output_shape": [
+            1,
+            2,
+            1,
+            128
+          ],
+          "approx_output_shape": [
+            1,
+            2,
+            1,
+            128
+          ],
+          "mean_abs_diff": 6.623975423281081e-06,
+          "max_abs_diff": 6.350874900817871e-05,
+          "l2_diff": 0.000197179862880148
+        },
+        "attention_tensor_breakdown": {
+          "full_shape": [
+            1,
+            2,
+            1,
+            128
+          ],
+          "approx_shape": [
+            1,
+            2,
+            1,
+            128
+          ],
+          "full_num_heads": 2,
+          "full_head_dim": 128,
+          "full_flattened_last_dim": 256,
+          "approx_num_heads": 2,
+          "approx_head_dim": 128,
+          "approx_flattened_last_dim": 256
+        },
+        "replacement_ready": true,
+        "replacement_gate_passed": false,
+        "replacement_selected": false,
+        "replacement_gate_passed_raw": false,
+        "replacement_gate_suppressed_by_min_step": false,
+        "predictor_score_margin_threshold": 10.0,
+        "predictor_mean_abs_diff_threshold": 0.0001,
+        "predictor_danger": false,
+        "predictor_would_block": false,
+        "predictor_gate_overlap": false,
+        "predictor_block_requested": false,
+        "predictor_effective_block": false,
+        "replacement_gate_blocked_by_predictor": false,
+        "replacement_hook_enabled": false,
+        "replacement_hook_triggered": false,
+        "replacement_hook_mode": "disabled",
+        "replacement_next_step_apply_armed": false,
+        "replacement_next_step_apply_pending_source_step_idx": null,
+        "replacement_tensor_writeback_ready": false,
+        "replacement_tensor_writeback_reason": "gate_not_passed",
+        "replacement_writeback_tensor_shape": null,
+        "replacement_writeback_tensor_device": null,
+        "replacement_writeback_tensor_dtype": null,
+        "replacement_injection_selected": false,
+        "replacement_injection_target": null,
+        "replacement_injection_mode": "gate_not_passed",
+        "replacement_injection_ready": false,
+        "replacement_injection_ready_reason": "gate_not_passed",
+        "replacement_injection_apply_reason": "gate_not_passed",
+        "replacement_injection_applied": false,
+        "replacement_injection_tensor_shape": null,
+        "replacement_injection_tensor_device": null,
+        "replacement_injection_tensor_dtype": null,
+        "replacement_bridge_hidden_state_shape": null,
+        "replacement_bridge_hidden_state_device": null,
+        "replacement_bridge_hidden_state_dtype": null,
+        "replacement_bridge_runtime_shape": null,
+        "replacement_bridge_runtime_device": null,
+        "replacement_bridge_runtime_dtype": null,
+        "replacement_bridge_runtime_reason": null,
+        "replacement_bridge_compare": null,
+        "replacement_attn_hook_seen": true,
+        "replacement_attn_hook_shape": [
+          1,
+          1,
+          1536
+        ],
+        "replacement_attn_hook_dtype": "torch.float16",
+        "replacement_attn_hook_device": "cuda:0",
+        "replacement_layer_hook_seen": true,
+        "replacement_layer_hook_shape": [
+          1,
+          1,
+          1536
+        ],
+        "replacement_layer_hook_dtype": "torch.float16",
+        "replacement_layer_hook_device": "cuda:0",
+        "replacement_oproj_pre_hook_seen": true,
+        "replacement_oproj_pre_hook_shape": [
+          1,
+          1,
+          1536
+        ],
+        "replacement_oproj_pre_hook_dtype": "torch.float16",
+        "replacement_oproj_pre_hook_device": "cuda:0",
+        "replacement_oproj_pre_hook_replaced": false,
+        "replacement_next_step_apply_consumed": false,
+        "replacement_next_step_apply_source_step_idx": null,
+        "replacement_oproj_post_hook_seen": true,
+        "replacement_oproj_post_hook_shape": [
+          1,
+          1,
+          1536
+        ],
+        "replacement_oproj_post_hook_dtype": "torch.float16",
+        "replacement_oproj_post_hook_device": "cuda:0",
+        "replacement_attn_hook_hidden_size": 1536,
+        "replacement_layer_hook_hidden_size": 1536,
+        "replacement_shape_compare": {
+          "writeback_tensor_shape": null,
+          "attn_hook_output_shape": [
+            1,
+            1,
+            1536
+          ],
+          "oproj_pre_hook_input_shape": [
+            1,
+            1,
+            1536
+          ],
+          "oproj_post_hook_output_shape": [
+            1,
+            1,
+            1536
+          ],
+          "layer_hook_output_shape": [
+            1,
+            1,
+            1536
+          ]
+        },
+        "replacement_representation_compare": {
+          "writeback_device": null,
+          "writeback_dtype": null,
+          "attn_hook_device": "cuda:0",
+          "attn_hook_dtype": "torch.float16",
+          "oproj_pre_hook_device": "cuda:0",
+          "oproj_pre_hook_dtype": "torch.float16",
+          "oproj_post_hook_device": "cuda:0",
+          "oproj_post_hook_dtype": "torch.float16",
+          "layer_hook_device": "cuda:0",
+          "layer_hook_dtype": "torch.float16"
+        },
+        "replacement_layout_compare": {
+          "writeback_num_heads": 2,
+          "writeback_head_dim": 128,
+          "writeback_flattened_last_dim": 256,
+          "attn_hook_hidden_size": 1536,
+          "layer_hook_hidden_size": 1536
+        }
+      }
+    },
+    {
+      "step_idx": 8,
+      "generated_token_id": 13,
+      "top5_token_ids": [
+        13,
+        56370,
+        7709,
+        821,
+        17179
+      ],
+      "top5_logits": [
+        19.109375,
+        18.828125,
+        15.9765625,
+        15.0859375,
+        14.9140625
+      ],
+      "layer14": {
+        "layer_idx": 14,
+        "top_k": 1,
+        "selected_block_ids": [
+          15
+        ],
+        "selected_block_spans": [
+          [
+            3840,
+            3849
+          ]
+        ],
+        "selected_block_scores": [
+          362.5062248458862
+        ],
+        "gate_top_block_ids": [
+          15,
+          14
+        ],
+        "gate_top_block_scores": [
+          362.5062248458862,
+          348.5006480102539
+        ],
+        "top_block_score": 362.5062248458862,
+        "second_block_score": 348.5006480102539,
+        "score_margin": 14.005576835632326,
+        "min_score_margin": 20.0,
+        "candidate_k_len": 9,
+        "working_k_len": 265,
+        "coverage_ratio": 0.002338269680436477,
+        "working_ratio": 0.06455542021924482,
+        "candidate_kv": {
+          "layer_idx": 14,
+          "start": 3840,
+          "end": 3849,
+          "length": 9,
+          "range_length": 9,
+          "tensor_length": 9,
+          "k_shape": [
+            1,
+            2,
+            9,
+            128
+          ],
+          "v_shape": [
+            1,
+            2,
+            9,
+            128
+          ],
+          "k_device": "cpu",
+          "v_device": "cpu",
+          "selected_spans": [
+            [
+              3840,
+              3849
+            ]
+          ],
+          "is_contiguous": true
+        },
+        "working_kv": {
+          "layer_idx": 14,
+          "candidate_range": [
+            3840,
+            3849
+          ],
+          "hot_range": [
+            3849,
+            4105
+          ],
+          "length": 265,
+          "candidate_tensor_length": 9,
+          "candidate_is_contiguous": true,
+          "candidate_selected_spans": [
+            [
+              3840,
+              3849
+            ]
+          ],
+          "k_shape": [
+            1,
+            2,
+            265,
+            128
+          ],
+          "v_shape": [
+            1,
+            2,
+            265,
+            128
+          ],
+          "k_device": "cpu",
+          "v_device": "cpu"
+        },
+        "attention_compare": {
+          "full_output_shape": [
+            1,
+            2,
+            1,
+            128
+          ],
+          "approx_output_shape": [
+            1,
+            2,
+            1,
+            128
+          ],
+          "mean_abs_diff": 0.0012243535602465272,
+          "max_abs_diff": 0.007223606109619141,
+          "l2_diff": 0.030694054439663887
+        },
+        "attention_tensor_breakdown": {
+          "full_shape": [
+            1,
+            2,
+            1,
+            128
+          ],
+          "approx_shape": [
+            1,
+            2,
+            1,
+            128
+          ],
+          "full_num_heads": 2,
+          "full_head_dim": 128,
+          "full_flattened_last_dim": 256,
+          "approx_num_heads": 2,
+          "approx_head_dim": 128,
+          "approx_flattened_last_dim": 256
+        },
+        "replacement_ready": true,
+        "replacement_gate_passed": false,
+        "replacement_selected": false,
+        "replacement_gate_passed_raw": false,
+        "replacement_gate_suppressed_by_min_step": false,
+        "predictor_score_margin_threshold": 10.0,
+        "predictor_mean_abs_diff_threshold": 0.0001,
+        "predictor_danger": false,
+        "predictor_would_block": false,
+        "predictor_gate_overlap": false,
+        "predictor_block_requested": false,
+        "predictor_effective_block": false,
+        "replacement_gate_blocked_by_predictor": false,
+        "replacement_hook_enabled": false,
+        "replacement_hook_triggered": false,
+        "replacement_hook_mode": "disabled",
+        "replacement_next_step_apply_armed": false,
+        "replacement_next_step_apply_pending_source_step_idx": null,
+        "replacement_tensor_writeback_ready": false,
+        "replacement_tensor_writeback_reason": "gate_not_passed",
+        "replacement_writeback_tensor_shape": null,
+        "replacement_writeback_tensor_device": null,
+        "replacement_writeback_tensor_dtype": null,
+        "replacement_injection_selected": false,
+        "replacement_injection_target": null,
+        "replacement_injection_mode": "gate_not_passed",
+        "replacement_injection_ready": false,
+        "replacement_injection_ready_reason": "gate_not_passed",
+        "replacement_injection_apply_reason": "gate_not_passed",
+        "replacement_injection_applied": false,
+        "replacement_injection_tensor_shape": null,
+        "replacement_injection_tensor_device": null,
+        "replacement_injection_tensor_dtype": null,
+        "replacement_bridge_hidden_state_shape": null,
+        "replacement_bridge_hidden_state_device": null,
+        "replacement_bridge_hidden_state_dtype": null,
+        "replacement_bridge_runtime_shape": null,
+        "replacement_bridge_runtime_device": null,
+        "replacement_bridge_runtime_dtype": null,
+        "replacement_bridge_runtime_reason": null,
+        "replacement_bridge_compare": null,
+        "replacement_attn_hook_seen": true,
+        "replacement_attn_hook_shape": [
+          1,
+          1,
+          1536
+        ],
+        "replacement_attn_hook_dtype": "torch.float16",
+        "replacement_attn_hook_device": "cuda:0",
+        "replacement_layer_hook_seen": true,
+        "replacement_layer_hook_shape": [
+          1,
+          1,
+          1536
+        ],
+        "replacement_layer_hook_dtype": "torch.float16",
+        "replacement_layer_hook_device": "cuda:0",
+        "replacement_oproj_pre_hook_seen": true,
+        "replacement_oproj_pre_hook_shape": [
+          1,
+          1,
+          1536
+        ],
+        "replacement_oproj_pre_hook_dtype": "torch.float16",
+        "replacement_oproj_pre_hook_device": "cuda:0",
+        "replacement_oproj_pre_hook_replaced": false,
+        "replacement_next_step_apply_consumed": false,
+        "replacement_next_step_apply_source_step_idx": null,
+        "replacement_oproj_post_hook_seen": true,
+        "replacement_oproj_post_hook_shape": [
+          1,
+          1,
+          1536
+        ],
+        "replacement_oproj_post_hook_dtype": "torch.float16",
+        "replacement_oproj_post_hook_device": "cuda:0",
+        "replacement_attn_hook_hidden_size": 1536,
+        "replacement_layer_hook_hidden_size": 1536,
+        "replacement_shape_compare": {
+          "writeback_tensor_shape": null,
+          "attn_hook_output_shape": [
+            1,
+            1,
+            1536
+          ],
+          "oproj_pre_hook_input_shape": [
+            1,
+            1,
+            1536
+          ],
+          "oproj_post_hook_output_shape": [
+            1,
+            1,
+            1536
+          ],
+          "layer_hook_output_shape": [
+            1,
+            1,
+            1536
+          ]
+        },
+        "replacement_representation_compare": {
+          "writeback_device": null,
+          "writeback_dtype": null,
+          "attn_hook_device": "cuda:0",
+          "attn_hook_dtype": "torch.float16",
+          "oproj_pre_hook_device": "cuda:0",
+          "oproj_pre_hook_dtype": "torch.float16",
+          "oproj_post_hook_device": "cuda:0",
+          "oproj_post_hook_dtype": "torch.float16",
+          "layer_hook_device": "cuda:0",
+          "layer_hook_dtype": "torch.float16"
+        },
+        "replacement_layout_compare": {
+          "writeback_num_heads": 2,
+          "writeback_head_dim": 128,
+          "writeback_flattened_last_dim": 256,
+          "attn_hook_hidden_size": 1536,
+          "layer_hook_hidden_size": 1536
+        }
+      }
+    },
+    {
+      "step_idx": 9,
+      "generated_token_id": 13,
+      "top5_token_ids": [
+        13,
+        7709,
+        56370,
+        46172,
+        3213
+      ],
+      "top5_logits": [
+        18.265625,
+        16.953125,
+        16.328125,
+        16.1875,
+        15.765625
+      ],
+      "layer14": {
+        "layer_idx": 14,
+        "top_k": 1,
+        "selected_block_ids": [
+          15
+        ],
+        "selected_block_spans": [
+          [
+            3840,
+            3850
+          ]
+        ],
+        "selected_block_scores": [
+          436.57437602233887
+        ],
+        "gate_top_block_ids": [
+          15,
+          14
+        ],
+        "gate_top_block_scores": [
+          436.57437602233887,
+          416.70883892822263
+        ],
+        "top_block_score": 436.57437602233887,
+        "second_block_score": 416.70883892822263,
+        "score_margin": 19.865537094116235,
+        "min_score_margin": 20.0,
+        "candidate_k_len": 10,
+        "working_k_len": 266,
+        "coverage_ratio": 0.0025974025974025974,
+        "working_ratio": 0.06478324403312226,
+        "candidate_kv": {
+          "layer_idx": 14,
+          "start": 3840,
+          "end": 3850,
+          "length": 10,
+          "range_length": 10,
+          "tensor_length": 10,
+          "k_shape": [
+            1,
+            2,
+            10,
+            128
+          ],
+          "v_shape": [
+            1,
+            2,
+            10,
+            128
+          ],
+          "k_device": "cpu",
+          "v_device": "cpu",
+          "selected_spans": [
+            [
+              3840,
+              3850
+            ]
+          ],
+          "is_contiguous": true
+        },
+        "working_kv": {
+          "layer_idx": 14,
+          "candidate_range": [
+            3840,
+            3850
+          ],
+          "hot_range": [
+            3850,
+            4106
+          ],
+          "length": 266,
+          "candidate_tensor_length": 10,
+          "candidate_is_contiguous": true,
+          "candidate_selected_spans": [
+            [
+              3840,
+              3850
+            ]
+          ],
+          "k_shape": [
+            1,
+            2,
+            266,
+            128
+          ],
+          "v_shape": [
+            1,
+            2,
+            266,
+            128
+          ],
+          "k_device": "cpu",
+          "v_device": "cpu"
+        },
+        "attention_compare": {
+          "full_output_shape": [
+            1,
+            2,
+            1,
+            128
+          ],
+          "approx_output_shape": [
+            1,
+            2,
+            1,
+            128
+          ],
+          "mean_abs_diff": 1.9466864614514634e-05,
+          "max_abs_diff": 0.0001735687255859375,
+          "l2_diff": 0.000590421783272177
+        },
+        "attention_tensor_breakdown": {
+          "full_shape": [
+            1,
+            2,
+            1,
+            128
+          ],
+          "approx_shape": [
+            1,
+            2,
+            1,
+            128
+          ],
+          "full_num_heads": 2,
+          "full_head_dim": 128,
+          "full_flattened_last_dim": 256,
+          "approx_num_heads": 2,
+          "approx_head_dim": 128,
+          "approx_flattened_last_dim": 256
+        },
+        "replacement_ready": true,
+        "replacement_gate_passed": false,
+        "replacement_selected": false,
+        "replacement_gate_passed_raw": false,
+        "replacement_gate_suppressed_by_min_step": false,
+        "predictor_score_margin_threshold": 10.0,
+        "predictor_mean_abs_diff_threshold": 0.0001,
+        "predictor_danger": false,
+        "predictor_would_block": false,
+        "predictor_gate_overlap": false,
+        "predictor_block_requested": false,
+        "predictor_effective_block": false,
+        "replacement_gate_blocked_by_predictor": false,
+        "replacement_hook_enabled": false,
+        "replacement_hook_triggered": false,
+        "replacement_hook_mode": "disabled",
+        "replacement_next_step_apply_armed": false,
+        "replacement_next_step_apply_pending_source_step_idx": null,
+        "replacement_tensor_writeback_ready": false,
+        "replacement_tensor_writeback_reason": "gate_not_passed",
+        "replacement_writeback_tensor_shape": null,
+        "replacement_writeback_tensor_device": null,
+        "replacement_writeback_tensor_dtype": null,
+        "replacement_injection_selected": false,
+        "replacement_injection_target": null,
+        "replacement_injection_mode": "gate_not_passed",
+        "replacement_injection_ready": false,
+        "replacement_injection_ready_reason": "gate_not_passed",
+        "replacement_injection_apply_reason": "gate_not_passed",
+        "replacement_injection_applied": false,
+        "replacement_injection_tensor_shape": null,
+        "replacement_injection_tensor_device": null,
+        "replacement_injection_tensor_dtype": null,
+        "replacement_bridge_hidden_state_shape": null,
+        "replacement_bridge_hidden_state_device": null,
+        "replacement_bridge_hidden_state_dtype": null,
+        "replacement_bridge_runtime_shape": null,
+        "replacement_bridge_runtime_device": null,
+        "replacement_bridge_runtime_dtype": null,
+        "replacement_bridge_runtime_reason": null,
+        "replacement_bridge_compare": null,
+        "replacement_attn_hook_seen": true,
+        "replacement_attn_hook_shape": [
+          1,
+          1,
+          1536
+        ],
+        "replacement_attn_hook_dtype": "torch.float16",
+        "replacement_attn_hook_device": "cuda:0",
+        "replacement_layer_hook_seen": true,
+        "replacement_layer_hook_shape": [
+          1,
+          1,
+          1536
+        ],
+        "replacement_layer_hook_dtype": "torch.float16",
+        "replacement_layer_hook_device": "cuda:0",
+        "replacement_oproj_pre_hook_seen": true,
+        "replacement_oproj_pre_hook_shape": [
+          1,
+          1,
+          1536
+        ],
+        "replacement_oproj_pre_hook_dtype": "torch.float16",
+        "replacement_oproj_pre_hook_device": "cuda:0",
+        "replacement_oproj_pre_hook_replaced": false,
+        "replacement_next_step_apply_consumed": false,
+        "replacement_next_step_apply_source_step_idx": null,
+        "replacement_oproj_post_hook_seen": true,
+        "replacement_oproj_post_hook_shape": [
+          1,
+          1,
+          1536
+        ],
+        "replacement_oproj_post_hook_dtype": "torch.float16",
+        "replacement_oproj_post_hook_device": "cuda:0",
+        "replacement_attn_hook_hidden_size": 1536,
+        "replacement_layer_hook_hidden_size": 1536,
+        "replacement_shape_compare": {
+          "writeback_tensor_shape": null,
+          "attn_hook_output_shape": [
+            1,
+            1,
+            1536
+          ],
+          "oproj_pre_hook_input_shape": [
+            1,
+            1,
+            1536
+          ],
+          "oproj_post_hook_output_shape": [
+            1,
+            1,
+            1536
+          ],
+          "layer_hook_output_shape": [
+            1,
+            1,
+            1536
+          ]
+        },
+        "replacement_representation_compare": {
+          "writeback_device": null,
+          "writeback_dtype": null,
+          "attn_hook_device": "cuda:0",
+          "attn_hook_dtype": "torch.float16",
+          "oproj_pre_hook_device": "cuda:0",
+          "oproj_pre_hook_dtype": "torch.float16",
+          "oproj_post_hook_device": "cuda:0",
+          "oproj_post_hook_dtype": "torch.float16",
+          "layer_hook_device": "cuda:0",
+          "layer_hook_dtype": "torch.float16"
+        },
+        "replacement_layout_compare": {
+          "writeback_num_heads": 2,
+          "writeback_head_dim": 128,
+          "writeback_flattened_last_dim": 256,
+          "attn_hook_hidden_size": 1536,
+          "layer_hook_hidden_size": 1536
+        }
+      }
+    },
+    {
+      "step_idx": 10,
+      "generated_token_id": 314,
+      "top5_token_ids": [
+        314,
+        320,
+        13,
+        271,
+        6682
+      ],
+      "top5_logits": [
+        16.734375,
+        16.71875,
+        15.671875,
+        15.546875,
+        14.859375
+      ],
+      "layer14": {
+        "layer_idx": 14,
+        "top_k": 1,
+        "selected_block_ids": [
+          14
+        ],
+        "selected_block_spans": [
+          [
+            3584,
+            3840
+          ]
+        ],
+        "selected_block_scores": [
+          270.72421978759763
+        ],
+        "gate_top_block_ids": [
+          14,
+          12
+        ],
+        "gate_top_block_scores": [
+          270.72421978759763,
+          251.27062286376952
+        ],
+        "top_block_score": 270.72421978759763,
+        "second_block_score": 251.27062286376952,
+        "score_margin": 19.453596923828115,
+        "min_score_margin": 20.0,
+        "candidate_k_len": 256,
+        "working_k_len": 512,
+        "coverage_ratio": 0.06647623993767852,
+        "working_ratio": 0.12466520574628683,
+        "candidate_kv": {
+          "layer_idx": 14,
+          "start": 3584,
+          "end": 3840,
+          "length": 256,
+          "range_length": 256,
+          "tensor_length": 256,
+          "k_shape": [
+            1,
+            2,
+            256,
+            128
+          ],
+          "v_shape": [
+            1,
+            2,
+            256,
+            128
+          ],
+          "k_device": "cpu",
+          "v_device": "cpu",
+          "selected_spans": [
+            [
+              3584,
+              3840
+            ]
+          ],
+          "is_contiguous": true
+        },
+        "working_kv": {
+          "layer_idx": 14,
+          "candidate_range": [
+            3584,
+            3840
+          ],
+          "hot_range": [
+            3851,
+            4107
+          ],
+          "length": 512,
+          "candidate_tensor_length": 256,
+          "candidate_is_contiguous": true,
+          "candidate_selected_spans": [
+            [
+              3584,
+              3840
+            ]
+          ],
+          "k_shape": [
+            1,
+            2,
+            512,
+            128
+          ],
+          "v_shape": [
+            1,
+            2,
+            512,
+            128
+          ],
+          "k_device": "cpu",
+          "v_device": "cpu"
+        },
+        "attention_compare": {
+          "full_output_shape": [
+            1,
+            2,
+            1,
+            128
+          ],
+          "approx_output_shape": [
+            1,
+            2,
+            1,
+            128
+          ],
+          "mean_abs_diff": 0.00034985848469659686,
+          "max_abs_diff": 0.002924799919128418,
+          "l2_diff": 0.009794870391488075
+        },
+        "attention_tensor_breakdown": {
+          "full_shape": [
+            1,
+            2,
+            1,
+            128
+          ],
+          "approx_shape": [
+            1,
+            2,
+            1,
+            128
+          ],
+          "full_num_heads": 2,
+          "full_head_dim": 128,
+          "full_flattened_last_dim": 256,
+          "approx_num_heads": 2,
+          "approx_head_dim": 128,
+          "approx_flattened_last_dim": 256
+        },
+        "replacement_ready": true,
+        "replacement_gate_passed": false,
+        "replacement_selected": false,
+        "replacement_gate_passed_raw": false,
+        "replacement_gate_suppressed_by_min_step": false,
+        "predictor_score_margin_threshold": 10.0,
+        "predictor_mean_abs_diff_threshold": 0.0001,
+        "predictor_danger": false,
+        "predictor_would_block": false,
+        "predictor_gate_overlap": false,
+        "predictor_block_requested": false,
+        "predictor_effective_block": false,
+        "replacement_gate_blocked_by_predictor": false,
+        "replacement_hook_enabled": false,
+        "replacement_hook_triggered": false,
+        "replacement_hook_mode": "disabled",
+        "replacement_next_step_apply_armed": false,
+        "replacement_next_step_apply_pending_source_step_idx": null,
+        "replacement_tensor_writeback_ready": false,
+        "replacement_tensor_writeback_reason": "gate_not_passed",
+        "replacement_writeback_tensor_shape": null,
+        "replacement_writeback_tensor_device": null,
+        "replacement_writeback_tensor_dtype": null,
+        "replacement_injection_selected": false,
+        "replacement_injection_target": null,
+        "replacement_injection_mode": "gate_not_passed",
+        "replacement_injection_ready": false,
+        "replacement_injection_ready_reason": "gate_not_passed",
+        "replacement_injection_apply_reason": "gate_not_passed",
+        "replacement_injection_applied": false,
+        "replacement_injection_tensor_shape": null,
+        "replacement_injection_tensor_device": null,
+        "replacement_injection_tensor_dtype": null,
+        "replacement_bridge_hidden_state_shape": null,
+        "replacement_bridge_hidden_state_device": null,
+        "replacement_bridge_hidden_state_dtype": null,
+        "replacement_bridge_runtime_shape": null,
+        "replacement_bridge_runtime_device": null,
+        "replacement_bridge_runtime_dtype": null,
+        "replacement_bridge_runtime_reason": null,
+        "replacement_bridge_compare": null,
+        "replacement_attn_hook_seen": true,
+        "replacement_attn_hook_shape": [
+          1,
+          1,
+          1536
+        ],
+        "replacement_attn_hook_dtype": "torch.float16",
+        "replacement_attn_hook_device": "cuda:0",
+        "replacement_layer_hook_seen": true,
+        "replacement_layer_hook_shape": [
+          1,
+          1,
+          1536
+        ],
+        "replacement_layer_hook_dtype": "torch.float16",
+        "replacement_layer_hook_device": "cuda:0",
+        "replacement_oproj_pre_hook_seen": true,
+        "replacement_oproj_pre_hook_shape": [
+          1,
+          1,
+          1536
+        ],
+        "replacement_oproj_pre_hook_dtype": "torch.float16",
+        "replacement_oproj_pre_hook_device": "cuda:0",
+        "replacement_oproj_pre_hook_replaced": false,
+        "replacement_next_step_apply_consumed": false,
+        "replacement_next_step_apply_source_step_idx": null,
+        "replacement_oproj_post_hook_seen": true,
+        "replacement_oproj_post_hook_shape": [
+          1,
+          1,
+          1536
+        ],
+        "replacement_oproj_post_hook_dtype": "torch.float16",
+        "replacement_oproj_post_hook_device": "cuda:0",
+        "replacement_attn_hook_hidden_size": 1536,
+        "replacement_layer_hook_hidden_size": 1536,
+        "replacement_shape_compare": {
+          "writeback_tensor_shape": null,
+          "attn_hook_output_shape": [
+            1,
+            1,
+            1536
+          ],
+          "oproj_pre_hook_input_shape": [
+            1,
+            1,
+            1536
+          ],
+          "oproj_post_hook_output_shape": [
+            1,
+            1,
+            1536
+          ],
+          "layer_hook_output_shape": [
+            1,
+            1,
+            1536
+          ]
+        },
+        "replacement_representation_compare": {
+          "writeback_device": null,
+          "writeback_dtype": null,
+          "attn_hook_device": "cuda:0",
+          "attn_hook_dtype": "torch.float16",
+          "oproj_pre_hook_device": "cuda:0",
+          "oproj_pre_hook_dtype": "torch.float16",
+          "oproj_post_hook_device": "cuda:0",
+          "oproj_post_hook_dtype": "torch.float16",
+          "layer_hook_device": "cuda:0",
+          "layer_hook_dtype": "torch.float16"
+        },
+        "replacement_layout_compare": {
+          "writeback_num_heads": 2,
+          "writeback_head_dim": 128,
+          "writeback_flattened_last_dim": 256,
+          "attn_hook_hidden_size": 1536,
+          "layer_hook_hidden_size": 1536
+        }
+      }
+    },
+    {
+      "step_idx": 11,
+      "generated_token_id": 220,
+      "top5_token_ids": [
+        220,
+        56370,
+        1045,
+        320,
+        7
+      ],
+      "top5_logits": [
+        17.28125,
+        15.359375,
+        15.3515625,
+        15.3125,
+        15.15625
+      ],
+      "layer14": {
+        "layer_idx": 14,
+        "top_k": 1,
+        "selected_block_ids": [
+          15
+        ],
+        "selected_block_spans": [
+          [
+            3840,
+            3852
+          ]
+        ],
+        "selected_block_scores": [
+          342.5534705276489
+        ],
+        "gate_top_block_ids": [
+          15,
+          14
+        ],
+        "gate_top_block_scores": [
+          342.5534705276489,
+          333.62915753173826
+        ],
+        "top_block_score": 342.5534705276489,
+        "second_block_score": 333.62915753173826,
+        "score_margin": 8.924312995910668,
+        "min_score_margin": 20.0,
+        "candidate_k_len": 12,
+        "working_k_len": 268,
+        "coverage_ratio": 0.003115264797507788,
+        "working_ratio": 0.06523855890944498,
+        "candidate_kv": {
+          "layer_idx": 14,
+          "start": 3840,
+          "end": 3852,
+          "length": 12,
+          "range_length": 12,
+          "tensor_length": 12,
+          "k_shape": [
+            1,
+            2,
+            12,
+            128
+          ],
+          "v_shape": [
+            1,
+            2,
+            12,
+            128
+          ],
+          "k_device": "cpu",
+          "v_device": "cpu",
+          "selected_spans": [
+            [
+              3840,
+              3852
+            ]
+          ],
+          "is_contiguous": true
+        },
+        "working_kv": {
+          "layer_idx": 14,
+          "candidate_range": [
+            3840,
+            3852
+          ],
+          "hot_range": [
+            3852,
+            4108
+          ],
+          "length": 268,
+          "candidate_tensor_length": 12,
+          "candidate_is_contiguous": true,
+          "candidate_selected_spans": [
+            [
+              3840,
+              3852
+            ]
+          ],
+          "k_shape": [
+            1,
+            2,
+            268,
+            128
+          ],
+          "v_shape": [
+            1,
+            2,
+            268,
+            128
+          ],
+          "k_device": "cpu",
+          "v_device": "cpu"
+        },
+        "attention_compare": {
+          "full_output_shape": [
+            1,
+            2,
+            1,
+            128
+          ],
+          "approx_output_shape": [
+            1,
+            2,
+            1,
+            128
+          ],
+          "mean_abs_diff": 0.006556565873324871,
+          "max_abs_diff": 0.06008636951446533,
+          "l2_diff": 0.20481565594673157
+        },
+        "attention_tensor_breakdown": {
+          "full_shape": [
+            1,
+            2,
+            1,
+            128
+          ],
+          "approx_shape": [
+            1,
+            2,
+            1,
+            128
+          ],
+          "full_num_heads": 2,
+          "full_head_dim": 128,
+          "full_flattened_last_dim": 256,
+          "approx_num_heads": 2,
+          "approx_head_dim": 128,
+          "approx_flattened_last_dim": 256
+        },
+        "replacement_ready": true,
+        "replacement_gate_passed": false,
+        "replacement_selected": false,
+        "replacement_gate_passed_raw": false,
+        "replacement_gate_suppressed_by_min_step": false,
+        "predictor_score_margin_threshold": 10.0,
+        "predictor_mean_abs_diff_threshold": 0.0001,
+        "predictor_danger": true,
+        "predictor_would_block": true,
+        "predictor_gate_overlap": false,
+        "predictor_block_requested": false,
+        "predictor_effective_block": false,
+        "replacement_gate_blocked_by_predictor": false,
+        "replacement_hook_enabled": false,
+        "replacement_hook_triggered": false,
+        "replacement_hook_mode": "disabled",
+        "replacement_next_step_apply_armed": false,
+        "replacement_next_step_apply_pending_source_step_idx": null,
+        "replacement_tensor_writeback_ready": false,
+        "replacement_tensor_writeback_reason": "gate_not_passed",
+        "replacement_writeback_tensor_shape": null,
+        "replacement_writeback_tensor_device": null,
+        "replacement_writeback_tensor_dtype": null,
+        "replacement_injection_selected": false,
+        "replacement_injection_target": null,
+        "replacement_injection_mode": "gate_not_passed",
+        "replacement_injection_ready": false,
+        "replacement_injection_ready_reason": "gate_not_passed",
+        "replacement_injection_apply_reason": "gate_not_passed",
+        "replacement_injection_applied": false,
+        "replacement_injection_tensor_shape": null,
+        "replacement_injection_tensor_device": null,
+        "replacement_injection_tensor_dtype": null,
+        "replacement_bridge_hidden_state_shape": null,
+        "replacement_bridge_hidden_state_device": null,
+        "replacement_bridge_hidden_state_dtype": null,
+        "replacement_bridge_runtime_shape": null,
+        "replacement_bridge_runtime_device": null,
+        "replacement_bridge_runtime_dtype": null,
+        "replacement_bridge_runtime_reason": null,
+        "replacement_bridge_compare": null,
+        "replacement_attn_hook_seen": true,
+        "replacement_attn_hook_shape": [
+          1,
+          1,
+          1536
+        ],
+        "replacement_attn_hook_dtype": "torch.float16",
+        "replacement_attn_hook_device": "cuda:0",
+        "replacement_layer_hook_seen": true,
+        "replacement_layer_hook_shape": [
+          1,
+          1,
+          1536
+        ],
+        "replacement_layer_hook_dtype": "torch.float16",
+        "replacement_layer_hook_device": "cuda:0",
+        "replacement_oproj_pre_hook_seen": true,
+        "replacement_oproj_pre_hook_shape": [
+          1,
+          1,
+          1536
+        ],
+        "replacement_oproj_pre_hook_dtype": "torch.float16",
+        "replacement_oproj_pre_hook_device": "cuda:0",
+        "replacement_oproj_pre_hook_replaced": false,
+        "replacement_next_step_apply_consumed": false,
+        "replacement_next_step_apply_source_step_idx": null,
+        "replacement_oproj_post_hook_seen": true,
+        "replacement_oproj_post_hook_shape": [
+          1,
+          1,
+          1536
+        ],
+        "replacement_oproj_post_hook_dtype": "torch.float16",
+        "replacement_oproj_post_hook_device": "cuda:0",
+        "replacement_attn_hook_hidden_size": 1536,
+        "replacement_layer_hook_hidden_size": 1536,
+        "replacement_shape_compare": {
+          "writeback_tensor_shape": null,
+          "attn_hook_output_shape": [
+            1,
+            1,
+            1536
+          ],
+          "oproj_pre_hook_input_shape": [
+            1,
+            1,
+            1536
+          ],
+          "oproj_post_hook_output_shape": [
+            1,
+            1,
+            1536
+          ],
+          "layer_hook_output_shape": [
+            1,
+            1,
+            1536
+          ]
+        },
+        "replacement_representation_compare": {
+          "writeback_device": null,
+          "writeback_dtype": null,
+          "attn_hook_device": "cuda:0",
+          "attn_hook_dtype": "torch.float16",
+          "oproj_pre_hook_device": "cuda:0",
+          "oproj_pre_hook_dtype": "torch.float16",
+          "oproj_post_hook_device": "cuda:0",
+          "oproj_post_hook_dtype": "torch.float16",
+          "layer_hook_device": "cuda:0",
+          "layer_hook_dtype": "torch.float16"
+        },
+        "replacement_layout_compare": {
+          "writeback_num_heads": 2,
+          "writeback_head_dim": 128,
+          "writeback_flattened_last_dim": 256,
+          "attn_hook_hidden_size": 1536,
+          "layer_hook_hidden_size": 1536
+        }
+      }
+    },
+    {
+      "step_idx": 12,
+      "generated_token_id": 2266,
+      "top5_token_ids": [
+        2266,
+        56370,
+        7709,
+        13,
+        3213
+      ],
+      "top5_logits": [
+        17.78125,
+        17.671875,
+        17.125,
+        16.015625,
+        15.46875
+      ],
+      "layer14": {
+        "layer_idx": 14,
+        "top_k": 1,
+        "selected_block_ids": [
+          15
+        ],
+        "selected_block_spans": [
+          [
+            3840,
+            3853
+          ]
+        ],
+        "selected_block_scores": [
+          388.6953534317017
+        ],
+        "gate_top_block_ids": [
+          15,
+          14
+        ],
+        "gate_top_block_scores": [
+          388.6953534317017,
+          386.082953918457
+        ],
+        "top_block_score": 388.6953534317017,
+        "second_block_score": 386.082953918457,
+        "score_margin": 2.612399513244668,
+        "min_score_margin": 20.0,
+        "candidate_k_len": 13,
+        "working_k_len": 269,
+        "coverage_ratio": 0.003373994290163509,
+        "working_ratio": 0.06546605013385252,
+        "candidate_kv": {
+          "layer_idx": 14,
+          "start": 3840,
+          "end": 3853,
+          "length": 13,
+          "range_length": 13,
+          "tensor_length": 13,
+          "k_shape": [
+            1,
+            2,
+            13,
+            128
+          ],
+          "v_shape": [
+            1,
+            2,
+            13,
+            128
+          ],
+          "k_device": "cpu",
+          "v_device": "cpu",
+          "selected_spans": [
+            [
+              3840,
+              3853
+            ]
+          ],
+          "is_contiguous": true
+        },
+        "working_kv": {
+          "layer_idx": 14,
+          "candidate_range": [
+            3840,
+            3853
+          ],
+          "hot_range": [
+            3853,
+            4109
+          ],
+          "length": 269,
+          "candidate_tensor_length": 13,
+          "candidate_is_contiguous": true,
+          "candidate_selected_spans": [
+            [
+              3840,
+              3853
+            ]
+          ],
+          "k_shape": [
+            1,
+            2,
+            269,
+            128
+          ],
+          "v_shape": [
+            1,
+            2,
+            269,
+            128
+          ],
+          "k_device": "cpu",
+          "v_device": "cpu"
+        },
+        "attention_compare": {
+          "full_output_shape": [
+            1,
+            2,
+            1,
+            128
+          ],
+          "approx_output_shape": [
+            1,
+            2,
+            1,
+            128
+          ],
+          "mean_abs_diff": 2.7544265321921557e-06,
+          "max_abs_diff": 2.092123031616211e-05,
+          "l2_diff": 7.804356573615223e-05
+        },
+        "attention_tensor_breakdown": {
+          "full_shape": [
+            1,
+            2,
+            1,
+            128
+          ],
+          "approx_shape": [
+            1,
+            2,
+            1,
+            128
+          ],
+          "full_num_heads": 2,
+          "full_head_dim": 128,
+          "full_flattened_last_dim": 256,
+          "approx_num_heads": 2,
+          "approx_head_dim": 128,
+          "approx_flattened_last_dim": 256
+        },
+        "replacement_ready": true,
+        "replacement_gate_passed": false,
+        "replacement_selected": false,
+        "replacement_gate_passed_raw": false,
+        "replacement_gate_suppressed_by_min_step": false,
+        "predictor_score_margin_threshold": 10.0,
+        "predictor_mean_abs_diff_threshold": 0.0001,
+        "predictor_danger": false,
+        "predictor_would_block": false,
+        "predictor_gate_overlap": false,
+        "predictor_block_requested": false,
+        "predictor_effective_block": false,
+        "replacement_gate_blocked_by_predictor": false,
+        "replacement_hook_enabled": false,
+        "replacement_hook_triggered": false,
+        "replacement_hook_mode": "disabled",
+        "replacement_next_step_apply_armed": false,
+        "replacement_next_step_apply_pending_source_step_idx": null,
+        "replacement_tensor_writeback_ready": false,
+        "replacement_tensor_writeback_reason": "gate_not_passed",
+        "replacement_writeback_tensor_shape": null,
+        "replacement_writeback_tensor_device": null,
+        "replacement_writeback_tensor_dtype": null,
+        "replacement_injection_selected": false,
+        "replacement_injection_target": null,
+        "replacement_injection_mode": "gate_not_passed",
+        "replacement_injection_ready": false,
+        "replacement_injection_ready_reason": "gate_not_passed",
+        "replacement_injection_apply_reason": "gate_not_passed",
+        "replacement_injection_applied": false,
+        "replacement_injection_tensor_shape": null,
+        "replacement_injection_tensor_device": null,
+        "replacement_injection_tensor_dtype": null,
+        "replacement_bridge_hidden_state_shape": null,
+        "replacement_bridge_hidden_state_device": null,
+        "replacement_bridge_hidden_state_dtype": null,
+        "replacement_bridge_runtime_shape": null,
+        "replacement_bridge_runtime_device": null,
+        "replacement_bridge_runtime_dtype": null,
+        "replacement_bridge_runtime_reason": null,
+        "replacement_bridge_compare": null,
+        "replacement_attn_hook_seen": true,
+        "replacement_attn_hook_shape": [
+          1,
+          1,
+          1536
+        ],
+        "replacement_attn_hook_dtype": "torch.float16",
+        "replacement_attn_hook_device": "cuda:0",
+        "replacement_layer_hook_seen": true,
+        "replacement_layer_hook_shape": [
+          1,
+          1,
+          1536
+        ],
+        "replacement_layer_hook_dtype": "torch.float16",
+        "replacement_layer_hook_device": "cuda:0",
+        "replacement_oproj_pre_hook_seen": true,
+        "replacement_oproj_pre_hook_shape": [
+          1,
+          1,
+          1536
+        ],
+        "replacement_oproj_pre_hook_dtype": "torch.float16",
+        "replacement_oproj_pre_hook_device": "cuda:0",
+        "replacement_oproj_pre_hook_replaced": false,
+        "replacement_next_step_apply_consumed": false,
+        "replacement_next_step_apply_source_step_idx": null,
+        "replacement_oproj_post_hook_seen": true,
+        "replacement_oproj_post_hook_shape": [
+          1,
+          1,
+          1536
+        ],
+        "replacement_oproj_post_hook_dtype": "torch.float16",
+        "replacement_oproj_post_hook_device": "cuda:0",
+        "replacement_attn_hook_hidden_size": 1536,
+        "replacement_layer_hook_hidden_size": 1536,
+        "replacement_shape_compare": {
+          "writeback_tensor_shape": null,
+          "attn_hook_output_shape": [
+            1,
+            1,
+            1536
+          ],
+          "oproj_pre_hook_input_shape": [
+            1,
+            1,
+            1536
+          ],
+          "oproj_post_hook_output_shape": [
+            1,
+            1,
+            1536
+          ],
+          "layer_hook_output_shape": [
+            1,
+            1,
+            1536
+          ]
+        },
+        "replacement_representation_compare": {
+          "writeback_device": null,
+          "writeback_dtype": null,
+          "attn_hook_device": "cuda:0",
+          "attn_hook_dtype": "torch.float16",
+          "oproj_pre_hook_device": "cuda:0",
+          "oproj_pre_hook_dtype": "torch.float16",
+          "oproj_post_hook_device": "cuda:0",
+          "oproj_post_hook_dtype": "torch.float16",
+          "layer_hook_device": "cuda:0",
+          "layer_hook_dtype": "torch.float16"
+        },
+        "replacement_layout_compare": {
+          "writeback_num_heads": 2,
+          "writeback_head_dim": 128,
+          "writeback_flattened_last_dim": 256,
+          "attn_hook_hidden_size": 1536,
+          "layer_hook_hidden_size": 1536
+        }
+      }
+    },
+    {
+      "step_idx": 13,
+      "generated_token_id": 7709,
+      "top5_token_ids": [
+        7709,
+        13,
+        220,
+        308,
+        16999
+      ],
+      "top5_logits": [
+        19.671875,
+        19.0,
+        15.1875,
+        14.6484375,
+        14.546875
+      ],
+      "layer14": {
+        "layer_idx": 14,
+        "top_k": 1,
+        "selected_block_ids": [
+          15
+        ],
+        "selected_block_spans": [
+          [
+            3840,
+            3854
+          ]
+        ],
+        "selected_block_scores": [
+          382.6183040313721
+        ],
+        "gate_top_block_ids": [
+          15,
+          14
+        ],
+        "gate_top_block_scores": [
+          382.6183040313721,
+          378.85483502197263
+        ],
+        "top_block_score": 382.6183040313721,
+        "second_block_score": 378.85483502197263,
+        "score_margin": 3.7634690093994436,
+        "min_score_margin": 20.0,
+        "candidate_k_len": 14,
+        "working_k_len": 270,
+        "coverage_ratio": 0.0036325895173845357,
+        "working_ratio": 0.06569343065693431,
+        "candidate_kv": {
+          "layer_idx": 14,
+          "start": 3840,
+          "end": 3854,
+          "length": 14,
+          "range_length": 14,
+          "tensor_length": 14,
+          "k_shape": [
+            1,
+            2,
+            14,
+            128
+          ],
+          "v_shape": [
+            1,
+            2,
+            14,
+            128
+          ],
+          "k_device": "cpu",
+          "v_device": "cpu",
+          "selected_spans": [
+            [
+              3840,
+              3854
+            ]
+          ],
+          "is_contiguous": true
+        },
+        "working_kv": {
+          "layer_idx": 14,
+          "candidate_range": [
+            3840,
+            3854
+          ],
+          "hot_range": [
+            3854,
+            4110
+          ],
+          "length": 270,
+          "candidate_tensor_length": 14,
+          "candidate_is_contiguous": true,
+          "candidate_selected_spans": [
+            [
+              3840,
+              3854
+            ]
+          ],
+          "k_shape": [
+            1,
+            2,
+            270,
+            128
+          ],
+          "v_shape": [
+            1,
+            2,
+            270,
+            128
+          ],
+          "k_device": "cpu",
+          "v_device": "cpu"
+        },
+        "attention_compare": {
+          "full_output_shape": [
+            1,
+            2,
+            1,
+            128
+          ],
+          "approx_output_shape": [
+            1,
+            2,
+            1,
+            128
+          ],
+          "mean_abs_diff": 8.2602182374103e-06,
+          "max_abs_diff": 8.511543273925781e-05,
+          "l2_diff": 0.0002374497416894883
+        },
+        "attention_tensor_breakdown": {
+          "full_shape": [
+            1,
+            2,
+            1,
+            128
+          ],
+          "approx_shape": [
+            1,
+            2,
+            1,
+            128
+          ],
+          "full_num_heads": 2,
+          "full_head_dim": 128,
+          "full_flattened_last_dim": 256,
+          "approx_num_heads": 2,
+          "approx_head_dim": 128,
+          "approx_flattened_last_dim": 256
+        },
+        "replacement_ready": true,
+        "replacement_gate_passed": false,
+        "replacement_selected": false,
+        "replacement_gate_passed_raw": false,
+        "replacement_gate_suppressed_by_min_step": false,
+        "predictor_score_margin_threshold": 10.0,
+        "predictor_mean_abs_diff_threshold": 0.0001,
+        "predictor_danger": false,
+        "predictor_would_block": false,
+        "predictor_gate_overlap": false,
+        "predictor_block_requested": false,
+        "predictor_effective_block": false,
+        "replacement_gate_blocked_by_predictor": false,
+        "replacement_hook_enabled": false,
+        "replacement_hook_triggered": false,
+        "replacement_hook_mode": "disabled",
+        "replacement_next_step_apply_armed": false,
+        "replacement_next_step_apply_pending_source_step_idx": null,
+        "replacement_tensor_writeback_ready": false,
+        "replacement_tensor_writeback_reason": "gate_not_passed",
+        "replacement_writeback_tensor_shape": null,
+        "replacement_writeback_tensor_device": null,
+        "replacement_writeback_tensor_dtype": null,
+        "replacement_injection_selected": false,
+        "replacement_injection_target": null,
+        "replacement_injection_mode": "gate_not_passed",
+        "replacement_injection_ready": false,
+        "replacement_injection_ready_reason": "gate_not_passed",
+        "replacement_injection_apply_reason": "gate_not_passed",
+        "replacement_injection_applied": false,
+        "replacement_injection_tensor_shape": null,
+        "replacement_injection_tensor_device": null,
+        "replacement_injection_tensor_dtype": null,
+        "replacement_bridge_hidden_state_shape": null,
+        "replacement_bridge_hidden_state_device": null,
+        "replacement_bridge_hidden_state_dtype": null,
+        "replacement_bridge_runtime_shape": null,
+        "replacement_bridge_runtime_device": null,
+        "replacement_bridge_runtime_dtype": null,
+        "replacement_bridge_runtime_reason": null,
+        "replacement_bridge_compare": null,
+        "replacement_attn_hook_seen": true,
+        "replacement_attn_hook_shape": [
+          1,
+          1,
+          1536
+        ],
+        "replacement_attn_hook_dtype": "torch.float16",
+        "replacement_attn_hook_device": "cuda:0",
+        "replacement_layer_hook_seen": true,
+        "replacement_layer_hook_shape": [
+          1,
+          1,
+          1536
+        ],
+        "replacement_layer_hook_dtype": "torch.float16",
+        "replacement_layer_hook_device": "cuda:0",
+        "replacement_oproj_pre_hook_seen": true,
+        "replacement_oproj_pre_hook_shape": [
+          1,
+          1,
+          1536
+        ],
+        "replacement_oproj_pre_hook_dtype": "torch.float16",
+        "replacement_oproj_pre_hook_device": "cuda:0",
+        "replacement_oproj_pre_hook_replaced": false,
+        "replacement_next_step_apply_consumed": false,
+        "replacement_next_step_apply_source_step_idx": null,
+        "replacement_oproj_post_hook_seen": true,
+        "replacement_oproj_post_hook_shape": [
+          1,
+          1,
+          1536
+        ],
+        "replacement_oproj_post_hook_dtype": "torch.float16",
+        "replacement_oproj_post_hook_device": "cuda:0",
+        "replacement_attn_hook_hidden_size": 1536,
+        "replacement_layer_hook_hidden_size": 1536,
+        "replacement_shape_compare": {
+          "writeback_tensor_shape": null,
+          "attn_hook_output_shape": [
+            1,
+            1,
+            1536
+          ],
+          "oproj_pre_hook_input_shape": [
+            1,
+            1,
+            1536
+          ],
+          "oproj_post_hook_output_shape": [
+            1,
+            1,
+            1536
+          ],
+          "layer_hook_output_shape": [
+            1,
+            1,
+            1536
+          ]
+        },
+        "replacement_representation_compare": {
+          "writeback_device": null,
+          "writeback_dtype": null,
+          "attn_hook_device": "cuda:0",
+          "attn_hook_dtype": "torch.float16",
+          "oproj_pre_hook_device": "cuda:0",
+          "oproj_pre_hook_dtype": "torch.float16",
+          "oproj_post_hook_device": "cuda:0",
+          "oproj_post_hook_dtype": "torch.float16",
+          "layer_hook_device": "cuda:0",
+          "layer_hook_dtype": "torch.float16"
+        },
+        "replacement_layout_compare": {
+          "writeback_num_heads": 2,
+          "writeback_head_dim": 128,
+          "writeback_flattened_last_dim": 256,
+          "attn_hook_hidden_size": 1536,
+          "layer_hook_hidden_size": 1536
+        }
+      }
+    },
+    {
+      "step_idx": 14,
+      "generated_token_id": 13,
+      "top5_token_ids": [
+        13,
+        7709,
+        46172,
+        16999,
+        2266
+      ],
+      "top5_logits": [
+        20.234375,
+        18.703125,
+        16.03125,
+        14.9296875,
+        14.84375
+      ],
+      "layer14": {
+        "layer_idx": 14,
+        "top_k": 1,
+        "selected_block_ids": [
+          15
+        ],
+        "selected_block_spans": [
+          [
+            3840,
+            3855
+          ]
+        ],
+        "selected_block_scores": [
+          419.0696296920776
+        ],
+        "gate_top_block_ids": [
+          15,
+          14
+        ],
+        "gate_top_block_scores": [
+          419.0696296920776,
+          399.72302960205076
+        ],
+        "top_block_score": 419.0696296920776,
+        "second_block_score": 399.72302960205076,
+        "score_margin": 19.346600090026868,
+        "min_score_margin": 20.0,
+        "candidate_k_len": 15,
+        "working_k_len": 271,
+        "coverage_ratio": 0.0038910505836575876,
+        "working_ratio": 0.06592070055947458,
+        "candidate_kv": {
+          "layer_idx": 14,
+          "start": 3840,
+          "end": 3855,
+          "length": 15,
+          "range_length": 15,
+          "tensor_length": 15,
+          "k_shape": [
+            1,
+            2,
+            15,
+            128
+          ],
+          "v_shape": [
+            1,
+            2,
+            15,
+            128
+          ],
+          "k_device": "cpu",
+          "v_device": "cpu",
+          "selected_spans": [
+            [
+              3840,
+              3855
+            ]
+          ],
+          "is_contiguous": true
+        },
+        "working_kv": {
+          "layer_idx": 14,
+          "candidate_range": [
+            3840,
+            3855
+          ],
+          "hot_range": [
+            3855,
+            4111
+          ],
+          "length": 271,
+          "candidate_tensor_length": 15,
+          "candidate_is_contiguous": true,
+          "candidate_selected_spans": [
+            [
+              3840,
+              3855
+            ]
+          ],
+          "k_shape": [
+            1,
+            2,
+            271,
+            128
+          ],
+          "v_shape": [
+            1,
+            2,
+            271,
+            128
+          ],
+          "k_device": "cpu",
+          "v_device": "cpu"
+        },
+        "attention_compare": {
+          "full_output_shape": [
+            1,
+            2,
+            1,
+            128
+          ],
+          "approx_output_shape": [
+            1,
+            2,
+            1,
+            128
+          ],
+          "mean_abs_diff": 3.4530239645391703e-07,
+          "max_abs_diff": 3.337860107421875e-06,
+          "l2_diff": 1.063622949004639e-05
+        },
+        "attention_tensor_breakdown": {
+          "full_shape": [
+            1,
+            2,
+            1,
+            128
+          ],
+          "approx_shape": [
+            1,
+            2,
+            1,
+            128
+          ],
+          "full_num_heads": 2,
+          "full_head_dim": 128,
+          "full_flattened_last_dim": 256,
+          "approx_num_heads": 2,
+          "approx_head_dim": 128,
+          "approx_flattened_last_dim": 256
+        },
+        "replacement_ready": true,
+        "replacement_gate_passed": false,
+        "replacement_selected": false,
+        "replacement_gate_passed_raw": false,
+        "replacement_gate_suppressed_by_min_step": false,
+        "predictor_score_margin_threshold": 10.0,
+        "predictor_mean_abs_diff_threshold": 0.0001,
+        "predictor_danger": false,
+        "predictor_would_block": false,
+        "predictor_gate_overlap": false,
+        "predictor_block_requested": false,
+        "predictor_effective_block": false,
+        "replacement_gate_blocked_by_predictor": false,
+        "replacement_hook_enabled": false,
+        "replacement_hook_triggered": false,
+        "replacement_hook_mode": "disabled",
+        "replacement_next_step_apply_armed": false,
+        "replacement_next_step_apply_pending_source_step_idx": null,
+        "replacement_tensor_writeback_ready": false,
+        "replacement_tensor_writeback_reason": "gate_not_passed",
+        "replacement_writeback_tensor_shape": null,
+        "replacement_writeback_tensor_device": null,
+        "replacement_writeback_tensor_dtype": null,
+        "replacement_injection_selected": false,
+        "replacement_injection_target": null,
+        "replacement_injection_mode": "gate_not_passed",
+        "replacement_injection_ready": false,
+        "replacement_injection_ready_reason": "gate_not_passed",
+        "replacement_injection_apply_reason": "gate_not_passed",
+        "replacement_injection_applied": false,
+        "replacement_injection_tensor_shape": null,
+        "replacement_injection_tensor_device": null,
+        "replacement_injection_tensor_dtype": null,
+        "replacement_bridge_hidden_state_shape": null,
+        "replacement_bridge_hidden_state_device": null,
+        "replacement_bridge_hidden_state_dtype": null,
+        "replacement_bridge_runtime_shape": null,
+        "replacement_bridge_runtime_device": null,
+        "replacement_bridge_runtime_dtype": null,
+        "replacement_bridge_runtime_reason": null,
+        "replacement_bridge_compare": null,
+        "replacement_attn_hook_seen": true,
+        "replacement_attn_hook_shape": [
+          1,
+          1,
+          1536
+        ],
+        "replacement_attn_hook_dtype": "torch.float16",
+        "replacement_attn_hook_device": "cuda:0",
+        "replacement_layer_hook_seen": true,
+        "replacement_layer_hook_shape": [
+          1,
+          1,
+          1536
+        ],
+        "replacement_layer_hook_dtype": "torch.float16",
+        "replacement_layer_hook_device": "cuda:0",
+        "replacement_oproj_pre_hook_seen": true,
+        "replacement_oproj_pre_hook_shape": [
+          1,
+          1,
+          1536
+        ],
+        "replacement_oproj_pre_hook_dtype": "torch.float16",
+        "replacement_oproj_pre_hook_device": "cuda:0",
+        "replacement_oproj_pre_hook_replaced": false,
+        "replacement_next_step_apply_consumed": false,
+        "replacement_next_step_apply_source_step_idx": null,
+        "replacement_oproj_post_hook_seen": true,
+        "replacement_oproj_post_hook_shape": [
+          1,
+          1,
+          1536
+        ],
+        "replacement_oproj_post_hook_dtype": "torch.float16",
+        "replacement_oproj_post_hook_device": "cuda:0",
+        "replacement_attn_hook_hidden_size": 1536,
+        "replacement_layer_hook_hidden_size": 1536,
+        "replacement_shape_compare": {
+          "writeback_tensor_shape": null,
+          "attn_hook_output_shape": [
+            1,
+            1,
+            1536
+          ],
+          "oproj_pre_hook_input_shape": [
+            1,
+            1,
+            1536
+          ],
+          "oproj_post_hook_output_shape": [
+            1,
+            1,
+            1536
+          ],
+          "layer_hook_output_shape": [
+            1,
+            1,
+            1536
+          ]
+        },
+        "replacement_representation_compare": {
+          "writeback_device": null,
+          "writeback_dtype": null,
+          "attn_hook_device": "cuda:0",
+          "attn_hook_dtype": "torch.float16",
+          "oproj_pre_hook_device": "cuda:0",
+          "oproj_pre_hook_dtype": "torch.float16",
+          "oproj_post_hook_device": "cuda:0",
+          "oproj_post_hook_dtype": "torch.float16",
+          "layer_hook_device": "cuda:0",
+          "layer_hook_dtype": "torch.float16"
+        },
+        "replacement_layout_compare": {
+          "writeback_num_heads": 2,
+          "writeback_head_dim": 128,
+          "writeback_flattened_last_dim": 256,
+          "attn_hook_hidden_size": 1536,
+          "layer_hook_hidden_size": 1536
+        }
+      }
+    },
+    {
+      "step_idx": 15,
+      "generated_token_id": 320,
+      "top5_token_ids": [
+        320,
+        369,
+        1429,
+        659,
+        220
+      ],
+      "top5_logits": [
+        15.234375,
+        12.1796875,
+        11.6015625,
+        11.171875,
+        11.0078125
+      ],
+      "layer14": {
+        "layer_idx": 14,
+        "top_k": 1,
+        "selected_block_ids": [
+          14
+        ],
+        "selected_block_spans": [
+          [
+            3584,
+            3840
+          ]
+        ],
+        "selected_block_scores": [
+          247.57062481689454
+        ],
+        "gate_top_block_ids": [
+          14,
+          12
+        ],
+        "gate_top_block_scores": [
+          247.57062481689454,
+          245.06365264892577
+        ],
+        "top_block_score": 247.57062481689454,
+        "second_block_score": 245.06365264892577,
+        "score_margin": 2.506972167968769,
+        "min_score_margin": 20.0,
+        "candidate_k_len": 256,
+        "working_k_len": 512,
+        "coverage_ratio": 0.06639004149377593,
+        "working_ratio": 0.1245136186770428,
+        "candidate_kv": {
+          "layer_idx": 14,
+          "start": 3584,
+          "end": 3840,
+          "length": 256,
+          "range_length": 256,
+          "tensor_length": 256,
+          "k_shape": [
+            1,
+            2,
+            256,
+            128
+          ],
+          "v_shape": [
+            1,
+            2,
+            256,
+            128
+          ],
+          "k_device": "cpu",
+          "v_device": "cpu",
+          "selected_spans": [
+            [
+              3584,
+              3840
+            ]
+          ],
+          "is_contiguous": true
+        },
+        "working_kv": {
+          "layer_idx": 14,
+          "candidate_range": [
+            3584,
+            3840
+          ],
+          "hot_range": [
+            3856,
+            4112
+          ],
+          "length": 512,
+          "candidate_tensor_length": 256,
+          "candidate_is_contiguous": true,
+          "candidate_selected_spans": [
+            [
+              3584,
+              3840
+            ]
+          ],
+          "k_shape": [
+            1,
+            2,
+            512,
+            128
+          ],
+          "v_shape": [
+            1,
+            2,
+            512,
+            128
+          ],
+          "k_device": "cpu",
+          "v_device": "cpu"
+        },
+        "attention_compare": {
+          "full_output_shape": [
+            1,
+            2,
+            1,
+            128
+          ],
+          "approx_output_shape": [
+            1,
+            2,
+            1,
+            128
+          ],
+          "mean_abs_diff": 2.9915232516941614e-05,
+          "max_abs_diff": 0.00021123886108398438,
+          "l2_diff": 0.0008481084369122982
+        },
+        "attention_tensor_breakdown": {
+          "full_shape": [
+            1,
+            2,
+            1,
+            128
+          ],
+          "approx_shape": [
+            1,
+            2,
+            1,
+            128
+          ],
+          "full_num_heads": 2,
+          "full_head_dim": 128,
+          "full_flattened_last_dim": 256,
+          "approx_num_heads": 2,
+          "approx_head_dim": 128,
+          "approx_flattened_last_dim": 256
+        },
+        "replacement_ready": true,
+        "replacement_gate_passed": false,
+        "replacement_selected": false,
+        "replacement_gate_passed_raw": false,
+        "replacement_gate_suppressed_by_min_step": false,
+        "predictor_score_margin_threshold": 10.0,
+        "predictor_mean_abs_diff_threshold": 0.0001,
+        "predictor_danger": false,
+        "predictor_would_block": false,
+        "predictor_gate_overlap": false,
+        "predictor_block_requested": false,
+        "predictor_effective_block": false,
+        "replacement_gate_blocked_by_predictor": false,
+        "replacement_hook_enabled": false,
+        "replacement_hook_triggered": false,
+        "replacement_hook_mode": "disabled",
+        "replacement_next_step_apply_armed": false,
+        "replacement_next_step_apply_pending_source_step_idx": null,
+        "replacement_tensor_writeback_ready": false,
+        "replacement_tensor_writeback_reason": "gate_not_passed",
+        "replacement_writeback_tensor_shape": null,
+        "replacement_writeback_tensor_device": null,
+        "replacement_writeback_tensor_dtype": null,
+        "replacement_injection_selected": false,
+        "replacement_injection_target": null,
+        "replacement_injection_mode": "gate_not_passed",
+        "replacement_injection_ready": false,
+        "replacement_injection_ready_reason": "gate_not_passed",
+        "replacement_injection_apply_reason": "gate_not_passed",
+        "replacement_injection_applied": false,
+        "replacement_injection_tensor_shape": null,
+        "replacement_injection_tensor_device": null,
+        "replacement_injection_tensor_dtype": null,
+        "replacement_bridge_hidden_state_shape": null,
+        "replacement_bridge_hidden_state_device": null,
+        "replacement_bridge_hidden_state_dtype": null,
+        "replacement_bridge_runtime_shape": null,
+        "replacement_bridge_runtime_device": null,
+        "replacement_bridge_runtime_dtype": null,
+        "replacement_bridge_runtime_reason": null,
+        "replacement_bridge_compare": null,
+        "replacement_attn_hook_seen": true,
+        "replacement_attn_hook_shape": [
+          1,
+          1,
+          1536
+        ],
+        "replacement_attn_hook_dtype": "torch.float16",
+        "replacement_attn_hook_device": "cuda:0",
+        "replacement_layer_hook_seen": true,
+        "replacement_layer_hook_shape": [
+          1,
+          1,
+          1536
+        ],
+        "replacement_layer_hook_dtype": "torch.float16",
+        "replacement_layer_hook_device": "cuda:0",
+        "replacement_oproj_pre_hook_seen": true,
+        "replacement_oproj_pre_hook_shape": [
+          1,
+          1,
+          1536
+        ],
+        "replacement_oproj_pre_hook_dtype": "torch.float16",
+        "replacement_oproj_pre_hook_device": "cuda:0",
+        "replacement_oproj_pre_hook_replaced": false,
+        "replacement_next_step_apply_consumed": false,
+        "replacement_next_step_apply_source_step_idx": null,
+        "replacement_oproj_post_hook_seen": true,
+        "replacement_oproj_post_hook_shape": [
+          1,
+          1,
+          1536
+        ],
+        "replacement_oproj_post_hook_dtype": "torch.float16",
+        "replacement_oproj_post_hook_device": "cuda:0",
+        "replacement_attn_hook_hidden_size": 1536,
+        "replacement_layer_hook_hidden_size": 1536,
+        "replacement_shape_compare": {
+          "writeback_tensor_shape": null,
+          "attn_hook_output_shape": [
+            1,
+            1,
+            1536
+          ],
+          "oproj_pre_hook_input_shape": [
+            1,
+            1,
+            1536
+          ],
+          "oproj_post_hook_output_shape": [
+            1,
+            1,
+            1536
+          ],
+          "layer_hook_output_shape": [
+            1,
+            1,
+            1536
+          ]
+        },
+        "replacement_representation_compare": {
+          "writeback_device": null,
+          "writeback_dtype": null,
+          "attn_hook_device": "cuda:0",
+          "attn_hook_dtype": "torch.float16",
+          "oproj_pre_hook_device": "cuda:0",
+          "oproj_pre_hook_dtype": "torch.float16",
+          "oproj_post_hook_device": "cuda:0",
+          "oproj_post_hook_dtype": "torch.float16",
+          "layer_hook_device": "cuda:0",
+          "layer_hook_dtype": "torch.float16"
+        },
+        "replacement_layout_compare": {
+          "writeback_num_heads": 2,
+          "writeback_head_dim": 128,
+          "writeback_flattened_last_dim": 256,
+          "attn_hook_hidden_size": 1536,
+          "layer_hook_hidden_size": 1536
+        }
+      }
+    }
+  ],
+  "replacement_gate": {
+    "policy_name": "medium",
+    "mean_abs_diff_threshold": 0.002,
+    "min_score_margin": 20.0,
+    "min_gate_step": 7,
+    "require_contiguous_candidate": true,
+    "require_single_block": true,
+    "allowed_block_ids": [
+      3,
+      14,
+      15
+    ]
+  },
+  "replacement_hook": {
+    "enabled": false,
+    "mode": "tensor_writeback_ready_only",
+    "target_layers": [
+      14
+    ]
+  },
+  "replacement_writeback": {
+    "implemented": false,
+    "mode": "tensor_writeback_ready_only",
+    "target_layers": [
+      14
+    ],
+    "fallback_to_full_path": true
+  },
+  "replacement_injection": {
+    "implemented": false,
+    "mode": "runtime_bridge_ready_next_step_apply",
+    "target": "layer14_oproj_input",
+    "target_layers": [
+      14
+    ]
+  },
+  "predictor": {
+    "enabled": true,
+    "mode": "dry_run_only",
+    "blocks_gate_when_enabled": false,
+    "effective_block_requires_raw_gate_pass": true,
+    "score_margin_threshold": 10.0,
+    "mean_abs_diff_threshold": 0.0001
+  }
+}
