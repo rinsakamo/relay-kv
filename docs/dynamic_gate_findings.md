@@ -194,55 +194,141 @@ This suggests that the predictor is better interpreted as a **post-injection haz
 
 ## Current phase closure
 
-We close the current phase at the point where the core behavior of the dynamic gate is sufficiently understood. At 2048, a provisional cross-style policy candidate is already visible, while successful runs indicate that the main success factor is temporal routing rather than predictor-based control. In contrast, 4096 is not yet in a gate-policy tuning phase; it first requires sanity checks on the baseline/apply comparison setup. 7
+At this point, the current phase can be closed at the level of **understanding the core role of temporal gating**.
+
+This decision is based on the following observations:
+
+- At 2048, a provisional cross-style policy candidate has already emerged.
+- In successful runs, the main success factor is better explained by **temporal routing** than by predictor-based control.
+- The structured failure mode is best explained by **early application timing**, not by block identity itself.
+- At 4096, the current priority is not gate-policy optimization but **sanity checking the baseline/apply comparison setup**.
+
+Accordingly, this phase is closed as a study of the **core behavior of temporal gating**, and the next phase should shift its main design axis toward retrieval and memory architecture. 0
 
 ## Main conclusions from the dynamic-gate phase
 
-### Provisional common policy at 2048
+### Provisional common policy candidate at 2048
 
 For `medium_2048`, the current provisional common policy candidate is:
 
 - `min_score_margin = 20`
 - `min_gate_step = 7`
 
-### Failure is dominated by timing, not block identity
+This configuration achieved cross-style token-level agreement at 2048 in the current experiments and is the best current candidate for a representative success case. 1
 
-The best current explanation is that instability is governed more by when a block is applied than by which block is selected. In condensed form:
+### Failure is dominated by timing, not by block identity
+
+The current best explanation for the structured failure mode is not primarily:
+
+- which block was selected
+
+but rather:
+
+- **when that block was applied**
+
+A concise interpretation is:
 
 - block 7 is not unsafe
 - early block 7 is unsafe
 - late block 7 is safe
 
+In other words, the current evidence supports the view that the dominant variable is **temporal routing**, not block identity alone. 2
+
 ### Predictor is currently auxiliary
 
-The predictor now supports separate observation of requested vs. effective blocking. However, in successful runs it does not act as the primary control mechanism. At this phase, it is better interpreted as an auxiliary hazard-observation component rather than the main driver of stability. 8
+The predictor is now observable in terms of:
+
+- requested blocking
+- effective blocking
+
+However, in the current successful runs, the predictor does not appear to be the main control mechanism. At this stage, it is better interpreted as an **auxiliary hazard-observation component** rather than the primary driver of stability. 3
 
 ## Known constraints at the end of this phase
 
-The known constraints at this point are:
+The current constraints are best treated as **known constraints**, not as unresolved open questions within this phase:
 
-- early steps are risky
-- temporal routing is dominant
+- early decode steps are risky
+- temporal routing is the dominant factor
 - the predictor remains auxiliary
 - 4096 requires comparison sanity checks before policy tuning
-- retrieval metrics, fixed GPU live KV budget, and a recent/anchor/retrieval three-tier design are not yet introduced. 9
+- retrieval metrics, fixed GPU live KV budget, and a recent/anchor/retrieval three-tier design are not yet introduced
+
+These constraints define the boundary of the current phase and motivate the transition to the next one. 4
+
+## Representative runs retained for this phase
+
+The following runs are retained as the minimal representative set for this phase:
+
+- **2048 representative success**
+  - `structured_apply_next_step_apply_medium_2048_margin20_mingate7_predictor_block.json`
+- **2048 baseline counterpart**
+  - `structured_baseline_next_step_apply_medium_2048_v2.json`
+- **2048 representative early-divergence failure**
+  - `structured_apply_next_step_apply_medium_2048_margin30_mingate2_predictor_block.json`
+- **4096 sanity-check apply**
+  - `structured_apply_next_step_apply_medium_margin20_mingate7_predictor_block_4096.json`
+- **4096 sanity-check baseline**
+  - `structured_baseline_next_step_apply_medium_4096_v2.json`
+
+Optional cross-style support runs for the 2048 provisional common policy:
+
+- `prose_apply_next_step_apply_medium_2048_margin20_mingate7_predictor_block.json`
+- `repetitive_apply_next_step_apply_medium_2048_margin20_mingate7_predictor_block.json`
+
+This retained set is sufficient to preserve:
+- a representative success case
+- a baseline comparison case
+- an early-divergence case
+- a 4096 sanity-check case 5
 
 ## Treatment of 4096 results
 
-In this phase, 4096 should not be treated as a target for further dynamic-gate tuning. It should instead be treated as a sanity-check target for the comparison setup. The required checks are:
+In this phase, 4096 should **not** be treated as a target for further gate-policy tuning.
 
-- step-0 token/top5 agreement
+Instead, 4096 should be treated as a **sanity-check target** for validating the comparison setup. The required checks are:
+
+- step-0 token agreement
+- step-0 top-5 agreement
 - generated token count
 - `step_logs` length
-- baseline file pairing correctness. 10
+- baseline file pairing correctness
+
+Therefore, 4096 is not part of the present dynamic-gate optimization loop. It is only used to confirm that the transition into the next phase is not built on a broken comparison setup. 6
 
 ## Transition to the fast-track plan
 
-The next phase shifts the experimental subject away from dynamic-gate micro-tuning and toward memory/retrieval architecture. The next primary design axes are:
+The next phase should change the main subject of experimentation.
+
+The current phase focused on:
+
+- dynamic gate behavior
+- temporal routing
+- predictor semantics
+
+The next phase should focus on:
 
 - fixed GPU live KV budget
-- recent/anchor/retrieval three-tier memory design
-- retrieval quality metrics
+- recent / anchor / retrieval three-tier memory design
+- retrieval quality
 - coarse-to-fine retrieval
 
-This phase transition should begin once the 2048 representative success case is fixed, the divergence summary is stable in its current form, 4096 is explicitly treated as a sanity-check target, and the present phase conclusion is documented as temporal-routing-dominant. 11
+The intended transition order is:
+
+1. close the current phase as a study of temporal gating
+2. keep 4096 limited to sanity checks
+3. move to a fixed-`B_total` design perspective
+4. introduce a recent/anchor/retrieval three-tier design
+5. add retrieval-oriented metrics
+6. make two-stage retrieval / reranking the first major improvement target
+7. consider warmup-limited adaptive budgeting
+8. only later move toward asynchronous prefetching
+
+This phase transition should begin once:
+- the 2048 representative success case is fixed
+- the divergence summary is stable in its current form
+- 4096 is explicitly treated as a sanity-check target
+- the current phase conclusion is documented as temporal-routing-dominant 7
+
+## Closing statement
+
+In this phase, the current evidence strongly supports the conclusion that, under the 2048 setting, the main success factor of the dynamic gate is **temporal routing rather than predictor-based control**, and that `min_score_margin = 20` and `min_gate_step = 7` form a provisional common policy candidate. By contrast, 4096 is not yet a gate-policy evaluation regime and should be treated as a comparison-sanity-check regime. Therefore, this phase is best closed as a study of the **core behavior of temporal gating**, and the next phase should transition into the fast-track plan based on fixed GPU live KV budget and a recent/anchor/retrieval memory architecture. 8
