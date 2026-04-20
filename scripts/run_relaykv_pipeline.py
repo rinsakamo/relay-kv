@@ -171,6 +171,46 @@ def run_pipeline(
     coverage_ratio = candidate_k_len / cold_k_len if cold_k_len > 0 else 0.0
     working_ratio = working_k_len / full_k_len if full_k_len > 0 else 0.0
 
+    recent_tokens = hot_k.shape[2]
+    anchor_tokens = 0
+    retrieved_tokens = candidate_k_len
+    live_tokens = recent_tokens + anchor_tokens + retrieved_tokens
+
+    budget = {
+        "B_total_tokens": full_k_len,
+        "B_recent_tokens": recent_tokens,
+        "B_anchor_tokens": anchor_tokens,
+        "B_retrieval_tokens": retrieved_tokens,
+        "B_transient_tokens": 0,
+    }
+
+    selection_breakdown = {
+        "recent_tokens": recent_tokens,
+        "anchor_tokens": anchor_tokens,
+        "retrieved_tokens": retrieved_tokens,
+        "live_tokens": live_tokens,
+    }
+
+    assert live_tokens == working_k_len, (
+        f"live_tokens mismatch: live_tokens={live_tokens}, working_k_len={working_k_len}"
+    )
+
+    assert budget["B_recent_tokens"] == recent_tokens, (
+        f"B_recent_tokens mismatch: budget={budget['B_recent_tokens']}, recent_tokens={recent_tokens}"
+    )
+
+    assert budget["B_retrieval_tokens"] == retrieved_tokens, (
+        f"B_retrieval_tokens mismatch: budget={budget['B_retrieval_tokens']}, retrieved_tokens={retrieved_tokens}"
+    )
+
+    assert (
+        budget["B_recent_tokens"]
+        + budget["B_anchor_tokens"]
+        + budget["B_retrieval_tokens"]
+        + budget["B_transient_tokens"]
+        <= budget["B_total_tokens"]
+    ), f"budget overflow: {budget}"
+
     summary = {
         "model": model_name,
         "device": device,
@@ -192,6 +232,8 @@ def run_pipeline(
         "working_k_len": working_k_len,
         "coverage_ratio": coverage_ratio,
         "working_ratio": working_ratio,
+        "budget": budget,
+        "selection_breakdown": selection_breakdown,
         "candidate_kv": candidate_kv.summary(),
         "working_kv": working_kv.summary(),
         "attention_compare": attention_result.summary(),
