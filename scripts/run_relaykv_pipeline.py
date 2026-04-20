@@ -2,7 +2,6 @@ import sys
 import json
 import argparse
 from pathlib import Path
-
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 import torch
@@ -15,6 +14,7 @@ from relaykv import (
     score_blocks_with_query,
     top_k_blocks,
     retrieve_blocks,
+    RetrievedBlock,
     build_candidate_kv,
     build_working_kv,
     compare_attention_outputs,
@@ -93,6 +93,7 @@ def run_pipeline(
     layer_idx: int,
     scoring_variant: str,
     prompt_type: str,
+    anchor_blocks: int,
 ) -> dict:
     tokenizer, model, device = load_model(model_name)
 
@@ -122,9 +123,23 @@ def run_pipeline(
 
     query = layers[layer_idx].keys[:, :, -1:, :]  # [1, heads, 1, head_dim]
     layer_metadata = [m for m in metadata if m.layer_idx == layer_idx]
+    layer_blocks = sorted(
+        [b for b in all_blocks if b.layer_idx == layer_idx],
+        key=lambda b: b.block_id,
+    )
+
+    anchor_count = max(0, min(anchor_blocks, len(layer_blocks)))
+    anchor_layer_blocks = layer_blocks[:anchor_count]
+    anchor_block_ids = [b.block_id for b in anchor_layer_blocks]
+    anchor_block_spans = [[b.start, b.end] for b in anchor_layer_blocks]
+    anchor_block_id_set = set(anchor_block_ids)
+
+    retrieval_metadata = [
+        m for m in layer_metadata if m.block_id not in anchor_block_id_set
+    ]
 
     scores = score_blocks_with_query(
-        layer_metadata,
+        retrieval_metadata,
         query[:, :, 0, :],
         variant=scoring_variant,
         norm_weight=1e-3,
@@ -140,7 +155,36 @@ def run_pipeline(
     selected_block_scores = [s["score"] for s in selected_summaries]
     selected_block_spans = [[s["start"], s["end"]] for s in selected_summaries]
 
-    candidate_kv = build_candidate_kv(retrieved)
+    if retrieved:
+        candidate_kv = build_candidate_kv(retrieved)
+    else:
+        empty_k = query.new_zeros(
+            (query.shape[0], query.shape[1], 0, query.shape[3]),
+        )
+        candidate_layer_idx = layer_idx
+        candidate_start = split.cold_range[0]
+        if layer_blocks:
+            candidate_layer_idx = layer_blocks[0].layer_idx
+        candidate_kv = build_candidate_kv(
+            [
+                RetrievedBlock(
+                    layer_idx=candidate_layer_idx,
+                    block_id=-1,
+                    start=candidate_start,
+                    end=candidate_start,
+                    k=empty_k,
+                    v=empty_k.clone(),
+                )
+            ]
+        )
+        candidate_kv.selected_spans = []
+        candidate_kv.is_contiguous = True
+
+    anchor_k = None
+    anchor_v = None
+    if anchor_layer_blocks:
+        anchor_k = torch.cat([b.k for b in anchor_layer_blocks], dim=2)
+        anchor_v = torch.cat([b.v for b in anchor_layer_blocks], dim=2)
 
     hot_k = hot_kv.keys[layer_idx]
     hot_v = hot_kv.values[layer_idx]
@@ -150,6 +194,9 @@ def run_pipeline(
         hot_k=hot_k,
         hot_v=hot_v,
         hot_range=split.hot_range,
+        anchor_k=anchor_k,
+        anchor_v=anchor_v,
+        anchor_spans=anchor_block_spans,
     )
 
     full_k = layers[layer_idx].keys
@@ -164,12 +211,31 @@ def run_pipeline(
     )
 
     cold_k_len = split.cold_range[1] - split.cold_range[0]
+    anchor_k_len = int(anchor_k.shape[2]) if anchor_k is not None else 0
     candidate_k_len = candidate_kv.k.shape[2]
+    hot_k_len = hot_k.shape[2]
     working_k_len = working_kv.k.shape[2]
     full_k_len = full_k.shape[2]
 
     coverage_ratio = candidate_k_len / cold_k_len if cold_k_len > 0 else 0.0
     working_ratio = working_k_len / full_k_len if full_k_len > 0 else 0.0
+
+    assert set(anchor_block_ids).isdisjoint(set(selected_block_ids))
+    assert candidate_k_len == sum((e - s) for s, e in selected_block_spans)
+    assert anchor_k_len == sum((e - s) for s, e in anchor_block_spans)
+    assert working_k_len == anchor_k_len + candidate_k_len + hot_k_len
+
+    budget = {
+        "top_k": top_k,
+        "anchor_blocks": anchor_blocks,
+    }
+    selection_breakdown = {
+        "anchor_blocks": len(anchor_block_ids),
+        "retrieved_blocks": len(selected_block_ids),
+        "hot_tokens": hot_k_len,
+        "anchor_tokens": anchor_k_len,
+        "candidate_tokens": candidate_k_len,
+    }
 
     summary = {
         "model": model_name,
@@ -180,6 +246,7 @@ def run_pipeline(
         "hot_window": hot_window,
         "block_size": block_size,
         "top_k": top_k,
+        "anchor_blocks": anchor_blocks,
         "cold_range": list(split.cold_range),
         "hot_range": list(split.hot_range),
         "num_layers": len(layers),
@@ -187,6 +254,7 @@ def run_pipeline(
         "num_layer_blocks": len(layer_metadata),
         "num_selected_blocks": len(top_scores),
         "cold_k_len": cold_k_len,
+        "anchor_k_len": anchor_k_len,
         "candidate_k_len": candidate_k_len,
         "full_k_len": full_k_len,
         "working_k_len": working_k_len,
@@ -197,9 +265,13 @@ def run_pipeline(
         "attention_compare": attention_result.summary(),
         "top_scores": selected_summaries,
         "selected_block_ranks": selected_block_ranks,
+        "anchor_block_ids": anchor_block_ids,
+        "anchor_block_spans": anchor_block_spans,
         "selected_block_ids": selected_block_ids,
         "selected_block_scores": selected_block_scores,
         "selected_block_spans": selected_block_spans,
+        "budget": budget,
+        "selection_breakdown": selection_breakdown,
         "scoring_variant": scoring_variant,
         "prompt_type": prompt_type,
 }
@@ -263,6 +335,12 @@ def main() -> None:
         default="prose",
         help="Prompt type: repetitive, prose, structured",
     )
+    parser.add_argument(
+        "--anchor-blocks",
+        type=int,
+        default=0,
+        help="Number of leading cold blocks kept as anchors",
+    )
     args = parser.parse_args()
 
     ensure_results_dir()
@@ -276,6 +354,7 @@ def main() -> None:
         layer_idx=args.layer_idx,
         scoring_variant=args.scoring_variant,
         prompt_type=args.prompt_type,
+        anchor_blocks=args.anchor_blocks,
     )
 
     output_path = RESULTS_DIR / args.output
