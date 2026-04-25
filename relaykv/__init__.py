@@ -12,6 +12,11 @@ from .attention_compare import (
     scaled_dot_product_attention,
     compare_attention_outputs,
 )
+from .three_tier_policy import (
+    Span,
+    ThreeTierSelection,
+    build_three_tier_selection,
+)
 
 __all__ = [
     "TierManager",
@@ -36,4 +41,7 @@ __all__ = [
     "AttentionCompareResult",
     "scaled_dot_product_attention",
     "compare_attention_outputs",
+    "Span",
+    "ThreeTierSelection",
+    "build_three_tier_selection",
 ]

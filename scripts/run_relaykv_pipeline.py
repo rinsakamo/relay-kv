@@ -18,6 +18,7 @@ from relaykv import (
     build_candidate_kv,
     build_working_kv,
     compare_attention_outputs,
+    build_three_tier_selection,
 )
 
 
@@ -93,6 +94,7 @@ def run_pipeline(
     layer_idx: int,
     scoring_variant: str,
     prompt_type: str,
+    anchor_blocks: int,
 ) -> dict:
     tokenizer, model, device = load_model(model_name)
 
@@ -132,6 +134,16 @@ def run_pipeline(
     )
 
     top_scores = top_k_blocks(scores, k=min(top_k, len(scores)))
+
+    selection = build_three_tier_selection(
+        seq_len=seq_len_actual,
+        hot_window=hot_window,
+        anchor_blocks=anchor_blocks,
+        block_size=block_size,
+        selected_scores=top_scores,
+        layer_idx=layer_idx,
+    )
+
     retrieved = retrieve_blocks(all_blocks, top_scores)
 
     selected_summaries = [s.summary() for s in top_scores]
@@ -163,18 +175,33 @@ def run_pipeline(
         approx_v=working_kv.v,
     )
 
-    cold_k_len = split.cold_range[1] - split.cold_range[0]
-    candidate_k_len = candidate_kv.k.shape[2]
+    # ---- Three-tier accounting / SGLang migration boundary ----
+
     working_k_len = working_kv.k.shape[2]
+    candidate_k_len = candidate_kv.k.shape[2] if candidate_kv.k.numel() > 0 else 0
     full_k_len = full_k.shape[2]
+    hot_k_len = hot_k.shape[2]
+    cold_k_len = max(0, full_k_len - hot_k_len)
+
+    recent_tokens = sum(s.length for s in selection.recent_spans)
+    anchor_tokens = sum(s.length for s in selection.anchor_spans)
+    retrieved_tokens = sum(s.length for s in selection.retrieval_spans)
+    live_tokens = recent_tokens + anchor_tokens + retrieved_tokens
+
+    # PyTorch prototype path currently materializes retrieval + recent only.
+    # Anchor spans are tracked for the SGLang migration boundary, but not yet
+    # concatenated into working_kv.
+    prototype_materialized_tokens = retrieved_tokens + recent_tokens
 
     coverage_ratio = candidate_k_len / cold_k_len if cold_k_len > 0 else 0.0
     working_ratio = working_k_len / full_k_len if full_k_len > 0 else 0.0
 
-    recent_tokens = hot_k.shape[2]
-    anchor_tokens = 0
-    retrieved_tokens = candidate_k_len
-    live_tokens = recent_tokens + anchor_tokens + retrieved_tokens
+    selection_ratio = (
+        selection.selected_token_count / full_k_len if full_k_len > 0 else 0.0
+    )
+    prototype_working_ratio = (
+        working_k_len / full_k_len if full_k_len > 0 else 0.0
+    )
 
     budget = {
         "B_total_tokens": full_k_len,
@@ -189,18 +216,26 @@ def run_pipeline(
         "anchor_tokens": anchor_tokens,
         "retrieved_tokens": retrieved_tokens,
         "live_tokens": live_tokens,
+        "prototype_materialized_tokens": prototype_materialized_tokens,
     }
 
-    assert live_tokens == working_k_len, (
-        f"live_tokens mismatch: live_tokens={live_tokens}, working_k_len={working_k_len}"
+    assert budget["B_recent_tokens"] == recent_tokens, (
+        f"B_recent_tokens mismatch: {budget['B_recent_tokens']} != {recent_tokens}"
     )
 
-    assert budget["B_recent_tokens"] == recent_tokens, (
-        f"B_recent_tokens mismatch: budget={budget['B_recent_tokens']}, recent_tokens={recent_tokens}"
+    assert budget["B_anchor_tokens"] == anchor_tokens, (
+        f"B_anchor_tokens mismatch: {budget['B_anchor_tokens']} != {anchor_tokens}"
     )
 
     assert budget["B_retrieval_tokens"] == retrieved_tokens, (
-        f"B_retrieval_tokens mismatch: budget={budget['B_retrieval_tokens']}, retrieved_tokens={retrieved_tokens}"
+        f"B_retrieval_tokens mismatch: {budget['B_retrieval_tokens']} != {retrieved_tokens}"
+    )
+
+    assert candidate_k_len + recent_tokens == working_k_len, (
+        "prototype working_k_len mismatch: "
+        f"candidate_k_len={candidate_k_len}, "
+        f"recent_tokens={recent_tokens}, "
+        f"working_k_len={working_k_len}"
     )
 
     assert (
@@ -218,6 +253,7 @@ def run_pipeline(
         "seq_len_actual": seq_len_actual,
         "layer_idx": layer_idx,
         "hot_window": hot_window,
+        "anchor_blocks": anchor_blocks,
         "block_size": block_size,
         "top_k": top_k,
         "cold_range": list(split.cold_range),
@@ -232,8 +268,11 @@ def run_pipeline(
         "working_k_len": working_k_len,
         "coverage_ratio": coverage_ratio,
         "working_ratio": working_ratio,
+        "selection_ratio": selection_ratio,
+        "prototype_working_ratio": prototype_working_ratio,
         "budget": budget,
         "selection_breakdown": selection_breakdown,
+        "three_tier_selection": selection.summary(),
         "candidate_kv": candidate_kv.summary(),
         "working_kv": working_kv.summary(),
         "attention_compare": attention_result.summary(),
@@ -305,6 +344,12 @@ def main() -> None:
         default="prose",
         help="Prompt type: repetitive, prose, structured",
     )
+    parser.add_argument(
+        "--anchor-blocks",
+        type=int,
+        default=0,
+        help="Number of initial cold blocks to keep as anchor/sink spans",
+    )
     args = parser.parse_args()
 
     ensure_results_dir()
@@ -318,6 +363,7 @@ def main() -> None:
         layer_idx=args.layer_idx,
         scoring_variant=args.scoring_variant,
         prompt_type=args.prompt_type,
+        anchor_blocks=args.anchor_blocks,
     )
 
     output_path = RESULTS_DIR / args.output

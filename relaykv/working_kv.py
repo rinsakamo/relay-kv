@@ -44,6 +44,12 @@ def build_working_kv(
     hot_range: tuple[int, int],
 ) -> WorkingKV:
     """
+    Materialize prototype working KV as candidate KV + recent hot KV.
+
+    This is a PyTorch attention-compare path only.
+    It intentionally does not model the final SGLang implementation, where
+    RelayKV should select KV page/slot indices rather than concatenate tensors.
+
     candidate_kv: typically on CPU
     hot_k/hot_v: typically on GPU or current device
     shape: [batch, heads, seq_len, head_dim]

@@ -36,6 +36,13 @@ class CandidateKV:
 
 
 def build_candidate_kv(retrieved_blocks: list[RetrievedBlock]) -> CandidateKV:
+    """
+    Materialize retrieved KV blocks into a contiguous tensor.
+
+    This is a PyTorch prototype path for attention comparison only.
+    SGLang integration should consume ThreeTierSelection spans / KV indices
+    directly instead of concatenating KV tensors.
+    """
     if not retrieved_blocks:
         raise ValueError("retrieved_blocks must not be empty")
 
