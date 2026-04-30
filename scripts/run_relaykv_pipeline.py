@@ -19,6 +19,7 @@ from relaykv import (
     build_working_kv,
     compare_attention_outputs,
     build_three_tier_selection,
+    plan_budget,
 )
 
 
@@ -85,6 +86,19 @@ def make_prompt_for_target_tokens(target_tokens: int, prompt_type: str) -> str:
     return " ".join(chunks[:target_tokens])
 
 
+def infer_kv_bytes_per_token(layers) -> int | None:
+    if not layers:
+        return None
+    sample = layers[0].keys
+    if sample.ndim < 4:
+        return None
+    num_layers = len(layers)
+    num_kv_heads = int(sample.shape[1])
+    head_dim = int(sample.shape[-1])
+    dtype_bytes = sample.element_size()
+    return int(2 * num_layers * num_kv_heads * head_dim * dtype_bytes)
+
+
 def run_pipeline(
     model_name: str,
     seq_len_target: int,
@@ -95,6 +109,10 @@ def run_pipeline(
     scoring_variant: str,
     prompt_type: str,
     anchor_blocks: int,
+    available_kv_budget_mib: float,
+    kv_working_budget_tokens: int,
+    budget_block_size: int,
+    retrieval_top_k: int | None,
 ) -> dict:
     tokenizer, model, device = load_model(model_name)
 
@@ -114,6 +132,7 @@ def run_pipeline(
 
     layers = outputs.past_key_values.layers
     seq_len_actual = layers[0].keys.shape[2]
+    kv_bytes_per_token = infer_kv_bytes_per_token(layers)
 
     tier_manager = TierManager(hot_window=hot_window)
     split = tier_manager.split_range(seq_len_actual)
@@ -134,6 +153,17 @@ def run_pipeline(
     )
 
     top_scores = top_k_blocks(scores, k=min(top_k, len(scores)))
+    retrieval_top_k_requested = top_k if retrieval_top_k is None else retrieval_top_k
+    budget_plan = plan_budget(
+        available_kv_budget_mib=available_kv_budget_mib,
+        kv_working_budget_tokens=kv_working_budget_tokens,
+        kv_bytes_per_token=kv_bytes_per_token,
+        recent_window_tokens=hot_window,
+        anchor_blocks=anchor_blocks,
+        budget_block_size=budget_block_size,
+        retrieval_top_k_requested=retrieval_top_k_requested,
+        fallback_working_budget_tokens=seq_len_actual,
+    )
 
     selection = build_three_tier_selection(
         seq_len=seq_len_actual,
@@ -256,6 +286,9 @@ def run_pipeline(
         "anchor_blocks": anchor_blocks,
         "block_size": block_size,
         "top_k": top_k,
+        "retrieval_top_k": retrieval_top_k,
+        "kv_bytes_per_token": kv_bytes_per_token,
+        **budget_plan.summary(),
         "cold_range": list(split.cold_range),
         "hot_range": list(split.hot_range),
         "num_layers": len(layers),
@@ -268,6 +301,11 @@ def run_pipeline(
         "working_k_len": working_k_len,
         "coverage_ratio": coverage_ratio,
         "working_ratio": working_ratio,
+        "mean_abs_diff": attention_result.summary()["mean_abs_diff"],
+        "top5_overlap": None,
+        "first_divergence_step": None,
+        "task_accuracy": None,
+        "same_first_code": None,
         "selection_ratio": selection_ratio,
         "prototype_working_ratio": prototype_working_ratio,
         "budget": budget,
@@ -307,6 +345,12 @@ def main() -> None:
         type=int,
         default=128,
         help="Hot KV window size",
+    )
+    parser.add_argument(
+        "--recent-window",
+        type=int,
+        dest="hot_window",
+        help="Alias for --hot-window.",
     )
     parser.add_argument(
         "--block-size",
@@ -350,6 +394,30 @@ def main() -> None:
         default=0,
         help="Number of initial cold blocks to keep as anchor/sink spans",
     )
+    parser.add_argument(
+        "--available-kv-budget-mib",
+        type=float,
+        default=0.0,
+        help="Available KV working-set budget in MiB for metadata planning.",
+    )
+    parser.add_argument(
+        "--kv-working-budget-tokens",
+        type=int,
+        default=0,
+        help="Explicit KV working-set token budget; overrides MiB estimation.",
+    )
+    parser.add_argument(
+        "--budget-block-size",
+        type=int,
+        default=128,
+        help="Logical RelayKV budget block size in tokens.",
+    )
+    parser.add_argument(
+        "--retrieval-top-k",
+        type=int,
+        default=None,
+        help="Requested retrieval top-k for budget metadata; does not alter --top-k.",
+    )
     args = parser.parse_args()
 
     ensure_results_dir()
@@ -364,6 +432,10 @@ def main() -> None:
         scoring_variant=args.scoring_variant,
         prompt_type=args.prompt_type,
         anchor_blocks=args.anchor_blocks,
+        available_kv_budget_mib=args.available_kv_budget_mib,
+        kv_working_budget_tokens=args.kv_working_budget_tokens,
+        budget_block_size=args.budget_block_size,
+        retrieval_top_k=args.retrieval_top_k,
     )
 
     output_path = RESULTS_DIR / args.output

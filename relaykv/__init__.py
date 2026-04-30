@@ -17,6 +17,7 @@ from .three_tier_policy import (
     ThreeTierSelection,
     build_three_tier_selection,
 )
+from .budget_planner import BudgetPlan, plan_budget
 
 __all__ = [
     "TierManager",
@@ -44,4 +45,6 @@ __all__ = [
     "Span",
     "ThreeTierSelection",
     "build_three_tier_selection",
+    "BudgetPlan",
+    "plan_budget",
 ]

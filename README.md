@@ -76,6 +76,13 @@ The default output is:
 results/raw/prototype_checks/relaykv_pipeline_summary.json
 ```
 
+Budget-planner metadata can be smoke-checked without changing the existing
+retrieval behavior:
+
+```bash
+python scripts/run_relaykv_pipeline.py --seq-len 1024 --recent-window 768 --block-size 128 --top-k 2 --layer-idx 27 --kv-working-budget-tokens 1024 --anchor-blocks 4 --retrieval-top-k 8 --output relaykv_budget_smoke.json
+```
+
 ### 3. Sweep experiment
 
 ```bash

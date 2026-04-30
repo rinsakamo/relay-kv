@@ -25,6 +25,14 @@ def extract_meta(payload: dict[str, Any]) -> dict[str, Any]:
         "hot_window": payload.get("hot_window"),
         "block_size": payload.get("block_size"),
         "scoring_variant": payload.get("scoring_variant"),
+        "kv_working_budget_tokens": payload.get("kv_working_budget_tokens"),
+        "recent_window_tokens": payload.get("recent_window_tokens"),
+        "anchor_blocks": payload.get("anchor_blocks"),
+        "budget_block_size": payload.get("budget_block_size"),
+        "anchor_budget_tokens": payload.get("anchor_budget_tokens"),
+        "retrieval_budget_tokens": payload.get("retrieval_budget_tokens"),
+        "retrieval_top_k_effective": payload.get("retrieval_top_k_effective"),
+        "budget_policy_reason": payload.get("budget_policy_reason"),
     }
 
 
@@ -69,12 +77,19 @@ def format_float(x: float) -> str:
 
 def make_markdown_table(rows: list[dict[str, Any]]) -> str:
     lines = [
-        "| plan | layer 0 mean_abs_diff | layer 14 mean_abs_diff | layer 27 mean_abs_diff | avg | max | total_top_k |",
-        "|---|---:|---:|---:|---:|---:|---:|",
+        "| plan | working_tokens | recent | anchor_tokens | retrieval_tokens | retrieval_top_k_effective | budget_reason | layer 0 mean_abs_diff | layer 14 mean_abs_diff | layer 27 mean_abs_diff | avg | max | total_top_k |",
+        "|---|---:|---:|---:|---:|---:|---|---:|---:|---:|---:|---:|---:|",
     ]
     for row in rows:
+        meta = row["meta"]
         lines.append(
             f"| {row['plan']} "
+            f"| {meta.get('kv_working_budget_tokens')} "
+            f"| {meta.get('recent_window_tokens')} "
+            f"| {meta.get('anchor_budget_tokens')} "
+            f"| {meta.get('retrieval_budget_tokens')} "
+            f"| {meta.get('retrieval_top_k_effective')} "
+            f"| {meta.get('budget_policy_reason')} "
             f"| {format_float(row['layer0_mean_abs_diff'])} "
             f"| {format_float(row['layer14_mean_abs_diff'])} "
             f"| {format_float(row['layer27_mean_abs_diff'])} "
