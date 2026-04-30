@@ -1,0 +1,6 @@
+| plan | kv_working_budget_tokens | recent_window_tokens | budget_block_size | anchor_blocks | anchor_budget_tokens | retrieval_budget_tokens | retrieval_block_budget | retrieval_top_k_requested | retrieval_top_k_effective | budget_overflow | budget_policy_reason | top_k | num_selected_blocks | working_ratio | mean_abs_diff |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---|---:|---:|---:|---:|
+| tiny_16 | 16 | 8 | 8 | 1 | 8 | 0 | 0 | 2 | 0 | True | no_retrieval_room_after_recent_and_anchor | 1 | 1 | 0.500000000 | 0.000006579 |
+| small_32 | 32 | 8 | 8 | 1 | 8 | 16 | 2 | 2 | 2 | False | explicit_working_budget_tokens | 1 | 1 | 0.500000000 | 0.000006579 |
+| medium_64 | 64 | 16 | 8 | 1 | 8 | 40 | 5 | 4 | 4 | False | explicit_working_budget_tokens | 1 | 1 | 0.500000000 | 0.000006579 |
+| mib_512 | 18724 | 768 | 128 | 4 | 512 | 17444 | 136 | 8 | 8 | False | estimated_from_available_kv_budget_mib | 1 | 1 | 0.500000000 | 0.000006579 |

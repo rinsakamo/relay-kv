@@ -111,6 +111,7 @@ def run_pipeline(
     anchor_blocks: int,
     available_kv_budget_mib: float,
     kv_working_budget_tokens: int,
+    recent_window_tokens: int | None,
     budget_block_size: int,
     retrieval_top_k: int | None,
 ) -> dict:
@@ -158,7 +159,9 @@ def run_pipeline(
         available_kv_budget_mib=available_kv_budget_mib,
         kv_working_budget_tokens=kv_working_budget_tokens,
         kv_bytes_per_token=kv_bytes_per_token,
-        recent_window_tokens=hot_window,
+        recent_window_tokens=hot_window
+        if recent_window_tokens is None
+        else recent_window_tokens,
         anchor_blocks=anchor_blocks,
         budget_block_size=budget_block_size,
         retrieval_top_k_requested=retrieval_top_k_requested,
@@ -353,6 +356,12 @@ def main() -> None:
         help="Alias for --hot-window.",
     )
     parser.add_argument(
+        "--recent-window-tokens",
+        type=int,
+        default=None,
+        help="Budget metadata recent window; does not alter --hot-window.",
+    )
+    parser.add_argument(
         "--block-size",
         type=int,
         default=128,
@@ -434,6 +443,7 @@ def main() -> None:
         anchor_blocks=args.anchor_blocks,
         available_kv_budget_mib=args.available_kv_budget_mib,
         kv_working_budget_tokens=args.kv_working_budget_tokens,
+        recent_window_tokens=args.recent_window_tokens,
         budget_block_size=args.budget_block_size,
         retrieval_top_k=args.retrieval_top_k,
     )
