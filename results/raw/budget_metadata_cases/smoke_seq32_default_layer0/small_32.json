@@ -1,0 +1,224 @@
+{
+  "model": "Qwen/Qwen2.5-1.5B-Instruct",
+  "device": "cuda",
+  "seq_len_target": 32,
+  "seq_len_actual": 32,
+  "layer_idx": 0,
+  "hot_window": 8,
+  "anchor_blocks": 1,
+  "block_size": 8,
+  "top_k": 1,
+  "retrieval_top_k": 2,
+  "kv_bytes_per_token": 28672,
+  "available_kv_budget_mib": 0.0,
+  "kv_working_budget_tokens": 32,
+  "kv_working_budget_source": "explicit_working_budget_tokens",
+  "recent_window_tokens": 8,
+  "budget_block_size": 8,
+  "anchor_budget_tokens": 8,
+  "retrieval_budget_tokens": 16,
+  "retrieval_block_budget": 2,
+  "retrieval_top_k_requested": 2,
+  "retrieval_top_k_effective": 2,
+  "budget_overflow": false,
+  "budget_policy_reason": "explicit_working_budget_tokens",
+  "cold_range": [
+    0,
+    24
+  ],
+  "hot_range": [
+    24,
+    32
+  ],
+  "num_layers": 28,
+  "num_all_blocks": 84,
+  "num_layer_blocks": 3,
+  "num_selected_blocks": 1,
+  "cold_k_len": 24,
+  "candidate_k_len": 8,
+  "full_k_len": 32,
+  "working_k_len": 16,
+  "coverage_ratio": 0.3333333333333333,
+  "working_ratio": 0.5,
+  "mean_abs_diff": 6.578863576578442e-06,
+  "top5_overlap": null,
+  "first_divergence_step": null,
+  "task_accuracy": null,
+  "same_first_code": null,
+  "selection_ratio": 0.75,
+  "prototype_working_ratio": 0.5,
+  "budget": {
+    "B_total_tokens": 32,
+    "B_recent_tokens": 8,
+    "B_anchor_tokens": 8,
+    "B_retrieval_tokens": 8,
+    "B_transient_tokens": 0
+  },
+  "selection_breakdown": {
+    "recent_tokens": 8,
+    "anchor_tokens": 8,
+    "retrieved_tokens": 8,
+    "live_tokens": 24,
+    "prototype_materialized_tokens": 16
+  },
+  "three_tier_selection": {
+    "policy_name": "three_tier_v0",
+    "layer_idx": 0,
+    "full_token_count": 32,
+    "selected_token_count": 24,
+    "selected_ratio": 0.75,
+    "recent_spans": [
+      {
+        "start": 24,
+        "end": 32,
+        "length": 8,
+        "kind": "recent"
+      }
+    ],
+    "anchor_spans": [
+      {
+        "start": 0,
+        "end": 8,
+        "length": 8,
+        "kind": "anchor"
+      }
+    ],
+    "retrieval_spans": [
+      {
+        "start": 16,
+        "end": 24,
+        "length": 8,
+        "kind": "retrieval"
+      }
+    ],
+    "selected_block_ids": [
+      2
+    ],
+    "all_spans": [
+      {
+        "start": 0,
+        "end": 8,
+        "length": 8,
+        "kind": "anchor"
+      },
+      {
+        "start": 16,
+        "end": 24,
+        "length": 8,
+        "kind": "retrieval"
+      },
+      {
+        "start": 24,
+        "end": 32,
+        "length": 8,
+        "kind": "recent"
+      }
+    ]
+  },
+  "candidate_kv": {
+    "layer_idx": 0,
+    "start": 16,
+    "end": 24,
+    "length": 8,
+    "range_length": 8,
+    "tensor_length": 8,
+    "k_shape": [
+      1,
+      2,
+      8,
+      128
+    ],
+    "v_shape": [
+      1,
+      2,
+      8,
+      128
+    ],
+    "k_device": "cpu",
+    "v_device": "cpu",
+    "selected_spans": [
+      [
+        16,
+        24
+      ]
+    ],
+    "is_contiguous": true
+  },
+  "working_kv": {
+    "layer_idx": 0,
+    "candidate_range": [
+      16,
+      24
+    ],
+    "hot_range": [
+      24,
+      32
+    ],
+    "length": 16,
+    "candidate_tensor_length": 8,
+    "candidate_is_contiguous": true,
+    "candidate_selected_spans": [
+      [
+        16,
+        24
+      ]
+    ],
+    "k_shape": [
+      1,
+      2,
+      16,
+      128
+    ],
+    "v_shape": [
+      1,
+      2,
+      16,
+      128
+    ],
+    "k_device": "cpu",
+    "v_device": "cpu"
+  },
+  "attention_compare": {
+    "full_output_shape": [
+      1,
+      2,
+      1,
+      128
+    ],
+    "approx_output_shape": [
+      1,
+      2,
+      1,
+      128
+    ],
+    "mean_abs_diff": 6.578863576578442e-06,
+    "max_abs_diff": 4.966557025909424e-05,
+    "l2_diff": 0.0001903618103824556
+  },
+  "top_scores": [
+    {
+      "layer_idx": 0,
+      "block_id": 2,
+      "start": 16,
+      "end": 24,
+      "score": 1217373.375
+    }
+  ],
+  "selected_block_ranks": [
+    0
+  ],
+  "selected_block_ids": [
+    2
+  ],
+  "selected_block_scores": [
+    1217373.375
+  ],
+  "selected_block_spans": [
+    [
+      16,
+      24
+    ]
+  ],
+  "scoring_variant": "mean_only",
+  "prompt_type": "prose"
+}

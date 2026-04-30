@@ -27,58 +27,129 @@ DEFAULT_PIPELINE_ARGS = {
     "block_size": 8,
     "top_k": 1,
     "layer_idx": 0,
+    "prompt_type": "default",
 }
 
-CASES: list[dict[str, Any]] = [
-    {
-        "name": "tiny_16",
-        "kv_working_budget_tokens": 16,
-        "recent_window": 8,
-        "budget_block_size": 8,
-        "anchor_blocks": 1,
-        "retrieval_top_k": 2,
-    },
-    {
-        "name": "small_32",
-        "kv_working_budget_tokens": 32,
-        "recent_window": 8,
-        "budget_block_size": 8,
-        "anchor_blocks": 1,
-        "retrieval_top_k": 2,
-    },
-    {
-        "name": "medium_64",
-        "kv_working_budget_tokens": 64,
-        "recent_window": 16,
-        "budget_block_size": 8,
-        "anchor_blocks": 1,
-        "retrieval_top_k": 4,
-    },
-    {
-        "name": "mib_512",
-        "available_kv_budget_mib": 512,
-        "recent_window": 768,
-        "budget_block_size": 128,
-        "anchor_blocks": 4,
-        "retrieval_top_k": 8,
-    },
-]
+CASE_SETS: dict[str, list[dict[str, Any]]] = {
+    "smoke": [
+        {
+            "name": "tiny_16",
+            "kv_working_budget_tokens": 16,
+            "recent_window": 8,
+            "budget_block_size": 8,
+            "anchor_blocks": 1,
+            "retrieval_top_k": 2,
+        },
+        {
+            "name": "small_32",
+            "kv_working_budget_tokens": 32,
+            "recent_window": 8,
+            "budget_block_size": 8,
+            "anchor_blocks": 1,
+            "retrieval_top_k": 2,
+        },
+        {
+            "name": "medium_64",
+            "kv_working_budget_tokens": 64,
+            "recent_window": 16,
+            "budget_block_size": 8,
+            "anchor_blocks": 1,
+            "retrieval_top_k": 4,
+        },
+        {
+            "name": "mib_512",
+            "available_kv_budget_mib": 512,
+            "recent_window": 768,
+            "budget_block_size": 128,
+            "anchor_blocks": 4,
+            "retrieval_top_k": 8,
+        },
+    ],
+    "budget_tokens": [
+        {
+            "name": "tokens_1024",
+            "kv_working_budget_tokens": 1024,
+            "recent_window": 768,
+            "budget_block_size": 128,
+            "anchor_blocks": 4,
+            "retrieval_top_k": 8,
+        },
+        {
+            "name": "tokens_2048",
+            "kv_working_budget_tokens": 2048,
+            "recent_window": 768,
+            "budget_block_size": 128,
+            "anchor_blocks": 4,
+            "retrieval_top_k": 8,
+        },
+        {
+            "name": "tokens_4096",
+            "kv_working_budget_tokens": 4096,
+            "recent_window": 768,
+            "budget_block_size": 128,
+            "anchor_blocks": 4,
+            "retrieval_top_k": 8,
+        },
+    ],
+    "residual_mib": [
+        {
+            "name": "mib_128",
+            "available_kv_budget_mib": 128,
+            "recent_window": 768,
+            "budget_block_size": 128,
+            "anchor_blocks": 4,
+            "retrieval_top_k": 8,
+        },
+        {
+            "name": "mib_256",
+            "available_kv_budget_mib": 256,
+            "recent_window": 768,
+            "budget_block_size": 128,
+            "anchor_blocks": 4,
+            "retrieval_top_k": 8,
+        },
+        {
+            "name": "mib_512",
+            "available_kv_budget_mib": 512,
+            "recent_window": 768,
+            "budget_block_size": 128,
+            "anchor_blocks": 4,
+            "retrieval_top_k": 8,
+        },
+    ],
+}
 
 
-def build_command(case: dict[str, Any], output_path: Path) -> list[str]:
+def slug(value: str) -> str:
+    return "".join(ch if ch.isalnum() or ch in ("-", "_") else "_" for ch in value)
+
+
+def default_output_paths(args: argparse.Namespace) -> tuple[Path, Path, Path]:
+    prompt = slug(args.prompt_type)
+    run_name = f"{args.case_set}_seq{args.seq_len}_{prompt}_layer{args.layer_idx}"
+    return (
+        RAW_DIR / run_name,
+        ROOT / f"results/processed/budget_metadata_cases_{run_name}.md",
+        ROOT / f"results/processed/budget_metadata_cases_{run_name}.json",
+    )
+
+
+def build_command(
+    case: dict[str, Any], output_path: Path, args: argparse.Namespace
+) -> list[str]:
     cmd = [
         sys.executable,
         str(ROOT / "scripts/run_relaykv_pipeline.py"),
         "--seq-len",
-        str(DEFAULT_PIPELINE_ARGS["seq_len"]),
+        str(args.seq_len),
         "--hot-window",
-        str(DEFAULT_PIPELINE_ARGS["hot_window"]),
+        str(args.hot_window),
         "--block-size",
-        str(DEFAULT_PIPELINE_ARGS["block_size"]),
+        str(args.block_size),
         "--top-k",
-        str(DEFAULT_PIPELINE_ARGS["top_k"]),
+        str(args.top_k),
         "--layer-idx",
-        str(DEFAULT_PIPELINE_ARGS["layer_idx"]),
+        str(args.layer_idx),
         "--recent-window-tokens",
         str(case["recent_window"]),
         "--budget-block-size",
@@ -90,6 +161,8 @@ def build_command(case: dict[str, Any], output_path: Path) -> list[str]:
         "--output",
         str(output_path),
     ]
+    if args.prompt_type != "default":
+        cmd.extend(["--prompt-type", args.prompt_type])
     if case.get("kv_working_budget_tokens"):
         cmd.extend(["--kv-working-budget-tokens", str(case["kv_working_budget_tokens"])])
     if case.get("available_kv_budget_mib"):
@@ -97,9 +170,11 @@ def build_command(case: dict[str, Any], output_path: Path) -> list[str]:
     return cmd
 
 
-def run_case(case: dict[str, Any], raw_dir: Path, env: dict[str, str]) -> Path:
+def run_case(
+    case: dict[str, Any], raw_dir: Path, env: dict[str, str], args: argparse.Namespace
+) -> Path:
     output_path = raw_dir / f"{case['name']}.json"
-    cmd = build_command(case, output_path)
+    cmd = build_command(case, output_path, args)
     print(f"running {case['name']}: {' '.join(cmd)}")
     try:
         subprocess.run(cmd, cwd=ROOT, env=env, check=True)
@@ -113,11 +188,41 @@ def run_case(case: dict[str, Any], raw_dir: Path, env: dict[str, str]) -> Path:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Run metadata-only RelayKV budget cases via run_relaykv_pipeline.py."
+        description="Run metadata-only RelayKV budget cases via run_relaykv_pipeline.py.",
+        epilog=(
+            "Example: HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 "
+            "PYTHONPYCACHEPREFIX=/tmp/relaykv_pycache "
+            ".venv/bin/python scripts/run_budget_metadata_cases.py "
+            "--case-set budget_tokens --seq-len 1024 --prompt-type structured "
+            "--layer-idx 0 --top-k 1"
+        ),
     )
-    parser.add_argument("--raw-dir", type=Path, default=RAW_DIR)
-    parser.add_argument("--output-md", type=Path, default=PROCESSED_MD)
-    parser.add_argument("--output-json", type=Path, default=PROCESSED_JSON)
+    parser.add_argument("--seq-len", type=int, default=DEFAULT_PIPELINE_ARGS["seq_len"])
+    parser.add_argument(
+        "--prompt-type",
+        type=str,
+        default=DEFAULT_PIPELINE_ARGS["prompt_type"],
+        help="Pipeline prompt type. Use 'default' to keep run_relaykv_pipeline.py default.",
+    )
+    parser.add_argument(
+        "--layer-idx", type=int, default=DEFAULT_PIPELINE_ARGS["layer_idx"]
+    )
+    parser.add_argument("--top-k", type=int, default=DEFAULT_PIPELINE_ARGS["top_k"])
+    parser.add_argument(
+        "--hot-window", type=int, default=DEFAULT_PIPELINE_ARGS["hot_window"]
+    )
+    parser.add_argument(
+        "--block-size", type=int, default=DEFAULT_PIPELINE_ARGS["block_size"]
+    )
+    parser.add_argument(
+        "--case-set",
+        choices=sorted(CASE_SETS),
+        default="smoke",
+        help="Budget metadata case set to run.",
+    )
+    parser.add_argument("--raw-dir", type=Path, default=None)
+    parser.add_argument("--output-md", type=Path, default=None)
+    parser.add_argument("--output-json", type=Path, default=None)
     args = parser.parse_args()
 
     env = os.environ.copy()
@@ -125,24 +230,27 @@ def main() -> None:
     env.setdefault("TRANSFORMERS_OFFLINE", "1")
     env.setdefault("PYTHONPYCACHEPREFIX", "/tmp/relaykv_pycache")
 
-    raw_dir = args.raw_dir
+    default_raw_dir, default_output_md, default_output_json = default_output_paths(args)
+    raw_dir = args.raw_dir or default_raw_dir
+    output_md = args.output_md or default_output_md
+    output_json = args.output_json or default_output_json
     raw_dir.mkdir(parents=True, exist_ok=True)
-    args.output_md.parent.mkdir(parents=True, exist_ok=True)
-    args.output_json.parent.mkdir(parents=True, exist_ok=True)
+    output_md.parent.mkdir(parents=True, exist_ok=True)
+    output_json.parent.mkdir(parents=True, exist_ok=True)
 
     rows = []
-    for case in CASES:
-        output_path = run_case(case, raw_dir, env)
+    for case in CASE_SETS[args.case_set]:
+        output_path = run_case(case, raw_dir, env, args)
         rows.append(extract_budget_row(case["name"], load_json(output_path)))
 
     md = make_budget_markdown_table(rows)
-    args.output_md.write_text(md + "\n", encoding="utf-8")
-    with args.output_json.open("w", encoding="utf-8") as f:
+    output_md.write_text(md + "\n", encoding="utf-8")
+    with output_json.open("w", encoding="utf-8") as f:
         json.dump(rows, f, indent=2, ensure_ascii=False)
 
     print(md)
-    print(f"\nsaved markdown: {args.output_md}")
-    print(f"saved json: {args.output_json}")
+    print(f"\nsaved markdown: {output_md}")
+    print(f"saved json: {output_json}")
 
 
 if __name__ == "__main__":
