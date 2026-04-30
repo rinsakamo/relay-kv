@@ -22,6 +22,7 @@ PROCESSED_MD = ROOT / "results/processed/budget_metadata_cases_table.md"
 PROCESSED_JSON = ROOT / "results/processed/budget_metadata_cases_table.json"
 
 DEFAULT_PIPELINE_ARGS = {
+    "model_name": "Qwen/Qwen2.5-1.5B-Instruct",
     "seq_len": 32,
     "hot_window": 8,
     "block_size": 8,
@@ -124,9 +125,21 @@ def slug(value: str) -> str:
     return "".join(ch if ch.isalnum() or ch in ("-", "_") else "_" for ch in value)
 
 
+def model_suffix(model_name: str) -> str:
+    if model_name == DEFAULT_PIPELINE_ARGS["model_name"]:
+        return ""
+    name = model_name.lower().split("/")[-1]
+    name = name.replace("qwen2.5", "qwen2p5").replace("-instruct", "")
+    name = name.replace("-", "_")
+    return f"_{slug(name)}"
+
+
 def default_output_paths(args: argparse.Namespace) -> tuple[Path, Path, Path]:
     prompt = slug(args.prompt_type)
-    run_name = f"{args.case_set}_seq{args.seq_len}_{prompt}_layer{args.layer_idx}"
+    run_name = (
+        f"{args.case_set}_seq{args.seq_len}_{prompt}_layer{args.layer_idx}"
+        f"{model_suffix(args.model_name)}"
+    )
     return (
         RAW_DIR / run_name,
         ROOT / f"results/processed/budget_metadata_cases_{run_name}.md",
@@ -140,6 +153,8 @@ def build_command(
     cmd = [
         sys.executable,
         str(ROOT / "scripts/run_relaykv_pipeline.py"),
+        "--model",
+        args.model_name,
         "--seq-len",
         str(args.seq_len),
         "--hot-window",
@@ -193,9 +208,16 @@ def main() -> None:
             "Example: HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 "
             "PYTHONPYCACHEPREFIX=/tmp/relaykv_pycache "
             ".venv/bin/python scripts/run_budget_metadata_cases.py "
+            "--model-name Qwen/Qwen2.5-1.5B-Instruct "
             "--case-set budget_tokens --seq-len 1024 --prompt-type structured "
             "--layer-idx 0 --top-k 1"
         ),
+    )
+    parser.add_argument(
+        "--model-name",
+        type=str,
+        default=DEFAULT_PIPELINE_ARGS["model_name"],
+        help="Model name passed through to run_relaykv_pipeline.py --model.",
     )
     parser.add_argument("--seq-len", type=int, default=DEFAULT_PIPELINE_ARGS["seq_len"])
     parser.add_argument(
