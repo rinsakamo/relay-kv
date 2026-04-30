@@ -1,0 +1,285 @@
+{
+  "model": "Qwen/Qwen2.5-3B-Instruct",
+  "model_name": "Qwen/Qwen2.5-3B-Instruct",
+  "device": "cuda",
+  "seq_len_target": 1024,
+  "seq_len_actual": 1024,
+  "layer_idx": 27,
+  "hot_window": 256,
+  "anchor_blocks": 4,
+  "block_size": 128,
+  "top_k": 3,
+  "retrieval_top_k": 8,
+  "kv_bytes_per_token": 36864,
+  "num_key_value_heads": 2,
+  "head_dim": 128,
+  "kv_dtype_bytes": 2,
+  "available_kv_budget_mib": 0.0,
+  "kv_working_budget_tokens": 1024,
+  "kv_working_budget_source": "explicit_working_budget_tokens",
+  "recent_window_tokens": 768,
+  "budget_block_size": 128,
+  "anchor_budget_tokens": 256,
+  "retrieval_budget_tokens": 0,
+  "retrieval_block_budget": 0,
+  "retrieval_top_k_requested": 8,
+  "retrieval_top_k_effective": 0,
+  "budget_overflow": true,
+  "budget_policy_reason": "anchor_budget_clipped_after_recent_window",
+  "cold_range": [
+    0,
+    768
+  ],
+  "hot_range": [
+    768,
+    1024
+  ],
+  "num_layers": 36,
+  "num_all_blocks": 216,
+  "num_layer_blocks": 6,
+  "num_selected_blocks": 3,
+  "cold_k_len": 768,
+  "candidate_k_len": 384,
+  "full_k_len": 1024,
+  "working_k_len": 640,
+  "coverage_ratio": 0.5,
+  "working_ratio": 0.625,
+  "mean_abs_diff": 0.3692620098590851,
+  "top5_overlap": null,
+  "first_divergence_step": null,
+  "task_accuracy": null,
+  "same_first_code": null,
+  "selection_ratio": 1.0,
+  "prototype_working_ratio": 0.625,
+  "budget": {
+    "B_total_tokens": 1024,
+    "B_recent_tokens": 256,
+    "B_anchor_tokens": 512,
+    "B_retrieval_tokens": 256,
+    "B_transient_tokens": 0
+  },
+  "selection_breakdown": {
+    "recent_tokens": 256,
+    "anchor_tokens": 512,
+    "retrieved_tokens": 256,
+    "live_tokens": 1024,
+    "prototype_materialized_tokens": 512
+  },
+  "three_tier_selection": {
+    "policy_name": "three_tier_v0",
+    "layer_idx": 27,
+    "full_token_count": 1024,
+    "selected_token_count": 1024,
+    "selected_ratio": 1.0,
+    "recent_spans": [
+      {
+        "start": 768,
+        "end": 1024,
+        "length": 256,
+        "kind": "recent"
+      }
+    ],
+    "anchor_spans": [
+      {
+        "start": 0,
+        "end": 512,
+        "length": 512,
+        "kind": "anchor"
+      }
+    ],
+    "retrieval_spans": [
+      {
+        "start": 640,
+        "end": 768,
+        "length": 128,
+        "kind": "retrieval"
+      },
+      {
+        "start": 512,
+        "end": 640,
+        "length": 128,
+        "kind": "retrieval"
+      }
+    ],
+    "selected_block_ids": [
+      5,
+      4
+    ],
+    "all_spans": [
+      {
+        "start": 0,
+        "end": 512,
+        "length": 512,
+        "kind": "anchor"
+      },
+      {
+        "start": 512,
+        "end": 640,
+        "length": 128,
+        "kind": "retrieval"
+      },
+      {
+        "start": 640,
+        "end": 768,
+        "length": 128,
+        "kind": "retrieval"
+      },
+      {
+        "start": 768,
+        "end": 1024,
+        "length": 256,
+        "kind": "recent"
+      }
+    ]
+  },
+  "candidate_kv": {
+    "layer_idx": 27,
+    "start": 384,
+    "end": 768,
+    "length": 384,
+    "range_length": 384,
+    "tensor_length": 384,
+    "k_shape": [
+      1,
+      2,
+      384,
+      128
+    ],
+    "v_shape": [
+      1,
+      2,
+      384,
+      128
+    ],
+    "k_device": "cpu",
+    "v_device": "cpu",
+    "selected_spans": [
+      [
+        384,
+        512
+      ],
+      [
+        512,
+        640
+      ],
+      [
+        640,
+        768
+      ]
+    ],
+    "is_contiguous": true
+  },
+  "working_kv": {
+    "layer_idx": 27,
+    "candidate_range": [
+      384,
+      768
+    ],
+    "hot_range": [
+      768,
+      1024
+    ],
+    "length": 640,
+    "candidate_tensor_length": 384,
+    "candidate_is_contiguous": true,
+    "candidate_selected_spans": [
+      [
+        384,
+        512
+      ],
+      [
+        512,
+        640
+      ],
+      [
+        640,
+        768
+      ]
+    ],
+    "k_shape": [
+      1,
+      2,
+      640,
+      128
+    ],
+    "v_shape": [
+      1,
+      2,
+      640,
+      128
+    ],
+    "k_device": "cpu",
+    "v_device": "cpu"
+  },
+  "attention_compare": {
+    "full_output_shape": [
+      1,
+      2,
+      1,
+      128
+    ],
+    "approx_output_shape": [
+      1,
+      2,
+      1,
+      128
+    ],
+    "mean_abs_diff": 0.3692620098590851,
+    "max_abs_diff": 2.5754945278167725,
+    "l2_diff": 10.395933151245117
+  },
+  "top_scores": [
+    {
+      "layer_idx": 27,
+      "block_id": 5,
+      "start": 640,
+      "end": 768,
+      "score": 4345.341796875
+    },
+    {
+      "layer_idx": 27,
+      "block_id": 4,
+      "start": 512,
+      "end": 640,
+      "score": 4343.46826171875
+    },
+    {
+      "layer_idx": 27,
+      "block_id": 3,
+      "start": 384,
+      "end": 512,
+      "score": 4338.47802734375
+    }
+  ],
+  "selected_block_ranks": [
+    0,
+    1,
+    2
+  ],
+  "selected_block_ids": [
+    5,
+    4,
+    3
+  ],
+  "selected_block_scores": [
+    4345.341796875,
+    4343.46826171875,
+    4338.47802734375
+  ],
+  "selected_block_spans": [
+    [
+      640,
+      768
+    ],
+    [
+      512,
+      640
+    ],
+    [
+      384,
+      512
+    ]
+  ],
+  "scoring_variant": "mean_only",
+  "prompt_type": "repetitive"
+}
