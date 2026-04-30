@@ -1,0 +1,68 @@
+[
+  {
+    "model_name": "Qwen/Qwen2.5-3B-Instruct",
+    "prompt_type": "repetitive",
+    "layer_idx": 27,
+    "seq_len": 1024,
+    "top_k": 3,
+    "num_selected_blocks": 3,
+    "selected_block_ids": [
+      5,
+      4,
+      3
+    ],
+    "working_ratio": 0.625,
+    "coverage_ratio": 0.5,
+    "candidate_k_len": 384,
+    "working_k_len": 640,
+    "cold_k_len": 768,
+    "mean_abs_diff": 0.3692620098590851,
+    "max_abs_diff": 2.5754945278167725
+  },
+  {
+    "model_name": "Qwen/Qwen2.5-3B-Instruct",
+    "prompt_type": "repetitive",
+    "layer_idx": 27,
+    "seq_len": 1024,
+    "top_k": 6,
+    "num_selected_blocks": 6,
+    "selected_block_ids": [
+      5,
+      4,
+      3,
+      2,
+      1,
+      0
+    ],
+    "working_ratio": 1.0,
+    "coverage_ratio": 1.0,
+    "candidate_k_len": 768,
+    "working_k_len": 1024,
+    "cold_k_len": 768,
+    "mean_abs_diff": 0.0,
+    "max_abs_diff": 0.0
+  },
+  {
+    "model_name": "Qwen/Qwen2.5-3B-Instruct",
+    "prompt_type": "repetitive",
+    "layer_idx": 27,
+    "seq_len": 1024,
+    "top_k": 8,
+    "num_selected_blocks": 6,
+    "selected_block_ids": [
+      5,
+      4,
+      3,
+      2,
+      1,
+      0
+    ],
+    "working_ratio": 1.0,
+    "coverage_ratio": 1.0,
+    "candidate_k_len": 768,
+    "working_k_len": 1024,
+    "cold_k_len": 768,
+    "mean_abs_diff": 0.0,
+    "max_abs_diff": 0.0
+  }
+]
