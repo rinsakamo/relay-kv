@@ -20,6 +20,12 @@ def extract_mean_abs_diff(payload: dict[str, Any]) -> float:
 def extract_meta(payload: dict[str, Any]) -> dict[str, Any]:
     return {
         "model": payload.get("model"),
+        "model_name": payload.get("model_name", payload.get("model")),
+        "num_layers": payload.get("num_layers"),
+        "num_key_value_heads": payload.get("num_key_value_heads"),
+        "head_dim": payload.get("head_dim"),
+        "kv_dtype_bytes": payload.get("kv_dtype_bytes"),
+        "kv_bytes_per_token": payload.get("kv_bytes_per_token"),
         "seq_len_target": payload.get("seq_len_target"),
         "prompt_type": payload.get("prompt_type"),
         "hot_window": payload.get("hot_window"),
@@ -42,6 +48,12 @@ def extract_meta(payload: dict[str, Any]) -> dict[str, Any]:
 def extract_budget_row(plan_name: str, payload: dict[str, Any]) -> dict[str, Any]:
     return {
         "plan": plan_name,
+        "model_name": payload.get("model_name", payload.get("model")),
+        "num_layers": payload.get("num_layers"),
+        "num_key_value_heads": payload.get("num_key_value_heads"),
+        "head_dim": payload.get("head_dim"),
+        "kv_dtype_bytes": payload.get("kv_dtype_bytes"),
+        "kv_bytes_per_token": payload.get("kv_bytes_per_token"),
         "kv_working_budget_tokens": payload.get("kv_working_budget_tokens"),
         "recent_window_tokens": payload.get("recent_window_tokens"),
         "budget_block_size": payload.get("budget_block_size"),
@@ -117,6 +129,12 @@ def format_cell(value: Any) -> str:
 def make_budget_markdown_table(rows: list[dict[str, Any]]) -> str:
     columns = [
         "plan",
+        "model_name",
+        "num_layers",
+        "num_key_value_heads",
+        "head_dim",
+        "kv_dtype_bytes",
+        "kv_bytes_per_token",
         "kv_working_budget_tokens",
         "recent_window_tokens",
         "budget_block_size",
@@ -135,7 +153,7 @@ def make_budget_markdown_table(rows: list[dict[str, Any]]) -> str:
     ]
     lines = [
         "| " + " | ".join(columns) + " |",
-        "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---|---:|---:|---:|---:|",
+        "|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---|---:|---:|---:|---:|",
     ]
     for row in rows:
         lines.append("| " + " | ".join(format_cell(row.get(c)) for c in columns) + " |")
@@ -144,13 +162,19 @@ def make_budget_markdown_table(rows: list[dict[str, Any]]) -> str:
 
 def make_markdown_table(rows: list[dict[str, Any]]) -> str:
     lines = [
-        "| plan | working_tokens | recent | budget_block_size | anchor_blocks | anchor_tokens | retrieval_tokens | retrieval_block_budget | retrieval_top_k_requested | retrieval_top_k_effective | budget_overflow | budget_reason | top_k | num_selected_blocks | working_ratio | mean_abs_diff | layer 0 mean_abs_diff | layer 14 mean_abs_diff | layer 27 mean_abs_diff | avg | max | total_top_k |",
-        "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
+        "| plan | model_name | num_layers | num_key_value_heads | head_dim | kv_dtype_bytes | kv_bytes_per_token | working_tokens | recent | budget_block_size | anchor_blocks | anchor_tokens | retrieval_tokens | retrieval_block_budget | retrieval_top_k_requested | retrieval_top_k_effective | budget_overflow | budget_reason | top_k | num_selected_blocks | working_ratio | mean_abs_diff | layer 0 mean_abs_diff | layer 14 mean_abs_diff | layer 27 mean_abs_diff | avg | max | total_top_k |",
+        "|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
     ]
     for row in rows:
         meta = row["meta"]
         lines.append(
             f"| {row['plan']} "
+            f"| {meta.get('model_name')} "
+            f"| {meta.get('num_layers')} "
+            f"| {meta.get('num_key_value_heads')} "
+            f"| {meta.get('head_dim')} "
+            f"| {meta.get('kv_dtype_bytes')} "
+            f"| {meta.get('kv_bytes_per_token')} "
             f"| {meta.get('kv_working_budget_tokens')} "
             f"| {meta.get('recent_window_tokens')} "
             f"| {meta.get('budget_block_size')} "

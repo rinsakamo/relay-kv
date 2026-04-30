@@ -86,17 +86,36 @@ def make_prompt_for_target_tokens(target_tokens: int, prompt_type: str) -> str:
     return " ".join(chunks[:target_tokens])
 
 
-def infer_kv_bytes_per_token(layers) -> int | None:
+def infer_kv_profile(layers) -> dict[str, int | None]:
     if not layers:
-        return None
+        return {
+            "num_layers": None,
+            "num_key_value_heads": None,
+            "head_dim": None,
+            "kv_dtype_bytes": None,
+            "kv_bytes_per_token": None,
+        }
     sample = layers[0].keys
     if sample.ndim < 4:
-        return None
+        return {
+            "num_layers": len(layers),
+            "num_key_value_heads": None,
+            "head_dim": None,
+            "kv_dtype_bytes": sample.element_size(),
+            "kv_bytes_per_token": None,
+        }
     num_layers = len(layers)
     num_kv_heads = int(sample.shape[1])
     head_dim = int(sample.shape[-1])
     dtype_bytes = sample.element_size()
-    return int(2 * num_layers * num_kv_heads * head_dim * dtype_bytes)
+    kv_bytes_per_token = int(2 * num_layers * num_kv_heads * head_dim * dtype_bytes)
+    return {
+        "num_layers": num_layers,
+        "num_key_value_heads": num_kv_heads,
+        "head_dim": head_dim,
+        "kv_dtype_bytes": dtype_bytes,
+        "kv_bytes_per_token": kv_bytes_per_token,
+    }
 
 
 def run_pipeline(
@@ -133,7 +152,8 @@ def run_pipeline(
 
     layers = outputs.past_key_values.layers
     seq_len_actual = layers[0].keys.shape[2]
-    kv_bytes_per_token = infer_kv_bytes_per_token(layers)
+    kv_profile = infer_kv_profile(layers)
+    kv_bytes_per_token = kv_profile["kv_bytes_per_token"]
 
     tier_manager = TierManager(hot_window=hot_window)
     split = tier_manager.split_range(seq_len_actual)
@@ -281,6 +301,7 @@ def run_pipeline(
 
     summary = {
         "model": model_name,
+        "model_name": model_name,
         "device": device,
         "seq_len_target": seq_len_target,
         "seq_len_actual": seq_len_actual,
@@ -291,10 +312,13 @@ def run_pipeline(
         "top_k": top_k,
         "retrieval_top_k": retrieval_top_k,
         "kv_bytes_per_token": kv_bytes_per_token,
+        "num_key_value_heads": kv_profile["num_key_value_heads"],
+        "head_dim": kv_profile["head_dim"],
+        "kv_dtype_bytes": kv_profile["kv_dtype_bytes"],
         **budget_plan.summary(),
         "cold_range": list(split.cold_range),
         "hot_range": list(split.hot_range),
-        "num_layers": len(layers),
+        "num_layers": kv_profile["num_layers"],
         "num_all_blocks": len(all_blocks),
         "num_layer_blocks": len(layer_metadata),
         "num_selected_blocks": len(top_scores),
