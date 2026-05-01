@@ -1,0 +1,5 @@
+| plan | model_name | num_layers | num_key_value_heads | head_dim | kv_dtype_bytes | kv_bytes_per_token | kv_working_budget_tokens | recent_window_tokens | budget_block_size | anchor_blocks | anchor_budget_tokens | retrieval_budget_tokens | retrieval_block_budget | retrieval_top_k_requested | retrieval_top_k_effective | budget_overflow | budget_policy_reason | top_k | num_selected_blocks | working_ratio | mean_abs_diff |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---|---:|---:|---:|---:|
+| tokens_1024 | Qwen/Qwen2.5-3B-Instruct | 36 | 2 | 128 | 2 | 36864 | 1024 | 768 | 128 | 4 | 256 | 0 | 0 | 8 | 0 | True | anchor_budget_clipped_after_recent_window | 3 | 3 | 0.312500000 | 0.010569170 |
+| tokens_2048 | Qwen/Qwen2.5-3B-Instruct | 36 | 2 | 128 | 2 | 36864 | 2048 | 768 | 128 | 4 | 512 | 768 | 6 | 8 | 6 | True | retrieval_top_k_clipped_to_remaining_budget | 3 | 3 | 0.312500000 | 0.010569170 |
+| tokens_4096 | Qwen/Qwen2.5-3B-Instruct | 36 | 2 | 128 | 2 | 36864 | 4096 | 768 | 128 | 4 | 512 | 2816 | 22 | 8 | 8 | False | explicit_working_budget_tokens | 3 | 3 | 0.312500000 | 0.010569170 |
