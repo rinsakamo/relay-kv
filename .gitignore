@@ -2,3 +2,12 @@
 __pycache__/
 *.pyc
 *:Zone.Identifier
+
+# RelayKV local HF smoke/runtime artifacts
+.venv-hf/
+.venv-hf-*/
+results/raw/
+~/work/hf-models/
+hf-models/
+__pycache__/
+*.pyc
