@@ -207,7 +207,10 @@ def main() -> int:
         }
 
     out_path.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
-    overall_ok = bool(result.get("load", {}).get("ok")) and any(r.get("ok") for r in result.get("results", []))
+    rows = result.get("results", [])
+    overall_ok = bool(result.get("load", {}).get("ok")) and bool(rows) and all(
+        r.get("ok") for r in rows
+    )
     print(json.dumps({"ok": overall_ok, "out": str(out_path)}, ensure_ascii=False, indent=2))
     return 0 if overall_ok else 1
 
