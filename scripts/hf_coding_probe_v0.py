@@ -9,6 +9,7 @@ This script intentionally does not import or modify RelayKV internals.
 """
 
 from __future__ import annotations
+from pathlib import Path
 
 import argparse
 import gc
@@ -16,7 +17,6 @@ import json
 import os
 import platform
 import time
-from pathlib import Path
 from typing import Any
 
 import psutil
@@ -24,8 +24,14 @@ import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 
-DEFAULT_MODEL = str(Path("~/work/hf-models/Qwen2.5-Coder-7B-Instruct-AWQ").expanduser())
+DEFAULT_MODEL = "Qwen/Qwen2.5-Coder-7B-Instruct-AWQ"
 DEFAULT_OUT = "results/raw/hf_coding_probe/qwen25_coder_7b_awq_probe_v0.json"
+REQUIRED_PARSED_KEYS = (
+    "relevant_files",
+    "change_plan",
+    "smoke_commands",
+    "risks",
+)
 
 
 def mib(n: int | float) -> float:
@@ -134,7 +140,7 @@ def extract_json_object(text: str) -> str:
     return candidate[start : end + 1]
 
 
-def parse_generated_json(text: str) -> tuple[object | None, bool, dict[str, str] | str | None]:
+def parse_generated_json(text: str) -> tuple[object | None, bool, dict[str, Any] | str | None]:
     candidate = text.strip()
     if not candidate:
         return None, False, {"type": "EmptyOutput", "message": "Model returned empty text."}
@@ -145,7 +151,7 @@ def parse_generated_json(text: str) -> tuple[object | None, bool, dict[str, str]
         try:
             parsed = json.loads(payload)
         except json.JSONDecodeError as exc:
-            last_error: dict[str, str] | str | None = {
+            last_error: dict[str, Any] | str | None = {
                 "type": "JSONDecodeError",
                 "message": str(exc),
             }
@@ -154,6 +160,19 @@ def parse_generated_json(text: str) -> tuple[object | None, bool, dict[str, str]
             return None, False, {
                 "type": "ParsedNull",
                 "message": "JSON parsed to null instead of an object.",
+            }
+        if not isinstance(parsed, dict):
+            return None, False, {
+                "type": "ParsedNonObject",
+                "message": f"JSON parsed to {type(parsed).__name__}, expected object.",
+            }
+
+        missing_keys = [key for key in REQUIRED_PARSED_KEYS if key not in parsed]
+        if missing_keys:
+            return parsed, False, {
+                "type": "ParsedMissingKeys",
+                "message": "Parsed object is missing required keys.",
+                "missing_keys": missing_keys,
             }
         return parsed, True, None
 
