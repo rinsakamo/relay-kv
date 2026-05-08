@@ -16,6 +16,7 @@ import gc
 import json
 import os
 import platform
+import shlex
 import time
 from typing import Any
 
@@ -32,6 +33,27 @@ REQUIRED_PARSED_KEYS = (
     "smoke_commands",
     "risks",
 )
+MAX_SCRIPT_FILES = 32
+MAX_RELAYKV_FILES = 16
+MAX_DEVLOG_FILES = 16
+
+
+def make_warning(
+    warning_type: str,
+    message: str,
+    *,
+    command: str | None = None,
+    value: str | None = None,
+) -> dict[str, Any]:
+    warning: dict[str, Any] = {
+        "type": warning_type,
+        "message": message,
+    }
+    if command is not None:
+        warning["command"] = command
+    if value is not None:
+        warning["value"] = value
+    return warning
 
 
 def mib(n: int | float) -> float:
@@ -53,21 +75,241 @@ def cuda_snapshot() -> dict[str, Any]:
     }
 
 
-def repo_context_lines() -> list[str]:
-    return [
-        "Repo context:",
-        "- scripts/run_relaykv_pipeline.py: main prototype comparison path from model KV extraction through retrieval and attention comparison.",
-        "- scripts/hf_model_smoke.py: minimal HF model/tokenizer/CUDA/generation smoke with JSON logging.",
-        "- scripts/hf_context_length_smoke.py: deterministic HF context-length smoke with per-run OOM capture.",
-        "- relaykv/: core prototype package for KV split, block metadata, retrieval, working KV assembly, and attention comparison.",
-        "- docs/experimental_findings.md: current prototype findings emphasize coverage-driven error trends and keeping comparisons easy to reason about.",
+def collect_repo_context(repo_root: Path) -> dict[str, Any]:
+    scripts_dir = repo_root / "scripts"
+    relaykv_dir = repo_root / "relaykv"
+    notes_dir = repo_root / "notes"
+    docs_path = repo_root / "docs" / "experimental_findings.md"
+
+    scripts_all = sorted(
+        str(path.relative_to(repo_root))
+        for path in scripts_dir.glob("*.py")
+        if path.is_file()
+    )
+    relaykv_all = sorted(
+        str(path.relative_to(repo_root))
+        for path in relaykv_dir.glob("*.py")
+        if path.is_file()
+    )
+    devlog_all = sorted(
+        str(path.relative_to(repo_root))
+        for path in notes_dir.glob("devlog*")
+        if path.is_file()
+    )
+
+    included_files: list[str] = []
+    included_files.extend(scripts_all[:MAX_SCRIPT_FILES])
+    included_files.extend(relaykv_all[:MAX_RELAYKV_FILES])
+    if docs_path.is_file():
+        included_files.append(str(docs_path.relative_to(repo_root)))
+    included_files.extend(devlog_all[:MAX_DEVLOG_FILES])
+
+    return {
+        "repo_root": str(repo_root),
+        "num_repo_files": len(scripts_all) + len(relaykv_all) + (1 if docs_path.is_file() else 0) + len(devlog_all),
+        "scripts_count": len(scripts_all),
+        "relaykv_files_count": len(relaykv_all),
+        "included_files": included_files,
+        "all_repo_files": sorted(
+            set(scripts_all + relaykv_all + ([str(docs_path.relative_to(repo_root))] if docs_path.is_file() else []) + devlog_all)
+        ),
+        "scripts_all": scripts_all,
+        "relaykv_all": relaykv_all,
+        "devlog_all": devlog_all,
+        "docs_present": docs_path.is_file(),
+    }
+
+
+def repo_context_lines(repo_context: dict[str, Any]) -> list[str]:
+    lines = [
+        "Repo grounding context:",
+        "Actual script files under scripts/:",
     ]
+    lines.extend(f"- {path}" for path in repo_context["scripts_all"][:MAX_SCRIPT_FILES])
+    lines.append("Actual top-level relaykv/*.py files:")
+    lines.extend(f"- {path}" for path in repo_context["relaykv_all"][:MAX_RELAYKV_FILES])
+    if repo_context["docs_present"]:
+        lines.append("Docs file included:")
+        lines.append("- docs/experimental_findings.md")
+    if repo_context["devlog_all"]:
+        lines.append("notes/devlog files list only:")
+        lines.extend(f"- {path}" for path in repo_context["devlog_all"][:MAX_DEVLOG_FILES])
+    return lines
+
+
+def is_plausible_model_value(value: str, repo_root: Path) -> bool:
+    if not value:
+        return False
+    if value.startswith("~/") or value.startswith("/"):
+        expanded = Path(value).expanduser()
+        return expanded.exists() or value.startswith("~/") or value.startswith("/")
+    if "/" in value:
+        return True
+    candidate = repo_root / value
+    return candidate.exists()
+
+
+def validate_smoke_command(command: object, repo_context: dict[str, Any]) -> list[dict[str, Any]]:
+    warnings: list[dict[str, Any]] = []
+    repo_root = Path(repo_context["repo_root"])
+    known_scripts = set(repo_context["scripts_all"])
+
+    if not isinstance(command, str):
+        warnings.append(
+            make_warning(
+                "SmokeCommandNonString",
+                "smoke_commands contains a non-string entry.",
+                value=repr(command),
+            )
+        )
+        return warnings
+
+    if not command.strip():
+        warnings.append(
+            make_warning(
+                "SmokeCommandEmpty",
+                "smoke_commands contains an empty command string.",
+                command=command,
+            )
+        )
+        return warnings
+
+    try:
+        parts = shlex.split(command)
+    except ValueError as exc:
+        warnings.append(
+            make_warning(
+                "SmokeCommandParseError",
+                f"smoke_commands could not be parsed with shlex: {exc}",
+                command=command,
+            )
+        )
+        return warnings
+
+    if not parts:
+        warnings.append(
+            make_warning(
+                "SmokeCommandEmpty",
+                "smoke_commands contains an empty command after parsing.",
+                command=command,
+            )
+        )
+        return warnings
+
+    first = parts[0]
+    script_token: str | None = None
+    if first in {"python", "python3"}:
+        if len(parts) >= 2 and parts[1].startswith("scripts/"):
+            script_token = parts[1]
+    elif first.startswith("scripts/"):
+        script_token = first
+        warnings.append(
+            make_warning(
+                "PythonScriptWithoutPython",
+                "Python scripts must be invoked from repo root as python scripts/<existing_script>.py ...",
+                command=command,
+            )
+        )
+
+    if script_token is not None and script_token not in known_scripts:
+        warnings.append(
+            make_warning(
+                "UnknownScriptPath",
+                "smoke_commands references a script path that does not exist.",
+                command=command,
+                value=script_token,
+            )
+        )
+
+    for idx, part in enumerate(parts):
+        if not part.startswith("scripts/"):
+            continue
+        if part not in known_scripts:
+            warnings.append(
+                make_warning(
+                    "UnknownScriptPath",
+                    "smoke_commands references a script path that does not exist.",
+                    command=command,
+                    value=part,
+                )
+            )
+        if idx == 0:
+            continue
+        if parts[0] not in {"python", "python3"} and idx == 1:
+            warnings.append(
+                make_warning(
+                    "PythonScriptWithoutPython",
+                    "Python scripts must be invoked from repo root as python scripts/<existing_script>.py ...",
+                    command=command,
+                )
+            )
+        break
+
+    for idx, part in enumerate(parts):
+        if part != "--model":
+            continue
+        if idx + 1 >= len(parts):
+            warnings.append(
+                make_warning(
+                    "ModelValueMissing",
+                    "--model must be followed by a model id or path.",
+                    command=command,
+                )
+            )
+            continue
+        model_value = parts[idx + 1]
+        if not is_plausible_model_value(model_value, repo_root):
+            warnings.append(
+                make_warning(
+                    "InvalidModelValue",
+                    "--model value must be an existing local path, a path beginning with ~/ or /, or a Hub id containing '/'.",
+                    command=command,
+                    value=model_value,
+                )
+            )
+
+    return warnings
+
+
+def validate_generated_output(parsed: object, repo_context: dict[str, Any]) -> dict[str, Any]:
+    warnings: list[dict[str, Any]] = []
+    if not isinstance(parsed, dict):
+        return {"ok": True, "warnings": warnings}
+
+    known_repo_files = set(repo_context["all_repo_files"])
+    for path in parsed.get("relevant_files", []):
+        if not isinstance(path, str):
+            warnings.append(
+                make_warning(
+                    "RelevantFileNonString",
+                    "relevant_files contains a non-string entry.",
+                    value=repr(path),
+                )
+            )
+            continue
+        if path not in known_repo_files:
+            warnings.append(
+                make_warning(
+                    "UnknownRelevantFile",
+                    "relevant_files mentions a path not present in the grounded repo file list.",
+                    value=path,
+                )
+            )
+
+    for command in parsed.get("smoke_commands", []):
+        warnings.extend(validate_smoke_command(command, repo_context))
+
+    return {
+        "ok": len(warnings) == 0,
+        "warnings": warnings,
+    }
 
 
 def make_probe_prompt(
     tokenizer: Any,
     probe_name: str,
     target_tokens: int,
+    repo_context: dict[str, Any],
 ) -> tuple[str, int]:
     instruction = (
         "You are inspecting the RelayKV repository. "
@@ -85,9 +327,17 @@ def make_probe_prompt(
         "- Do not modify relaykv/ internals.\n"
         "- Reuse existing HF smoke patterns.\n"
         "- Keep the main comparison path easy to reason about.\n"
+        "- Only mention files that appear in the provided repo file list.\n"
+        "- Only suggest smoke commands using scripts that appear in the provided scripts list.\n"
+        "- Do not invent test directories, CLI flags, or files.\n"
+        "- If unsure, use existing scripts and conservative commands.\n"
+        "- smoke_commands must be runnable from the repo root.\n"
+        "- Python scripts must be invoked as: python scripts/<existing_script>.py ...\n"
+        "- Do not use source file names as --model values.\n"
+        "- For HF model commands, --model must be either Qwen/Qwen2.5-Coder-7B-Instruct-AWQ or a local path placeholder like ~/work/hf-models/Qwen2.5-Coder-7B-Instruct-AWQ.\n"
     )
 
-    repo_lines = repo_context_lines()
+    repo_lines = repo_context_lines(repo_context)
     seed_block = "\n".join(
         [
             f"Probe name: {probe_name}",
@@ -97,6 +347,10 @@ def make_probe_prompt(
             "- Propose a minimal implementation plan for a coding probe.",
             "- Provide smoke commands only, not full experiments.",
             "- Mention the main failure or ambiguity risks.",
+            "Conservative smoke command examples:",
+            "- python scripts/hf_model_smoke.py --model ~/work/hf-models/Qwen2.5-Coder-7B-Instruct-AWQ --max-new-tokens 128",
+            "- python scripts/hf_context_length_smoke.py --model ~/work/hf-models/Qwen2.5-Coder-7B-Instruct-AWQ --lengths 4096,8192,16384 --max-new-tokens 64",
+            "- python scripts/run_relaykv_pipeline.py --help",
         ]
     )
 
@@ -106,9 +360,26 @@ def make_probe_prompt(
         raise RuntimeError("Tokenizer produced empty prompt ids.")
 
     available_seed_tokens = max(1, target_tokens - len(instruction_ids) - 128)
-    repeat = max(1, (available_seed_tokens // len(seed_ids)) + 2)
-    repeated_seed_ids = (seed_ids * repeat)[:available_seed_tokens]
-    repeated_seed_text = tokenizer.decode(repeated_seed_ids, skip_special_tokens=True)
+    repeated_seed_text = seed_block
+    if len(seed_ids) < available_seed_tokens:
+        padding_block = "\n".join(
+            [
+                "Grounding reminder:",
+                "- Use only listed files.",
+                "- Use only listed scripts in smoke_commands.",
+                "- Do not invent repo paths, test directories, or CLI flags.",
+                "- Commands must be runnable from repo root.",
+                "- Use python scripts/<existing_script>.py ... for Python scripts.",
+                "- Do not use source file names as --model values.",
+            ]
+        )
+        padding_ids = tokenizer(padding_block, add_special_tokens=False)["input_ids"]
+        if not padding_ids:
+            raise RuntimeError("Tokenizer produced empty padding ids.")
+        remaining_tokens = available_seed_tokens - len(seed_ids)
+        repeat = max(1, (remaining_tokens // len(padding_ids)) + 1)
+        repeated_padding_ids = (padding_ids * repeat)[:remaining_tokens]
+        repeated_seed_text = seed_block + "\n" + tokenizer.decode(repeated_padding_ids, skip_special_tokens=True)
 
     user_content = instruction + "\n" + repeated_seed_text
     messages = [
@@ -194,6 +465,8 @@ def main() -> int:
 
     out_path = Path(args.out)
     out_path.parent.mkdir(parents=True, exist_ok=True)
+    repo_root = Path.cwd()
+    repo_context = collect_repo_context(repo_root)
 
     result: dict[str, Any] = {
         "script": "hf_coding_probe_v0.py",
@@ -203,12 +476,15 @@ def main() -> int:
         "max_new_tokens": args.max_new_tokens,
         "context_tokens": args.context_tokens,
         "prompt_context_paths": [
-            "scripts/run_relaykv_pipeline.py",
-            "scripts/hf_model_smoke.py",
-            "scripts/hf_context_length_smoke.py",
-            "relaykv/",
-            "docs/experimental_findings.md",
+            *repo_context["included_files"],
         ],
+        "repo_context": {
+            "repo_root": repo_context["repo_root"],
+            "num_repo_files": repo_context["num_repo_files"],
+            "scripts_count": repo_context["scripts_count"],
+            "relaykv_files_count": repo_context["relaykv_files_count"],
+            "included_files": repo_context["included_files"],
+        },
         "env": {
             "python": platform.python_version(),
             "platform": platform.platform(),
@@ -227,6 +503,7 @@ def main() -> int:
         "parsed_json": None,
         "parse_error": None,
         "generated_text": None,
+        "validation": {"ok": True, "warnings": []},
         "error": None,
     }
 
@@ -272,6 +549,7 @@ def main() -> int:
             tokenizer=tokenizer,
             probe_name=args.probe_name,
             target_tokens=args.context_tokens,
+            repo_context=repo_context,
         )
         result["prompt_preview"] = prompt[:2000]
         result["prompt_preview_truncated"] = len(prompt) > 2000
@@ -299,6 +577,7 @@ def main() -> int:
         generated_text = tokenizer.decode(outputs[0][input_tokens:], skip_special_tokens=True)
 
         parsed, parse_ok, parse_error = parse_generated_json(generated_text)
+        validation = validate_generated_output(parsed, repo_context)
 
         result.update({
             "ok": True,
@@ -307,6 +586,7 @@ def main() -> int:
             "parsed_json": parsed,
             "parse_ok": parse_ok and parsed is not None,
             "parse_error": None if (parse_ok and parsed is not None) else parse_error,
+            "validation": validation,
             "new_tokens": new_tokens,
             "elapsed_sec": elapsed,
             "tokens_per_sec_new": (new_tokens / elapsed) if elapsed > 0 else None,
