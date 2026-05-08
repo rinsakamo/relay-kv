@@ -359,9 +359,14 @@ def make_probe_prompt(
     if not instruction_ids or not seed_ids:
         raise RuntimeError("Tokenizer produced empty prompt ids.")
 
-    available_seed_tokens = max(1, target_tokens - len(instruction_ids) - 128)
-    repeated_seed_text = seed_block
-    if len(seed_ids) < available_seed_tokens:
+    available_seed_tokens = target_tokens - len(instruction_ids) - 128
+    repeated_seed_text = ""
+    if available_seed_tokens <= 0:
+        repeated_seed_text = ""
+    elif len(seed_ids) >= available_seed_tokens:
+        repeated_seed_text = tokenizer.decode(seed_ids[:available_seed_tokens], skip_special_tokens=True)
+    else:
+        repeated_seed_text = seed_block
         padding_block = "\n".join(
             [
                 "Grounding reminder:",
