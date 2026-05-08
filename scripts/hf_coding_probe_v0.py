@@ -114,26 +114,53 @@ def make_probe_prompt(
     return prompt, input_tokens
 
 
-def try_parse_json(text: str) -> tuple[bool, Any, dict[str, str] | None]:
+def extract_json_object(text: str) -> str:
     candidate = text.strip()
     if not candidate:
-        return False, None, {"type": "EmptyOutput", "message": "Model returned empty text."}
+        return ""
 
-    try:
-        return True, json.loads(candidate), None
-    except json.JSONDecodeError:
-        pass
+    if candidate.startswith("```"):
+        lines = candidate.splitlines()
+        if len(lines) >= 3:
+            first_line = lines[0].strip()
+            last_line = lines[-1].strip()
+            if first_line in {"```", "```json"} and last_line == "```":
+                candidate = "\n".join(lines[1:-1]).strip()
 
     start = candidate.find("{")
     end = candidate.rfind("}")
-    if start != -1 and end != -1 and end >= start:
-        snippet = candidate[start : end + 1]
-        try:
-            return True, json.loads(snippet), None
-        except json.JSONDecodeError as exc:
-            return False, None, {"type": "JSONDecodeError", "message": str(exc)}
+    if start == -1 or end == -1 or end < start:
+        return ""
+    return candidate[start : end + 1]
 
-    return False, None, {"type": "JSONDecodeError", "message": "No JSON object found in generated text."}
+
+def parse_generated_json(text: str) -> tuple[object | None, bool, dict[str, str] | str | None]:
+    candidate = text.strip()
+    if not candidate:
+        return None, False, {"type": "EmptyOutput", "message": "Model returned empty text."}
+
+    for payload in (candidate, extract_json_object(candidate)):
+        if not payload:
+            continue
+        try:
+            parsed = json.loads(payload)
+        except json.JSONDecodeError as exc:
+            last_error: dict[str, str] | str | None = {
+                "type": "JSONDecodeError",
+                "message": str(exc),
+            }
+            continue
+        if parsed is None:
+            return None, False, {
+                "type": "ParsedNull",
+                "message": "JSON parsed to null instead of an object.",
+            }
+        return parsed, True, None
+
+    return None, False, last_error if "last_error" in locals() else {
+        "type": "JSONDecodeError",
+        "message": "No JSON object found in generated text.",
+    }
 
 
 def main() -> int:
@@ -177,7 +204,9 @@ def main() -> int:
         },
         "ok": False,
         "parse_ok": False,
+        "parsed": None,
         "parsed_json": None,
+        "parse_error": None,
         "generated_text": None,
         "error": None,
     }
@@ -250,13 +279,15 @@ def main() -> int:
         new_tokens = max(0, output_tokens_total - input_tokens)
         generated_text = tokenizer.decode(outputs[0][input_tokens:], skip_special_tokens=True)
 
-        parse_ok, parsed_json, parse_error = try_parse_json(generated_text)
+        parsed, parse_ok, parse_error = parse_generated_json(generated_text)
 
         result.update({
             "ok": True,
-            "parse_ok": parse_ok,
-            "parsed_json": parsed_json,
             "generated_text": generated_text,
+            "parsed": parsed,
+            "parsed_json": parsed,
+            "parse_ok": parse_ok and parsed is not None,
+            "parse_error": None if (parse_ok and parsed is not None) else parse_error,
             "new_tokens": new_tokens,
             "elapsed_sec": elapsed,
             "tokens_per_sec_new": (new_tokens / elapsed) if elapsed > 0 else None,
@@ -267,8 +298,6 @@ def main() -> int:
                 "cpu_rss_mib": mib(psutil.Process(os.getpid()).memory_info().rss),
             },
         })
-        if parse_error is not None:
-            result["error"] = parse_error
     except torch.cuda.OutOfMemoryError as exc:
         result["error"] = {"type": "torch.cuda.OutOfMemoryError", "message": str(exc)}
         result["after_error"] = {
