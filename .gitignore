@@ -7,6 +7,7 @@ __pycache__/
 .venv-hf/
 .venv-hf-*/
 results/raw/
+results/processed/
 ~/work/hf-models/
 hf-models/
 __pycache__/
