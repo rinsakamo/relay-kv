@@ -757,21 +757,40 @@ def validate_generated_output(
 
     if case_related_files:
         relevant_file_set = {path for path in relevant_files if isinstance(path, str)}
+        primary_case_file = case_related_files[0]
         has_case_overlap = bool(relevant_file_set.intersection(case_related_files))
-        should_warn_missing_case_file = False
+        has_primary_case_file = primary_case_file in relevant_file_set
+
         if probe_name in {"relaykv_bug_triage", "relaykv_result_interpretation", "relaykv_safe_next_change"}:
-            should_warn_missing_case_file = not has_case_overlap
-        elif probe_name == "relaykv_smoke_plan":
-            should_warn_missing_case_file = (not has_case_overlap) and len(relevant_file_set) > 12
-        if should_warn_missing_case_file:
-            warnings.append(
-                make_warning(
-                    "CaseRelatedFileMissing",
-                    "relevant_files does not include any grounded case-related file for the supplied real-case input.",
-                    expected_files=case_related_files,
-                    relevant_files=sorted(relevant_file_set),
+            if has_case_overlap and not has_primary_case_file:
+                warnings.append(
+                    make_warning(
+                        "CaseRelatedPrimaryFileMissing",
+                        "relevant_files is missing the primary case-related file inferred from the case input.",
+                        value=primary_case_file,
+                        expected_files=case_related_files,
+                        relevant_files=sorted(relevant_file_set),
+                    )
                 )
-            )
+            elif not has_case_overlap:
+                warnings.append(
+                    make_warning(
+                        "CaseRelatedFileMissing",
+                        "relevant_files does not include any grounded case-related file for the supplied real-case input.",
+                        expected_files=case_related_files,
+                        relevant_files=sorted(relevant_file_set),
+                    )
+                )
+        elif probe_name == "relaykv_smoke_plan":
+            if (not has_case_overlap) and len(relevant_file_set) > 12:
+                warnings.append(
+                    make_warning(
+                        "CaseRelatedFileMissing",
+                        "relevant_files does not include any grounded case-related file for the supplied real-case input.",
+                        expected_files=case_related_files,
+                        relevant_files=sorted(relevant_file_set),
+                    )
+                )
 
     add_profile_quality_warnings(probe_name, parsed, warnings)
     warnings = dedupe_warnings(warnings)
