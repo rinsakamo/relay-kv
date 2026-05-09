@@ -27,15 +27,127 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 
 DEFAULT_MODEL = "Qwen/Qwen2.5-Coder-7B-Instruct-AWQ"
 DEFAULT_OUT = "results/raw/hf_coding_probe/qwen25_coder_7b_awq_probe_v0.json"
-REQUIRED_PARSED_KEYS = (
-    "relevant_files",
-    "change_plan",
-    "smoke_commands",
-    "risks",
-)
 MAX_SCRIPT_FILES = 32
 MAX_RELAYKV_FILES = 16
 MAX_DEVLOG_FILES = 16
+PROBE_PROFILES: dict[str, dict[str, Any]] = {
+    "relaykv_repo_entry": {
+        "required_keys": (
+            "relevant_files",
+            "change_plan",
+            "smoke_commands",
+            "risks",
+        ),
+        "schema_example": {
+            "relevant_files": ["path"],
+            "change_plan": ["step"],
+            "smoke_commands": ["command"],
+            "risks": ["risk"],
+        },
+        "task_lines": [
+            "- Identify the most relevant files to inspect first.",
+            "- Propose a minimal implementation plan for a coding probe.",
+            "- Provide smoke commands only, not full experiments.",
+            "- Mention the main failure or ambiguity risks.",
+        ],
+    },
+    "relaykv_bug_triage": {
+        "required_keys": (
+            "relevant_files",
+            "likely_causes",
+            "minimal_fix_plan",
+            "smoke_commands",
+            "risks",
+        ),
+        "schema_example": {
+            "relevant_files": ["path"],
+            "likely_causes": ["cause"],
+            "minimal_fix_plan": ["step"],
+            "smoke_commands": ["command"],
+            "risks": ["risk"],
+        },
+        "task_lines": [
+            "- Focus on likely causes for a failed smoke or eval behavior.",
+            "- Keep the proposed fix plan minimal and conservative.",
+            "- Provide smoke commands that confirm the suspected cause.",
+            "- Mention the main debugging risks or ambiguities.",
+        ],
+    },
+    "relaykv_smoke_plan": {
+        "required_keys": (
+            "relevant_files",
+            "smoke_commands",
+            "expected_observations",
+            "failure_modes",
+            "risks",
+        ),
+        "schema_example": {
+            "relevant_files": ["path"],
+            "smoke_commands": ["command"],
+            "expected_observations": ["observation"],
+            "failure_modes": ["failure"],
+            "risks": ["risk"],
+        },
+        "task_lines": [
+            "- Plan safe validation commands only, not broad experiments.",
+            "- State the expected observation for each smoke direction.",
+            "- Mention the main failure modes to watch for.",
+            "- Keep all commands runnable from the repo root.",
+        ],
+    },
+    "relaykv_result_interpretation": {
+        "required_keys": (
+            "relevant_files",
+            "interpretation",
+            "next_checks",
+            "smoke_commands",
+            "risks",
+        ),
+        "schema_example": {
+            "relevant_files": ["path"],
+            "interpretation": ["finding"],
+            "next_checks": ["check"],
+            "smoke_commands": ["command"],
+            "risks": ["risk"],
+        },
+        "task_lines": [
+            "- Interpret an eval or result JSON conservatively.",
+            "- Suggest the most relevant follow-up checks.",
+            "- Keep smoke commands narrow and runnable from repo root.",
+            "- Mention the main interpretation risks or ambiguities.",
+        ],
+    },
+    "relaykv_safe_next_change": {
+        "required_keys": (
+            "relevant_files",
+            "change_plan",
+            "safety_constraints",
+            "smoke_commands",
+            "risks",
+        ),
+        "schema_example": {
+            "relevant_files": ["path"],
+            "change_plan": ["step"],
+            "safety_constraints": ["constraint"],
+            "smoke_commands": ["command"],
+            "risks": ["risk"],
+        },
+        "task_lines": [
+            "- Suggest the smallest safe next code change.",
+            "- Make safety constraints explicit before proposing commands.",
+            "- Provide smoke commands that validate the safe next step.",
+            "- Mention the main regression risks or unknowns.",
+        ],
+    },
+}
+
+
+def get_probe_profile(probe_name: str) -> dict[str, Any]:
+    try:
+        return PROBE_PROFILES[probe_name]
+    except KeyError as exc:
+        supported = ", ".join(sorted(PROBE_PROFILES))
+        raise ValueError(f"Unsupported probe_name: {probe_name}. Supported probe names: {supported}") from exc
 
 
 def make_warning(
@@ -277,7 +389,17 @@ def validate_generated_output(parsed: object, repo_context: dict[str, Any]) -> d
         return {"ok": True, "warnings": warnings}
 
     known_repo_files = set(repo_context["all_repo_files"])
-    for path in parsed.get("relevant_files", []):
+    relevant_files = parsed.get("relevant_files", [])
+    if not isinstance(relevant_files, list):
+        warnings.append(
+            make_warning(
+                "RelevantFilesNonList",
+                "relevant_files must be a list of strings.",
+                value=repr(relevant_files),
+            )
+        )
+        relevant_files = []
+    for path in relevant_files:
         if not isinstance(path, str):
             warnings.append(
                 make_warning(
@@ -296,7 +418,17 @@ def validate_generated_output(parsed: object, repo_context: dict[str, Any]) -> d
                 )
             )
 
-    for command in parsed.get("smoke_commands", []):
+    smoke_commands = parsed.get("smoke_commands", [])
+    if not isinstance(smoke_commands, list):
+        warnings.append(
+            make_warning(
+                "SmokeCommandsNonList",
+                "smoke_commands must be a list of strings.",
+                value=repr(smoke_commands),
+            )
+        )
+        smoke_commands = []
+    for command in smoke_commands:
         warnings.extend(validate_smoke_command(command, repo_context))
 
     return {
@@ -305,23 +437,29 @@ def validate_generated_output(parsed: object, repo_context: dict[str, Any]) -> d
     }
 
 
+def make_schema_text(schema_example: dict[str, list[str]]) -> str:
+    lines = ["{"]
+    items = list(schema_example.items())
+    for idx, (key, value) in enumerate(items):
+        suffix = "," if idx < len(items) - 1 else ""
+        lines.append(f'  "{key}": {json.dumps(value)}{suffix}')
+    lines.append("}")
+    return "\n".join(lines)
+
+
 def make_probe_prompt(
     tokenizer: Any,
     probe_name: str,
     target_tokens: int,
     repo_context: dict[str, Any],
 ) -> tuple[str, int]:
+    profile = get_probe_profile(probe_name)
     instruction = (
         "You are inspecting the RelayKV repository. "
         "Return JSON only. Do not use markdown fences. "
         "Do not add explanatory text before or after the JSON.\n\n"
         "Required JSON object schema:\n"
-        "{\n"
-        '  "relevant_files": ["path"],\n'
-        '  "change_plan": ["step"],\n'
-        '  "smoke_commands": ["command"],\n'
-        '  "risks": ["risk"]\n'
-        "}\n\n"
+        f"{make_schema_text(profile['schema_example'])}\n\n"
         "Task constraints:\n"
         "- Prefer minimal diffs.\n"
         "- Do not modify relaykv/ internals.\n"
@@ -343,10 +481,7 @@ def make_probe_prompt(
             f"Probe name: {probe_name}",
             *repo_lines,
             "Requested output:",
-            "- Identify the most relevant files to inspect first.",
-            "- Propose a minimal implementation plan for a coding probe.",
-            "- Provide smoke commands only, not full experiments.",
-            "- Mention the main failure or ambiguity risks.",
+            *profile["task_lines"],
             "Conservative smoke command examples:",
             "- python scripts/hf_model_smoke.py --model ~/work/hf-models/Qwen2.5-Coder-7B-Instruct-AWQ --max-new-tokens 128",
             "- python scripts/hf_context_length_smoke.py --model ~/work/hf-models/Qwen2.5-Coder-7B-Instruct-AWQ --lengths 4096,8192,16384 --max-new-tokens 64",
@@ -416,7 +551,10 @@ def extract_json_object(text: str) -> str:
     return candidate[start : end + 1]
 
 
-def parse_generated_json(text: str) -> tuple[object | None, bool, dict[str, Any] | str | None]:
+def parse_generated_json(
+    text: str,
+    required_keys: tuple[str, ...],
+) -> tuple[object | None, bool, dict[str, Any] | str | None]:
     candidate = text.strip()
     if not candidate:
         return None, False, {"type": "EmptyOutput", "message": "Model returned empty text."}
@@ -443,12 +581,13 @@ def parse_generated_json(text: str) -> tuple[object | None, bool, dict[str, Any]
                 "message": f"JSON parsed to {type(parsed).__name__}, expected object.",
             }
 
-        missing_keys = [key for key in REQUIRED_PARSED_KEYS if key not in parsed]
+        missing_keys = [key for key in required_keys if key not in parsed]
         if missing_keys:
             return parsed, False, {
                 "type": "ParsedMissingKeys",
                 "message": "Parsed object is missing required keys.",
                 "missing_keys": missing_keys,
+                "required_keys": list(required_keys),
             }
         return parsed, True, None
 
@@ -468,6 +607,8 @@ def main() -> int:
     parser.add_argument("--trust-remote-code", action="store_true")
     args = parser.parse_args()
 
+    profile = get_probe_profile(args.probe_name)
+    required_keys = tuple(profile["required_keys"])
     out_path = Path(args.out)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     repo_root = Path.cwd()
@@ -476,6 +617,7 @@ def main() -> int:
     result: dict[str, Any] = {
         "script": "hf_coding_probe_v0.py",
         "probe_name": args.probe_name,
+        "required_keys": list(required_keys),
         "model": args.model,
         "out": str(out_path),
         "max_new_tokens": args.max_new_tokens,
@@ -581,7 +723,7 @@ def main() -> int:
         new_tokens = max(0, output_tokens_total - input_tokens)
         generated_text = tokenizer.decode(outputs[0][input_tokens:], skip_special_tokens=True)
 
-        parsed, parse_ok, parse_error = parse_generated_json(generated_text)
+        parsed, parse_ok, parse_error = parse_generated_json(generated_text, required_keys)
         validation = validate_generated_output(parsed, repo_context)
 
         result.update({
@@ -627,6 +769,7 @@ def main() -> int:
             {
                 "ok": result["ok"],
                 "parse_ok": result["parse_ok"],
+                "probe_name": result["probe_name"],
                 "out": str(out_path),
                 "error": result.get("error"),
             },
