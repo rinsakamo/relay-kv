@@ -47,25 +47,41 @@ def read_json_if_present(path: Path) -> dict[str, Any] | None:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def make_failure_row(
+    *,
+    length: int,
+    output_path: Path,
+    error_type: str,
+    subprocess_returncode: int | None,
+) -> dict[str, Any]:
+    return {
+        "length": length,
+        "output_path": str(output_path),
+        "ok": False,
+        "input_tokens": None,
+        "new_tokens": None,
+        "elapsed_sec": None,
+        "tokens_per_sec_new": None,
+        "parse_ok": False,
+        "validation_ok": False,
+        "validation_warning_count": 0,
+        "error_type": error_type,
+        "subprocess_returncode": subprocess_returncode,
+        "peak_allocated_mib": None,
+        "peak_reserved_mib": None,
+        "relevant_files": [],
+        "smoke_commands": [],
+    }
+
+
 def summarize_probe_result(length: int, output_path: Path, payload: dict[str, Any] | None) -> dict[str, Any]:
     if payload is None:
-        return {
-            "length": length,
-            "output_path": str(output_path),
-            "ok": False,
-            "input_tokens": None,
-            "new_tokens": None,
-            "elapsed_sec": None,
-            "tokens_per_sec_new": None,
-            "parse_ok": False,
-            "validation_ok": False,
-            "validation_warning_count": 0,
-            "error_type": "MissingOutput",
-            "peak_allocated_mib": None,
-            "peak_reserved_mib": None,
-            "relevant_files": [],
-            "smoke_commands": [],
-        }
+        return make_failure_row(
+            length=length,
+            output_path=output_path,
+            error_type="MissingOutput",
+            subprocess_returncode=None,
+        )
 
     parsed = payload.get("parsed")
     validation = payload.get("validation") or {}
@@ -90,6 +106,7 @@ def summarize_probe_result(length: int, output_path: Path, payload: dict[str, An
         "validation_ok": bool(validation.get("ok", False)),
         "validation_warning_count": len(warnings),
         "error_type": error.get("type") or (payload.get("parse_error") or {}).get("type"),
+        "subprocess_returncode": None,
         "peak_allocated_mib": payload.get("peak_allocated_mib"),
         "peak_reserved_mib": payload.get("peak_reserved_mib"),
         "relevant_files": relevant_files,
@@ -145,6 +162,9 @@ def run_one_length(
     output_path: Path,
 ) -> tuple[dict[str, Any], int]:
     ensure_parent_dir(output_path)
+    if output_path.exists():
+        output_path.unlink()
+
     command = [
         python_bin,
         str(PROBE_SCRIPT),
@@ -174,32 +194,56 @@ def run_one_length(
         print(f"[stderr] length={length}\n{completed.stderr}", end="" if completed.stderr.endswith("\n") else "\n", flush=True)
     print(f"[done] length={length} returncode={completed.returncode} output={output_path}", flush=True)
 
+    if not output_path.exists():
+        row = make_failure_row(
+            length=length,
+            output_path=output_path,
+            error_type="MissingOutputAfterSubprocess",
+            subprocess_returncode=completed.returncode,
+        )
+        return row, completed.returncode
+
     try:
         payload = read_json_if_present(output_path)
-        row = summarize_probe_result(length, output_path, payload)
-    except Exception as exc:
-        row = {
-            "length": length,
-            "output_path": str(output_path),
-            "ok": False,
-            "input_tokens": None,
-            "new_tokens": None,
-            "elapsed_sec": None,
-            "tokens_per_sec_new": None,
-            "parse_ok": False,
-            "validation_ok": False,
-            "validation_warning_count": 0,
-            "error_type": exc.__class__.__name__,
-            "peak_allocated_mib": None,
-            "peak_reserved_mib": None,
-            "relevant_files": [],
-            "smoke_commands": [],
-        }
+    except json.JSONDecodeError:
+        row = make_failure_row(
+            length=length,
+            output_path=output_path,
+            error_type="OutputJsonDecodeError",
+            subprocess_returncode=completed.returncode,
+        )
+        return row, completed.returncode
+    except OSError:
+        row = make_failure_row(
+            length=length,
+            output_path=output_path,
+            error_type="OutputJsonReadError",
+            subprocess_returncode=completed.returncode,
+        )
+        return row, completed.returncode
+    except Exception:
+        row = make_failure_row(
+            length=length,
+            output_path=output_path,
+            error_type="OutputJsonReadError",
+            subprocess_returncode=completed.returncode,
+        )
+        return row, completed.returncode
 
+    try:
+        row = summarize_probe_result(length, output_path, payload)
+    except Exception:
+        row = make_failure_row(
+            length=length,
+            output_path=output_path,
+            error_type="OutputJsonReadError",
+            subprocess_returncode=completed.returncode,
+        )
+        return row, completed.returncode
+
+    row["subprocess_returncode"] = completed.returncode
     if row["error_type"] is None and completed.returncode != 0:
         row["error_type"] = "SubprocessNonZeroExit"
-    if row["error_type"] == "MissingOutput" and completed.returncode != 0:
-        row["error_type"] = "SubprocessFailedWithoutOutput"
     return row, completed.returncode
 
 
