@@ -262,6 +262,8 @@ def make_warning(
     *,
     command: str | None = None,
     value: str | None = None,
+    expected_files: list[str] | None = None,
+    relevant_files: list[str] | None = None,
 ) -> dict[str, Any]:
     warning: dict[str, Any] = {
         "type": warning_type,
@@ -271,18 +273,24 @@ def make_warning(
         warning["command"] = command
     if value is not None:
         warning["value"] = value
+    if expected_files is not None:
+        warning["expected_files"] = expected_files
+    if relevant_files is not None:
+        warning["relevant_files"] = relevant_files
     return warning
 
 
 def dedupe_warnings(warnings: list[dict[str, Any]]) -> list[dict[str, Any]]:
     deduped: list[dict[str, Any]] = []
-    seen: set[tuple[str | None, str | None, str | None, str | None]] = set()
+    seen: set[tuple[Any, ...]] = set()
     for warning in warnings:
         key = (
             warning.get("type"),
             warning.get("message"),
             warning.get("value"),
             warning.get("command"),
+            tuple(warning.get("expected_files") or []),
+            tuple(warning.get("relevant_files") or []),
         )
         if key in seen:
             continue
@@ -370,6 +378,54 @@ def repo_context_lines(repo_context: dict[str, Any]) -> list[str]:
         lines.append("notes/devlog files list only:")
         lines.extend(f"- {path}" for path in repo_context["devlog_all"][:MAX_DEVLOG_FILES])
     return lines
+
+
+CASE_KEYWORD_FILE_MAP: tuple[tuple[tuple[str, ...], str], ...] = (
+    (("eval runner", "summary-out", "summary-md", "per-length", "output_path", "subprocess", "missingoutputaftersubprocess", "stale output"), "scripts/run_hf_coding_probe_eval.py"),
+    (("score", "scorer", "jaccard", "best_length", "tie-break", "recommendation"), "scripts/score_hf_coding_probe_eval.py"),
+    (("probe", "parse_ok", "validation_ok", "required_keys", "case-text", "case-file"), "scripts/hf_coding_probe_v0.py"),
+    (("hf_model_smoke", "model smoke", "max-new-tokens"), "scripts/hf_model_smoke.py"),
+    (("context length", "lengths 4096", "8192", "16384"), "scripts/hf_context_length_smoke.py"),
+)
+
+
+def extract_case_related_files(case_input_text: str, repo_context: dict[str, Any]) -> list[str]:
+    if not case_input_text.strip():
+        return []
+
+    case_lower = case_input_text.lower()
+    known_repo_files = set(repo_context["all_repo_files"])
+    basename_to_paths: dict[str, list[str]] = {}
+    for repo_path in repo_context["all_repo_files"]:
+        basename_to_paths.setdefault(Path(repo_path).name.lower(), []).append(repo_path)
+
+    candidates: list[str] = []
+
+    for repo_path in repo_context["all_repo_files"]:
+        repo_path_lower = repo_path.lower()
+        if repo_path_lower in case_lower:
+            candidates.append(repo_path)
+
+    for basename, paths in basename_to_paths.items():
+        if len(paths) != 1:
+            continue
+        if basename in case_lower:
+            candidates.append(paths[0])
+
+    for keywords, repo_path in CASE_KEYWORD_FILE_MAP:
+        if repo_path not in known_repo_files:
+            continue
+        if any(keyword in case_lower for keyword in keywords):
+            candidates.append(repo_path)
+
+    deduped: list[str] = []
+    seen: set[str] = set()
+    for repo_path in candidates:
+        if repo_path not in known_repo_files or repo_path in seen:
+            continue
+        seen.add(repo_path)
+        deduped.append(repo_path)
+    return deduped
 
 
 def is_plausible_model_value(value: str, repo_root: Path) -> bool:
@@ -646,7 +702,12 @@ def add_profile_quality_warnings(
                 )
 
 
-def validate_generated_output(parsed: object, repo_context: dict[str, Any], probe_name: str) -> dict[str, Any]:
+def validate_generated_output(
+    parsed: object,
+    repo_context: dict[str, Any],
+    probe_name: str,
+    case_related_files: list[str],
+) -> dict[str, Any]:
     warnings: list[dict[str, Any]] = []
     if not isinstance(parsed, dict):
         return {"ok": True, "warnings": warnings}
@@ -694,6 +755,43 @@ def validate_generated_output(parsed: object, repo_context: dict[str, Any], prob
     for command in smoke_commands:
         warnings.extend(validate_smoke_command(command, repo_context))
 
+    if case_related_files:
+        relevant_file_set = {path for path in relevant_files if isinstance(path, str)}
+        primary_case_file = case_related_files[0]
+        has_case_overlap = bool(relevant_file_set.intersection(case_related_files))
+        has_primary_case_file = primary_case_file in relevant_file_set
+
+        if probe_name in {"relaykv_bug_triage", "relaykv_result_interpretation", "relaykv_safe_next_change"}:
+            if has_case_overlap and not has_primary_case_file:
+                warnings.append(
+                    make_warning(
+                        "CaseRelatedPrimaryFileMissing",
+                        "relevant_files is missing the primary case-related file inferred from the case input.",
+                        value=primary_case_file,
+                        expected_files=case_related_files,
+                        relevant_files=sorted(relevant_file_set),
+                    )
+                )
+            elif not has_case_overlap:
+                warnings.append(
+                    make_warning(
+                        "CaseRelatedFileMissing",
+                        "relevant_files does not include any grounded case-related file for the supplied real-case input.",
+                        expected_files=case_related_files,
+                        relevant_files=sorted(relevant_file_set),
+                    )
+                )
+        elif probe_name == "relaykv_smoke_plan":
+            if (not has_case_overlap) and len(relevant_file_set) > 12:
+                warnings.append(
+                    make_warning(
+                        "CaseRelatedFileMissing",
+                        "relevant_files does not include any grounded case-related file for the supplied real-case input.",
+                        expected_files=case_related_files,
+                        relevant_files=sorted(relevant_file_set),
+                    )
+                )
+
     add_profile_quality_warnings(probe_name, parsed, warnings)
     warnings = dedupe_warnings(warnings)
 
@@ -719,6 +817,7 @@ def make_probe_prompt(
     target_tokens: int,
     repo_context: dict[str, Any],
     case_input_text: str,
+    case_related_files: list[str],
 ) -> tuple[str, int, dict[str, Any]]:
     profile = get_probe_profile(probe_name)
     case_input_present = bool(case_input_text.strip())
@@ -748,6 +847,17 @@ def make_probe_prompt(
     fixed_seed_lines = [
         f"Probe name: {probe_name}",
         *repo_lines,
+    ]
+    if case_related_files:
+        fixed_seed_lines.extend([
+            "Case-related candidate files:",
+            *[f"- {path}" for path in case_related_files],
+            "Case grounding reminder:",
+            "- Prefer these files when they explain the supplied case.",
+            "- Do not invent files outside the grounded repo file list.",
+            "- If relevant_files differs from these case-related files, make the reason clear in the profile-specific JSON fields when appropriate.",
+        ])
+    fixed_seed_lines.extend([
         "Requested output:",
         *profile["task_lines"],
         *extra_case_guidance,
@@ -762,7 +872,7 @@ def make_probe_prompt(
         "- Commands must be runnable from repo root.",
         "- Use python scripts/<existing_script>.py ... for Python scripts.",
         "- Do not use source file names as --model values.",
-    ]
+    ])
     fixed_seed_block = "\n".join(fixed_seed_lines)
 
     instruction_ids = tokenizer(instruction, add_special_tokens=False)["input_ids"]
@@ -901,6 +1011,7 @@ def main() -> int:
     out_path.parent.mkdir(parents=True, exist_ok=True)
     repo_root = Path.cwd()
     repo_context = collect_repo_context(repo_root)
+    case_related_files = extract_case_related_files(case_input_text, repo_context) if case_input_present else []
 
     result: dict[str, Any] = {
         "script": "hf_coding_probe_v0.py",
@@ -913,6 +1024,7 @@ def main() -> int:
         "case_input_tokens_estimate": None,
         "case_input_included_chars": 0,
         "case_input_truncated": False,
+        "case_related_files": case_related_files,
         "model": args.model,
         "out": str(out_path),
         "max_new_tokens": args.max_new_tokens,
@@ -996,6 +1108,7 @@ def main() -> int:
             target_tokens=args.context_tokens,
             repo_context=repo_context,
             case_input_text=case_input_text,
+            case_related_files=case_related_files,
         )
         result["case_input_included_chars"] = case_prompt_meta["case_input_included_chars"]
         result["case_input_truncated"] = case_prompt_meta["case_input_truncated"]
@@ -1025,7 +1138,7 @@ def main() -> int:
         generated_text = tokenizer.decode(outputs[0][input_tokens:], skip_special_tokens=True)
 
         parsed, parse_ok, parse_error = parse_generated_json(generated_text, required_keys)
-        validation = validate_generated_output(parsed, repo_context, args.probe_name)
+        validation = validate_generated_output(parsed, repo_context, args.probe_name, case_related_files)
 
         result.update({
             "ok": True,

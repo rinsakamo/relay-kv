@@ -95,6 +95,8 @@ def make_failure_row(
         "validation_ok": False,
         "validation_warning_count": 0,
         "validation_warnings": [],
+        "case_related_files": [],
+        "case_related_file_count": 0,
         "error_type": error_type,
         "subprocess_returncode": subprocess_returncode,
         "peak_allocated_mib": None,
@@ -134,10 +136,16 @@ def summarize_probe_result(
         relevant_files = parsed.get("relevant_files") or []
         smoke_commands = parsed.get("smoke_commands") or []
 
+    case_related_files = payload.get("case_related_files") or []
+    if not isinstance(case_related_files, list):
+        case_related_files = []
+
     return {
         "probe_name": payload.get("probe_name") or probe_name,
         "case_name": payload.get("case_name") or case_name,
         "case_input_present": bool(payload.get("case_input_present", case_input_present)),
+        "case_related_files": case_related_files,
+        "case_related_file_count": len([path for path in case_related_files if isinstance(path, str)]),
         "length": length,
         "output_path": str(output_path),
         "ok": bool(payload.get("ok", False)),
