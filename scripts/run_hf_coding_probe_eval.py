@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import shlex
 import subprocess
 import sys
@@ -44,6 +45,21 @@ def parse_probe_names(value: str) -> list[str]:
     return probe_names
 
 
+def normalize_case_name(value: str | None) -> str:
+    if not value:
+        return ""
+    lowered = value.strip().lower()
+    if lowered in {"", "none"}:
+        return ""
+    return value.strip()
+
+
+def sanitize_filename_component(value: str) -> str:
+    sanitized = re.sub(r"[^A-Za-z0-9._-]+", "_", value.strip())
+    sanitized = sanitized.strip("._-")
+    return sanitized or "case"
+
+
 def ensure_parent_dir(path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -57,6 +73,8 @@ def read_json_if_present(path: Path) -> dict[str, Any] | None:
 def make_failure_row(
     *,
     probe_name: str,
+    case_name: str,
+    case_input_present: bool,
     length: int,
     output_path: Path,
     error_type: str,
@@ -64,6 +82,8 @@ def make_failure_row(
 ) -> dict[str, Any]:
     return {
         "probe_name": probe_name,
+        "case_name": case_name,
+        "case_input_present": case_input_present,
         "length": length,
         "output_path": str(output_path),
         "ok": False,
@@ -86,6 +106,8 @@ def make_failure_row(
 
 def summarize_probe_result(
     probe_name: str,
+    case_name: str,
+    case_input_present: bool,
     length: int,
     output_path: Path,
     payload: dict[str, Any] | None,
@@ -93,6 +115,8 @@ def summarize_probe_result(
     if payload is None:
         return make_failure_row(
             probe_name=probe_name,
+            case_name=case_name,
+            case_input_present=case_input_present,
             length=length,
             output_path=output_path,
             error_type="MissingOutput",
@@ -112,6 +136,8 @@ def summarize_probe_result(
 
     return {
         "probe_name": payload.get("probe_name") or probe_name,
+        "case_name": payload.get("case_name") or case_name,
+        "case_input_present": bool(payload.get("case_input_present", case_input_present)),
         "length": length,
         "output_path": str(output_path),
         "ok": bool(payload.get("ok", False)),
@@ -146,11 +172,12 @@ def format_number(value: Any, digits: int = 3) -> str:
 
 def make_markdown_summary(rows: list[dict[str, Any]]) -> str:
     lines = [
-        "| probe_name | length | ok | parse_ok | validation_ok | warnings | input_tokens | new_tokens | elapsed_sec | new_tok_s | error_type | output_path |",
-        "|---|---:|---|---|---|---:|---:|---:|---:|---:|---|---|",
+        "| case_name | probe_name | length | ok | parse_ok | validation_ok | warnings | input_tokens | new_tokens | elapsed_sec | new_tok_s | error_type | output_path |",
+        "|---|---|---:|---|---|---|---:|---:|---:|---:|---:|---|---|",
     ]
     for row in rows:
         lines.append(
+            f"| {row['case_name'] or '-'} "
             f"| {row['probe_name']} "
             f"| {row['length']} "
             f"| {format_number(row['ok'])} "
@@ -167,8 +194,13 @@ def make_markdown_summary(rows: list[dict[str, Any]]) -> str:
     return "\n".join(lines)
 
 
-def build_output_path(out_dir: Path, probe_name: str, length: int) -> Path:
-    return out_dir / f"qwen25_coder_7b_awq_probe_eval_{probe_name}_{length}.json"
+def build_output_path(out_dir: Path, case_name: str, probe_name: str, length: int) -> Path:
+    if case_name:
+        safe_case_name = sanitize_filename_component(case_name)
+        filename = f"qwen25_coder_7b_awq_probe_eval_{safe_case_name}_{probe_name}_{length}.json"
+    else:
+        filename = f"qwen25_coder_7b_awq_probe_eval_{probe_name}_{length}.json"
+    return out_dir / filename
 
 
 def run_one_eval(
@@ -176,6 +208,9 @@ def run_one_eval(
     python_bin: str,
     model: str,
     probe_name: str,
+    case_name: str,
+    case_text: str | None,
+    case_file: str | None,
     length: int,
     max_new_tokens: int,
     output_path: Path,
@@ -184,6 +219,7 @@ def run_one_eval(
     if output_path.exists():
         output_path.unlink()
 
+    case_input_present = bool((case_text and case_text.strip()) or (case_file and case_file.strip()))
     command = [
         python_bin,
         str(PROBE_SCRIPT),
@@ -198,8 +234,17 @@ def run_one_eval(
         "--probe-name",
         probe_name,
     ]
+    if case_text:
+        command.extend(["--case-text", case_text])
+    if case_file:
+        command.extend(["--case-file", case_file])
+    if case_name:
+        command.extend(["--case-name", case_name])
 
-    print(f"[run] probe_name={probe_name} length={length} command={shlex.join(command)}", flush=True)
+    print(
+        f"[run] case_name={case_name or 'none'} probe_name={probe_name} length={length} command={shlex.join(command)}",
+        flush=True,
+    )
     completed = subprocess.run(
         command,
         capture_output=True,
@@ -209,24 +254,26 @@ def run_one_eval(
 
     if completed.stdout:
         print(
-            f"[stdout] probe_name={probe_name} length={length}\n{completed.stdout}",
+            f"[stdout] case_name={case_name or 'none'} probe_name={probe_name} length={length}\n{completed.stdout}",
             end="" if completed.stdout.endswith("\n") else "\n",
             flush=True,
         )
     if completed.stderr:
         print(
-            f"[stderr] probe_name={probe_name} length={length}\n{completed.stderr}",
+            f"[stderr] case_name={case_name or 'none'} probe_name={probe_name} length={length}\n{completed.stderr}",
             end="" if completed.stderr.endswith("\n") else "\n",
             flush=True,
         )
     print(
-        f"[done] probe_name={probe_name} length={length} returncode={completed.returncode} output={output_path}",
+        f"[done] case_name={case_name or 'none'} probe_name={probe_name} length={length} returncode={completed.returncode} output={output_path}",
         flush=True,
     )
 
     if not output_path.exists():
         row = make_failure_row(
             probe_name=probe_name,
+            case_name=case_name,
+            case_input_present=case_input_present,
             length=length,
             output_path=output_path,
             error_type="MissingOutputAfterSubprocess",
@@ -239,6 +286,8 @@ def run_one_eval(
     except json.JSONDecodeError:
         row = make_failure_row(
             probe_name=probe_name,
+            case_name=case_name,
+            case_input_present=case_input_present,
             length=length,
             output_path=output_path,
             error_type="OutputJsonDecodeError",
@@ -248,6 +297,8 @@ def run_one_eval(
     except OSError:
         row = make_failure_row(
             probe_name=probe_name,
+            case_name=case_name,
+            case_input_present=case_input_present,
             length=length,
             output_path=output_path,
             error_type="OutputJsonReadError",
@@ -257,6 +308,8 @@ def run_one_eval(
     except Exception:
         row = make_failure_row(
             probe_name=probe_name,
+            case_name=case_name,
+            case_input_present=case_input_present,
             length=length,
             output_path=output_path,
             error_type="OutputJsonReadError",
@@ -265,10 +318,12 @@ def run_one_eval(
         return row, completed.returncode
 
     try:
-        row = summarize_probe_result(probe_name, length, output_path, payload)
+        row = summarize_probe_result(probe_name, case_name, case_input_present, length, output_path, payload)
     except Exception:
         row = make_failure_row(
             probe_name=probe_name,
+            case_name=case_name,
+            case_input_present=case_input_present,
             length=length,
             output_path=output_path,
             error_type="OutputJsonReadError",
@@ -289,6 +344,9 @@ def main() -> int:
     parser.add_argument("--max-new-tokens", type=int, default=DEFAULT_MAX_NEW_TOKENS)
     parser.add_argument("--probe-name", default=DEFAULT_PROBE_NAME)
     parser.add_argument("--probe-names", default=None)
+    parser.add_argument("--case-text", default=None)
+    parser.add_argument("--case-file", default=None)
+    parser.add_argument("--case-name", default="")
     parser.add_argument("--out-dir", type=Path, default=DEFAULT_OUT_DIR)
     parser.add_argument("--summary-out", type=Path, default=DEFAULT_SUMMARY_OUT)
     parser.add_argument("--summary-md", type=Path, default=DEFAULT_SUMMARY_MD)
@@ -297,6 +355,7 @@ def main() -> int:
 
     lengths = parse_lengths(args.lengths)
     probe_names = parse_probe_names(args.probe_names) if args.probe_names else [args.probe_name]
+    case_name = normalize_case_name(args.case_name)
     args.out_dir.mkdir(parents=True, exist_ok=True)
     ensure_parent_dir(args.summary_out)
     ensure_parent_dir(args.summary_md)
@@ -306,17 +365,20 @@ def main() -> int:
 
     for probe_name in probe_names:
         for length in lengths:
-            output_path = build_output_path(args.out_dir, probe_name, length)
+            output_path = build_output_path(args.out_dir, case_name, probe_name, length)
             row, return_code = run_one_eval(
                 python_bin=args.python,
                 model=args.model,
                 probe_name=probe_name,
+                case_name=case_name,
+                case_text=args.case_text,
+                case_file=args.case_file,
                 length=length,
                 max_new_tokens=args.max_new_tokens,
                 output_path=output_path,
             )
             rows.append(row)
-            return_codes[f"{probe_name}:{length}"] = return_code
+            return_codes[f"{case_name or 'none'}:{probe_name}:{length}"] = return_code
 
     summary: dict[str, Any] = {
         "script": "run_hf_coding_probe_eval.py",
@@ -326,6 +388,8 @@ def main() -> int:
         "max_new_tokens": args.max_new_tokens,
         "probe_name": args.probe_name,
         "probe_names": probe_names,
+        "case_name": case_name,
+        "case_input_present": bool((args.case_text and args.case_text.strip()) or (args.case_file and args.case_file.strip())),
         "out_dir": str(args.out_dir),
         "summary_md": str(args.summary_md),
         "rows": rows,

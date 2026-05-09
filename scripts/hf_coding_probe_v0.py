@@ -45,6 +45,9 @@ KNOWN_SCRIPT_OPTIONS: dict[str, set[str] | None] = {
         "--max-new-tokens",
         "--context-tokens",
         "--probe-name",
+        "--case-text",
+        "--case-file",
+        "--case-name",
         "--trust-remote-code",
     },
     "scripts/run_hf_coding_probe_eval.py": {
@@ -53,6 +56,9 @@ KNOWN_SCRIPT_OPTIONS: dict[str, set[str] | None] = {
         "--max-new-tokens",
         "--probe-name",
         "--probe-names",
+        "--case-text",
+        "--case-file",
+        "--case-name",
         "--out-dir",
         "--summary-out",
         "--summary-md",
@@ -200,6 +206,56 @@ def get_probe_profile(probe_name: str) -> dict[str, Any]:
         raise ValueError(f"Unsupported probe_name: {probe_name}. Supported probe names: {supported}") from exc
 
 
+def normalize_case_name(value: str | None) -> str:
+    if not value:
+        return ""
+    lowered = value.strip().lower()
+    if lowered in {"", "none"}:
+        return ""
+    return value.strip()
+
+
+def load_case_input(case_text: str | None, case_file: str | None) -> tuple[str, list[str]]:
+    sections: list[str] = []
+    sources: list[str] = []
+    if case_text:
+        sections.append("Real-case input from --case-text:\n" + case_text.strip())
+        sources.append("case_text")
+    if case_file:
+        path = Path(case_file)
+        text = path.read_text(encoding="utf-8")
+        sections.append(f"Real-case input from --case-file ({path}):\n" + text.strip())
+        sources.append(str(path))
+    return "\n\n".join(section for section in sections if section.strip()), sources
+
+
+def make_case_guidance(probe_name: str, case_input_present: bool) -> list[str]:
+    if not case_input_present:
+        return []
+    if probe_name == "relaykv_bug_triage":
+        return [
+            "- Base likely_causes and minimal_fix_plan on the supplied real-case input.",
+            "- Reference the supplied error, log, or result details when possible.",
+            "- Keep bug-triage claims cautious unless the case input is explicit.",
+        ]
+    if probe_name == "relaykv_result_interpretation":
+        return [
+            "- Interpret the concrete fields and values from the supplied real-case input.",
+            "- Mention observed values or named fields when possible.",
+        ]
+    if probe_name == "relaykv_smoke_plan":
+        return [
+            "- Use the supplied real-case input to propose the narrowest verification commands.",
+        ]
+    if probe_name == "relaykv_safe_next_change":
+        return [
+            "- Use the supplied real-case input to suggest the smallest safe next step.",
+        ]
+    return [
+        "- You may mention the supplied real-case input, but keep the answer repo-entry oriented.",
+    ]
+
+
 def make_warning(
     warning_type: str,
     message: str,
@@ -216,6 +272,23 @@ def make_warning(
     if value is not None:
         warning["value"] = value
     return warning
+
+
+def dedupe_warnings(warnings: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    deduped: list[dict[str, Any]] = []
+    seen: set[tuple[str | None, str | None, str | None, str | None]] = set()
+    for warning in warnings:
+        key = (
+            warning.get("type"),
+            warning.get("message"),
+            warning.get("value"),
+            warning.get("command"),
+        )
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(warning)
+    return deduped
 
 
 def mib(n: int | float) -> float:
@@ -535,6 +608,9 @@ def add_profile_quality_warnings(
             "parse_ok",
             "validation",
             "error_type",
+            "missingoutputaftersubprocess",
+            "output_path",
+            "stale",
         )
         generic_markers = (
             "relaykv",
@@ -619,6 +695,7 @@ def validate_generated_output(parsed: object, repo_context: dict[str, Any], prob
         warnings.extend(validate_smoke_command(command, repo_context))
 
     add_profile_quality_warnings(probe_name, parsed, warnings)
+    warnings = dedupe_warnings(warnings)
 
     return {
         "ok": len(warnings) == 0,
@@ -641,8 +718,11 @@ def make_probe_prompt(
     probe_name: str,
     target_tokens: int,
     repo_context: dict[str, Any],
+    case_input_text: str,
 ) -> tuple[str, int]:
     profile = get_probe_profile(probe_name)
+    case_input_present = bool(case_input_text.strip())
+    extra_case_guidance = make_case_guidance(probe_name, case_input_present)
     instruction = (
         "You are inspecting the RelayKV repository. "
         "Return JSON only. Do not use markdown fences. "
@@ -665,18 +745,27 @@ def make_probe_prompt(
     )
 
     repo_lines = repo_context_lines(repo_context)
-    seed_block = "\n".join(
+    seed_lines = [
+        f"Probe name: {probe_name}",
+        *repo_lines,
+    ]
+    if case_input_present:
+        seed_lines.extend([
+            "Real-case input:",
+            case_input_text,
+        ])
+    seed_lines.extend(
         [
-            f"Probe name: {probe_name}",
-            *repo_lines,
             "Requested output:",
             *profile["task_lines"],
+            *extra_case_guidance,
             "Conservative smoke command examples:",
             "- python scripts/hf_model_smoke.py --model ~/work/hf-models/Qwen2.5-Coder-7B-Instruct-AWQ --max-new-tokens 128",
             "- python scripts/hf_context_length_smoke.py --model ~/work/hf-models/Qwen2.5-Coder-7B-Instruct-AWQ --lengths 4096,8192,16384 --max-new-tokens 64",
             "- python scripts/run_relaykv_pipeline.py --help",
         ]
     )
+    seed_block = "\n".join(seed_lines)
 
     instruction_ids = tokenizer(instruction, add_special_tokens=False)["input_ids"]
     seed_ids = tokenizer(seed_block, add_special_tokens=False)["input_ids"]
@@ -793,11 +882,17 @@ def main() -> int:
     parser.add_argument("--max-new-tokens", type=int, default=512)
     parser.add_argument("--context-tokens", type=int, default=4096)
     parser.add_argument("--probe-name", default="relaykv_repo_entry")
+    parser.add_argument("--case-text", default=None)
+    parser.add_argument("--case-file", default=None)
+    parser.add_argument("--case-name", default="")
     parser.add_argument("--trust-remote-code", action="store_true")
     args = parser.parse_args()
 
     profile = get_probe_profile(args.probe_name)
     required_keys = tuple(profile["required_keys"])
+    normalized_case_name = normalize_case_name(args.case_name)
+    case_input_text, case_input_sources = load_case_input(args.case_text, args.case_file)
+    case_input_present = bool(case_input_text.strip())
     out_path = Path(args.out)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     repo_root = Path.cwd()
@@ -807,6 +902,11 @@ def main() -> int:
         "script": "hf_coding_probe_v0.py",
         "probe_name": args.probe_name,
         "required_keys": list(required_keys),
+        "case_name": normalized_case_name,
+        "case_input_present": case_input_present,
+        "case_input_chars": len(case_input_text),
+        "case_input_sources": case_input_sources,
+        "case_input_tokens_estimate": None,
         "model": args.model,
         "out": str(out_path),
         "max_new_tokens": args.max_new_tokens,
@@ -858,6 +958,9 @@ def main() -> int:
         if tokenizer.pad_token_id is None and tokenizer.eos_token_id is not None:
             tokenizer.pad_token = tokenizer.eos_token
 
+        if case_input_present:
+            result["case_input_tokens_estimate"] = len(tokenizer(case_input_text, add_special_tokens=False)["input_ids"])
+
         model = AutoModelForCausalLM.from_pretrained(
             args.model,
             device_map="auto",
@@ -886,6 +989,7 @@ def main() -> int:
             probe_name=args.probe_name,
             target_tokens=args.context_tokens,
             repo_context=repo_context,
+            case_input_text=case_input_text,
         )
         result["prompt_preview"] = prompt[:2000]
         result["prompt_preview_truncated"] = len(prompt) > 2000
@@ -959,6 +1063,7 @@ def main() -> int:
                 "ok": result["ok"],
                 "parse_ok": result["parse_ok"],
                 "probe_name": result["probe_name"],
+                "case_name": result["case_name"],
                 "out": str(out_path),
                 "error": result.get("error"),
             },
