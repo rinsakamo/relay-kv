@@ -451,6 +451,27 @@ BASE_ALLOWED_COMMAND_PATTERNS: tuple[tuple[str, str], ...] = (
 )
 
 
+def make_risk_guidance(probe_name: str) -> list[str]:
+    lines = [
+        "Risk wording guidance:",
+        "- This is a local RelayKV prototype and HF coding probe evaluation context.",
+        "- Avoid severe production, security, or data-integrity wording unless the supplied case input explicitly proves it.",
+        "- Avoid phrases: data loss, data corruption, security breach, production outage.",
+        "- Prefer precise local evaluation risks such as stale result file, misleading validation result, incorrect summary row, missed warning, false positive validation warning, false negative validation warning, non-reproducible smoke result, unsupported command option, wrong relevant file selection, incomplete triage, over-broad relevant_files, hallucinated script path, prompt truncation, or case input not reflected in the answer.",
+    ]
+    if probe_name == "relaykv_bug_triage":
+        lines.append("- Risks should describe how the diagnosis or fix could be misleading, incomplete, or fail to reproduce; prefer stale result may hide subprocess failure over severe incident wording.")
+    elif probe_name == "relaykv_result_interpretation":
+        lines.append("- Risks should describe interpretation mistakes; prefer summary may be misleading if stale output is reused over severe incident wording.")
+    elif probe_name == "relaykv_safe_next_change":
+        lines.append("- Risks should describe local validation and repo hygiene issues; prefer results files may be accidentally committed or validation may miss a regression.")
+    elif probe_name == "relaykv_smoke_plan":
+        lines.append("- Risks should describe smoke coverage gaps, non-reproducibility, missing warnings, or unsupported command options.")
+    elif probe_name == "relaykv_repo_entry":
+        lines.append("- Risks should describe wrong file focus, over-broad relevant_files, missing smoke checks, or outdated repo assumptions.")
+    return lines
+
+
 def make_allowed_command_patterns(probe_name: str, case_related_files: list[str]) -> list[str]:
     lines = [
         "Allowed smoke command patterns:",
@@ -718,7 +739,7 @@ def add_profile_quality_warnings(
             warnings.append(
                 make_warning(
                     "OverstatedRiskWording",
-                    "risks uses wording that is too severe for the local RelayKV prototype context.",
+                    "risks uses wording that is too severe for the local RelayKV prototype context; prefer local evaluation risks such as stale result file, misleading validation result, or unsupported command option.",
                     value=phrase,
                 )
             )
@@ -934,6 +955,7 @@ def make_probe_prompt(
     )
 
     repo_lines = repo_context_lines(repo_context)
+    risk_guidance_lines = make_risk_guidance(probe_name)
     allowed_command_lines = make_allowed_command_patterns(probe_name, case_related_files)
     fixed_seed_lines = [
         f"Probe name: {probe_name}",
@@ -952,6 +974,7 @@ def make_probe_prompt(
         "Requested output:",
         *profile["task_lines"],
         *extra_case_guidance,
+        *risk_guidance_lines,
         *allowed_command_lines,
         "Grounding reminder:",
         "- Use only listed files.",
