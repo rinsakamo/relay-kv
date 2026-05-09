@@ -37,9 +37,16 @@ SEVERE_RISK_PHRASES = (
     "production outage",
 )
 KNOWN_SCRIPT_OPTIONS: dict[str, set[str] | None] = {
-    "scripts/hf_model_smoke.py": {"--model", "--out", "--max-new-tokens", "--prompt"},
-    "scripts/hf_context_length_smoke.py": {"--model", "--lengths", "--max-new-tokens", "--out"},
-    "scripts/hf_coding_probe_v0.py": {"--model", "--out", "--max-new-tokens", "--context-tokens", "--probe-name"},
+    "scripts/hf_model_smoke.py": {"--model", "--out", "--max-new-tokens", "--prompt", "--trust-remote-code"},
+    "scripts/hf_context_length_smoke.py": {"--model", "--lengths", "--max-new-tokens", "--out", "--trust-remote-code"},
+    "scripts/hf_coding_probe_v0.py": {
+        "--model",
+        "--out",
+        "--max-new-tokens",
+        "--context-tokens",
+        "--probe-name",
+        "--trust-remote-code",
+    },
     "scripts/run_hf_coding_probe_eval.py": {
         "--model",
         "--lengths",
