@@ -719,7 +719,7 @@ def make_probe_prompt(
     target_tokens: int,
     repo_context: dict[str, Any],
     case_input_text: str,
-) -> tuple[str, int]:
+) -> tuple[str, int, dict[str, Any]]:
     profile = get_probe_profile(probe_name)
     case_input_present = bool(case_input_text.strip())
     extra_case_guidance = make_case_guidance(probe_name, case_input_present)
@@ -745,59 +745,60 @@ def make_probe_prompt(
     )
 
     repo_lines = repo_context_lines(repo_context)
-    seed_lines = [
+    fixed_seed_lines = [
         f"Probe name: {probe_name}",
         *repo_lines,
+        "Requested output:",
+        *profile["task_lines"],
+        *extra_case_guidance,
+        "Conservative smoke command examples:",
+        "- python scripts/hf_model_smoke.py --model ~/work/hf-models/Qwen2.5-Coder-7B-Instruct-AWQ --max-new-tokens 128",
+        "- python scripts/hf_context_length_smoke.py --model ~/work/hf-models/Qwen2.5-Coder-7B-Instruct-AWQ --lengths 4096,8192,16384 --max-new-tokens 64",
+        "- python scripts/run_relaykv_pipeline.py --help",
+        "Grounding reminder:",
+        "- Use only listed files.",
+        "- Use only listed scripts in smoke_commands.",
+        "- Do not invent repo paths, test directories, or CLI flags.",
+        "- Commands must be runnable from repo root.",
+        "- Use python scripts/<existing_script>.py ... for Python scripts.",
+        "- Do not use source file names as --model values.",
     ]
-    if case_input_present:
-        seed_lines.extend([
-            "Real-case input:",
-            case_input_text,
-        ])
-    seed_lines.extend(
-        [
-            "Requested output:",
-            *profile["task_lines"],
-            *extra_case_guidance,
-            "Conservative smoke command examples:",
-            "- python scripts/hf_model_smoke.py --model ~/work/hf-models/Qwen2.5-Coder-7B-Instruct-AWQ --max-new-tokens 128",
-            "- python scripts/hf_context_length_smoke.py --model ~/work/hf-models/Qwen2.5-Coder-7B-Instruct-AWQ --lengths 4096,8192,16384 --max-new-tokens 64",
-            "- python scripts/run_relaykv_pipeline.py --help",
-        ]
-    )
-    seed_block = "\n".join(seed_lines)
+    fixed_seed_block = "\n".join(fixed_seed_lines)
 
     instruction_ids = tokenizer(instruction, add_special_tokens=False)["input_ids"]
-    seed_ids = tokenizer(seed_block, add_special_tokens=False)["input_ids"]
-    if not instruction_ids or not seed_ids:
+    fixed_seed_ids = tokenizer(fixed_seed_block, add_special_tokens=False)["input_ids"]
+    if not instruction_ids or not fixed_seed_ids:
         raise RuntimeError("Tokenizer produced empty prompt ids.")
 
     available_seed_tokens = target_tokens - len(instruction_ids) - 128
-    repeated_seed_text = ""
     if available_seed_tokens <= 0:
         repeated_seed_text = ""
-    elif len(seed_ids) >= available_seed_tokens:
-        repeated_seed_text = tokenizer.decode(seed_ids[:available_seed_tokens], skip_special_tokens=True)
+        case_input_included_chars = 0
+        case_input_truncated = case_input_present
     else:
-        repeated_seed_text = seed_block
-        padding_block = "\n".join(
-            [
-                "Grounding reminder:",
-                "- Use only listed files.",
-                "- Use only listed scripts in smoke_commands.",
-                "- Do not invent repo paths, test directories, or CLI flags.",
-                "- Commands must be runnable from repo root.",
-                "- Use python scripts/<existing_script>.py ... for Python scripts.",
-                "- Do not use source file names as --model values.",
-            ]
-        )
-        padding_ids = tokenizer(padding_block, add_special_tokens=False)["input_ids"]
-        if not padding_ids:
-            raise RuntimeError("Tokenizer produced empty padding ids.")
-        remaining_tokens = available_seed_tokens - len(seed_ids)
-        repeat = max(1, (remaining_tokens // len(padding_ids)) + 1)
-        repeated_padding_ids = (padding_ids * repeat)[:remaining_tokens]
-        repeated_seed_text = seed_block + "\n" + tokenizer.decode(repeated_padding_ids, skip_special_tokens=True)
+        repeated_seed_text = fixed_seed_block
+        case_input_included_chars = 0
+        case_input_truncated = False
+
+        if len(fixed_seed_ids) > available_seed_tokens:
+            repeated_seed_text = tokenizer.decode(fixed_seed_ids[:available_seed_tokens], skip_special_tokens=True)
+            case_input_truncated = case_input_present
+        else:
+            remaining_tokens = available_seed_tokens - len(fixed_seed_ids)
+            if case_input_present and remaining_tokens > 0:
+                case_header = "Real-case input:\n"
+                case_block = case_header + case_input_text
+                case_ids = tokenizer(case_block, add_special_tokens=False)["input_ids"]
+                if len(case_ids) <= remaining_tokens:
+                    included_case_text = case_block
+                else:
+                    included_case_text = tokenizer.decode(case_ids[:remaining_tokens], skip_special_tokens=True)
+                    case_input_truncated = True
+                if included_case_text.strip():
+                    repeated_seed_text = fixed_seed_block + "\n" + included_case_text
+                    case_input_included_chars = max(0, len(included_case_text) - len(case_header))
+            elif case_input_present:
+                case_input_truncated = True
 
     user_content = instruction + "\n" + repeated_seed_text
     messages = [
@@ -806,7 +807,10 @@ def make_probe_prompt(
     ]
     prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
     input_tokens = len(tokenizer(prompt, add_special_tokens=False)["input_ids"])
-    return prompt, input_tokens
+    return prompt, input_tokens, {
+        "case_input_included_chars": case_input_included_chars,
+        "case_input_truncated": case_input_truncated,
+    }
 
 
 def extract_json_object(text: str) -> str:
@@ -907,6 +911,8 @@ def main() -> int:
         "case_input_chars": len(case_input_text),
         "case_input_sources": case_input_sources,
         "case_input_tokens_estimate": None,
+        "case_input_included_chars": 0,
+        "case_input_truncated": False,
         "model": args.model,
         "out": str(out_path),
         "max_new_tokens": args.max_new_tokens,
@@ -984,13 +990,15 @@ def main() -> int:
             "cuda": cuda_snapshot(),
         }
 
-        prompt, prompt_tokens = make_probe_prompt(
+        prompt, prompt_tokens, case_prompt_meta = make_probe_prompt(
             tokenizer=tokenizer,
             probe_name=args.probe_name,
             target_tokens=args.context_tokens,
             repo_context=repo_context,
             case_input_text=case_input_text,
         )
+        result["case_input_included_chars"] = case_prompt_meta["case_input_included_chars"]
+        result["case_input_truncated"] = case_prompt_meta["case_input_truncated"]
         result["prompt_preview"] = prompt[:2000]
         result["prompt_preview_truncated"] = len(prompt) > 2000
         result["prompt_target_context_tokens"] = args.context_tokens
