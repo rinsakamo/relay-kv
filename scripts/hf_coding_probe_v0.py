@@ -428,69 +428,6 @@ def extract_case_related_files(case_input_text: str, repo_context: dict[str, Any
     return deduped
 
 
-def allowed_options_text(script_path: str) -> str:
-    allowed_options = KNOWN_SCRIPT_OPTIONS.get(script_path)
-    if not allowed_options:
-        return "--help"
-    return ", ".join(sorted(allowed_options))
-
-
-BASE_ALLOWED_COMMAND_PATTERNS: tuple[tuple[str, str], ...] = (
-    ("scripts/hf_model_smoke.py", "python scripts/hf_model_smoke.py --model ~/work/hf-models/Qwen2.5-Coder-7B-Instruct-AWQ --max-new-tokens 128"),
-    ("scripts/hf_context_length_smoke.py", "python scripts/hf_context_length_smoke.py --model ~/work/hf-models/Qwen2.5-Coder-7B-Instruct-AWQ --lengths 4096,8192,16384 --max-new-tokens 64"),
-    ("scripts/hf_coding_probe_v0.py", "python scripts/hf_coding_probe_v0.py --model ~/work/hf-models/Qwen2.5-Coder-7B-Instruct-AWQ --probe-name relaykv_repo_entry --max-new-tokens 512 --context-tokens 4096 --out results/raw/hf_coding_probe/example.json"),
-    ("scripts/run_hf_coding_probe_eval.py", "python scripts/run_hf_coding_probe_eval.py --model ~/work/hf-models/Qwen2.5-Coder-7B-Instruct-AWQ --lengths 4096 --probe-name relaykv_repo_entry --max-new-tokens 512 --summary-out results/processed/example.json --summary-md results/processed/example.md"),
-    ("scripts/score_hf_coding_probe_eval.py", "python scripts/score_hf_coding_probe_eval.py --summary-in results/processed/example.json --score-out results/processed/example_score.json --score-md results/processed/example_score.md"),
-    ("scripts/run_relaykv_pipeline.py", "python scripts/run_relaykv_pipeline.py --help"),
-)
-
-
-def make_allowed_command_patterns(probe_name: str, case_related_files: list[str]) -> list[str]:
-    lines = [
-        "Allowed smoke command patterns:",
-        "- Prefer commands copied from these patterns.",
-        "- Do not invent CLI options.",
-        "- If unsure, use --help for an existing script.",
-    ]
-    if case_related_files and case_related_files[0] == "scripts/run_hf_coding_probe_eval.py":
-        lines.append("- For real-case eval-runner issues, prefer run_hf_coding_probe_eval.py with supported options, not fake input/output flags.")
-
-    for script_path, command in BASE_ALLOWED_COMMAND_PATTERNS:
-        lines.append(f"- {command}")
-        lines.append(f"  allowed options: {allowed_options_text(script_path)}")
-
-    if probe_name == "relaykv_bug_triage":
-        lines.extend([
-            "Profile-specific command guidance:",
-            "- Use commands that reproduce or validate the specific bug class.",
-            "- For eval-runner stale-output cases, prefer:",
-            "- python scripts/run_hf_coding_probe_eval.py --model ~/work/hf-models/Qwen2.5-Coder-7B-Instruct-AWQ --lengths 4096 --probe-names relaykv_bug_triage --case-name stale_output_review --case-text '<short case text>' --max-new-tokens 512 --summary-out results/processed/<name>.json --summary-md results/processed/<name>.md",
-            "- If exact reproduction is not possible, use: python scripts/run_hf_coding_probe_eval.py --help",
-        ])
-    elif probe_name == "relaykv_result_interpretation":
-        lines.extend([
-            "Profile-specific command guidance:",
-            "- Prefer commands that inspect existing generated summaries or rerun the same eval with supported options.",
-            "- Avoid inventing decode prototype scripts or unsupported input/output flags.",
-            "- If unsure, use: python scripts/score_hf_coding_probe_eval.py --summary-in results/processed/example.json --score-out results/processed/example_score.json --score-md results/processed/example_score.md",
-        ])
-    elif probe_name == "relaykv_smoke_plan":
-        lines.extend([
-            "Profile-specific command guidance:",
-            "- Prefer known smoke scripts before broader eval commands.",
-            "- python scripts/hf_model_smoke.py --model ~/work/hf-models/Qwen2.5-Coder-7B-Instruct-AWQ --max-new-tokens 128",
-            "- python scripts/hf_context_length_smoke.py --model ~/work/hf-models/Qwen2.5-Coder-7B-Instruct-AWQ --lengths 4096,8192,16384 --max-new-tokens 64",
-        ])
-    elif probe_name == "relaykv_safe_next_change":
-        lines.extend([
-            "Profile-specific command guidance:",
-            "- Prefer py_compile and targeted probe/eval commands with supported options.",
-            "- python -m py_compile scripts/hf_coding_probe_v0.py scripts/run_hf_coding_probe_eval.py scripts/score_hf_coding_probe_eval.py",
-            "- python scripts/run_hf_coding_probe_eval.py --help",
-        ])
-    return lines
-
-
 def is_plausible_model_value(value: str, repo_root: Path) -> bool:
     if not value:
         return False
@@ -640,7 +577,7 @@ def validate_smoke_command(command: object, repo_context: dict[str, Any]) -> lis
                 warnings.append(
                     make_warning(
                         "SuspiciousCommandOption",
-                        f"smoke_commands uses an option that is not in the conservative allowlist for this script. Allowed options: {allowed_options_text(part)}",
+                        "smoke_commands uses an option that is not in the conservative allowlist for this script.",
                         command=command,
                         value=option_name,
                     )
@@ -907,7 +844,6 @@ def make_probe_prompt(
     )
 
     repo_lines = repo_context_lines(repo_context)
-    allowed_command_lines = make_allowed_command_patterns(probe_name, case_related_files)
     fixed_seed_lines = [
         f"Probe name: {probe_name}",
         *repo_lines,
@@ -925,7 +861,10 @@ def make_probe_prompt(
         "Requested output:",
         *profile["task_lines"],
         *extra_case_guidance,
-        *allowed_command_lines,
+        "Conservative smoke command examples:",
+        "- python scripts/hf_model_smoke.py --model ~/work/hf-models/Qwen2.5-Coder-7B-Instruct-AWQ --max-new-tokens 128",
+        "- python scripts/hf_context_length_smoke.py --model ~/work/hf-models/Qwen2.5-Coder-7B-Instruct-AWQ --lengths 4096,8192,16384 --max-new-tokens 64",
+        "- python scripts/run_relaykv_pipeline.py --help",
         "Grounding reminder:",
         "- Use only listed files.",
         "- Use only listed scripts in smoke_commands.",
