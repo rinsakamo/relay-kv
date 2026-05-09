@@ -30,6 +30,49 @@ DEFAULT_OUT = "results/raw/hf_coding_probe/qwen25_coder_7b_awq_probe_v0.json"
 MAX_SCRIPT_FILES = 32
 MAX_RELAYKV_FILES = 16
 MAX_DEVLOG_FILES = 16
+SEVERE_RISK_PHRASES = (
+    "data loss",
+    "data corruption",
+    "security breach",
+    "production outage",
+)
+KNOWN_SCRIPT_OPTIONS: dict[str, set[str] | None] = {
+    "scripts/hf_model_smoke.py": {"--model", "--out", "--max-new-tokens", "--prompt", "--trust-remote-code"},
+    "scripts/hf_context_length_smoke.py": {"--model", "--lengths", "--max-new-tokens", "--out", "--trust-remote-code"},
+    "scripts/hf_coding_probe_v0.py": {
+        "--model",
+        "--out",
+        "--max-new-tokens",
+        "--context-tokens",
+        "--probe-name",
+        "--trust-remote-code",
+    },
+    "scripts/run_hf_coding_probe_eval.py": {
+        "--model",
+        "--lengths",
+        "--max-new-tokens",
+        "--probe-name",
+        "--probe-names",
+        "--out-dir",
+        "--summary-out",
+        "--summary-md",
+        "--python",
+    },
+    "scripts/score_hf_coding_probe_eval.py": {"--summary-in", "--score-out", "--score-md"},
+    "scripts/run_relaykv_pipeline.py": {
+        "--help",
+        "--model",
+        "--seq-len",
+        "--hot-window",
+        "--block-size",
+        "--top-k",
+        "--layer-idx",
+        "--output",
+        "--scoring-variant",
+        "--prompt-type",
+        "--anchor-blocks",
+    },
+}
 PROBE_PROFILES: dict[str, dict[str, Any]] = {
     "relaykv_repo_entry": {
         "required_keys": (
@@ -68,6 +111,8 @@ PROBE_PROFILES: dict[str, dict[str, Any]] = {
         },
         "task_lines": [
             "- Focus on likely causes for a failed smoke or eval behavior.",
+            "- If no concrete error or log is provided, state hypotheses as weak hypotheses.",
+            "- Avoid claiming a root cause as fact; prefer wording like possible cause or check.",
             "- Keep the proposed fix plan minimal and conservative.",
             "- Provide smoke commands that confirm the suspected cause.",
             "- Mention the main debugging risks or ambiguities.",
@@ -90,6 +135,8 @@ PROBE_PROFILES: dict[str, dict[str, Any]] = {
         },
         "task_lines": [
             "- Plan safe validation commands only, not broad experiments.",
+            "- Prefer known conservative commands.",
+            "- Do not invent CLI options.",
             "- State the expected observation for each smoke direction.",
             "- Mention the main failure modes to watch for.",
             "- Keep all commands runnable from the repo root.",
@@ -111,7 +158,8 @@ PROBE_PROFILES: dict[str, dict[str, Any]] = {
             "risks": ["risk"],
         },
         "task_lines": [
-            "- Interpret an eval or result JSON conservatively.",
+            "- Interpret only the supplied evaluation or result context conservatively.",
+            "- Avoid generic module descriptions unless they are directly supported by the supplied context.",
             "- Suggest the most relevant follow-up checks.",
             "- Keep smoke commands narrow and runnable from repo root.",
             "- Mention the main interpretation risks or ambiguities.",
@@ -134,6 +182,8 @@ PROBE_PROFILES: dict[str, dict[str, Any]] = {
         },
         "task_lines": [
             "- Suggest the smallest safe next code change.",
+            "- Prefer tests, docs, validation, or narrow scripts before modifying relaykv internals.",
+            "- Keep changes minimal and reversible.",
             "- Make safety constraints explicit before proposing commands.",
             "- Provide smoke commands that validate the safe next step.",
             "- Mention the main regression risks or unknowns.",
@@ -380,10 +430,147 @@ def validate_smoke_command(command: object, repo_context: dict[str, Any]) -> lis
                 )
             )
 
+    for idx, part in enumerate(parts):
+        if not part.startswith("scripts/"):
+            continue
+        allowed_options = KNOWN_SCRIPT_OPTIONS.get(part)
+        if allowed_options is None and Path(part).name.startswith("test_"):
+            allowed_options = set()
+        if allowed_options is None:
+            break
+        for opt in parts[idx + 1 :]:
+            if opt == "--":
+                break
+            if not opt.startswith("--"):
+                continue
+            option_name = opt.split("=", 1)[0]
+            if option_name not in allowed_options:
+                warnings.append(
+                    make_warning(
+                        "SuspiciousCommandOption",
+                        "smoke_commands uses an option that is not in the conservative allowlist for this script.",
+                        command=command,
+                        value=option_name,
+                    )
+                )
+        break
+
     return warnings
 
 
-def validate_generated_output(parsed: object, repo_context: dict[str, Any]) -> dict[str, Any]:
+def extract_list_strings(parsed: dict[str, Any], key: str, warnings: list[dict[str, Any]], warning_type: str) -> list[str]:
+    value = parsed.get(key, [])
+    if not isinstance(value, list):
+        warnings.append(
+            make_warning(
+                warning_type,
+                f"{key} must be a list of strings.",
+                value=repr(value),
+            )
+        )
+        return []
+    out: list[str] = []
+    for item in value:
+        if isinstance(item, str):
+            out.append(item)
+    return out
+
+
+def add_profile_quality_warnings(
+    probe_name: str,
+    parsed: dict[str, Any],
+    warnings: list[dict[str, Any]],
+) -> None:
+    relevant_files = extract_list_strings(parsed, "relevant_files", warnings, "RelevantFilesNonList")
+    threshold = 12 if probe_name == "relaykv_smoke_plan" else 6
+    if len(relevant_files) > threshold:
+        warnings.append(
+            make_warning(
+                "BroadRelevantFiles",
+                "relevant_files is broader than expected for this probe profile.",
+                value=str(len(relevant_files)),
+            )
+        )
+
+    risks = extract_list_strings(parsed, "risks", warnings, "RisksNonList")
+    lowered_risks = " ".join(risks).lower()
+    for phrase in SEVERE_RISK_PHRASES:
+        if phrase in lowered_risks:
+            warnings.append(
+                make_warning(
+                    "OverstatedRiskWording",
+                    "risks uses wording that is too severe for the local RelayKV prototype context.",
+                    value=phrase,
+                )
+            )
+
+    if probe_name == "relaykv_bug_triage":
+        likely_causes = extract_list_strings(parsed, "likely_causes", warnings, "LikelyCausesNonList")
+        certainty_phrases = ("is caused by", "the root cause is", "incorrect implementation")
+        for item in likely_causes:
+            lowered = item.lower()
+            if any(phrase in lowered for phrase in certainty_phrases):
+                warnings.append(
+                    make_warning(
+                        "UngroundedBugTriageClaim",
+                        "likely_causes states a strong claim without explicit error or log context.",
+                        value=item,
+                    )
+                )
+
+    if probe_name == "relaykv_result_interpretation":
+        interpretation = extract_list_strings(parsed, "interpretation", warnings, "InterpretationNonList")
+        interpretation_text = " ".join(interpretation).lower()
+        value_markers = (
+            "4096",
+            "8192",
+            "16384",
+            "score",
+            "warning",
+            "oom",
+            "vram",
+            "tokens",
+            "elapsed",
+            "jaccard",
+            "parse_ok",
+            "validation",
+            "error_type",
+        )
+        generic_markers = (
+            "relaykv",
+            "module",
+            "pipeline",
+            "repository",
+            "general",
+        )
+        if interpretation and not any(marker in interpretation_text for marker in value_markers):
+            if sum(marker in interpretation_text for marker in generic_markers) >= 2:
+                warnings.append(
+                    make_warning(
+                        "GenericResultInterpretation",
+                        "interpretation looks generic and does not reference observed result values or fields.",
+                    )
+                )
+
+    if probe_name == "relaykv_safe_next_change":
+        change_plan = extract_list_strings(parsed, "change_plan", warnings, "ChangePlanNonList")
+        safety_first_markers = ("test", "doc", "validation", "smoke", "check", "assert")
+        unsafe_markers = ("relaykv/", "refactor", "broad", "rewrite")
+        if change_plan:
+            first_step = change_plan[0].lower()
+            touches_internals_early = "relaykv" in first_step and not any(marker in first_step for marker in safety_first_markers)
+            broad_change = any(marker in first_step for marker in unsafe_markers)
+            if touches_internals_early or broad_change:
+                warnings.append(
+                    make_warning(
+                        "UnsafeNextChangePlan",
+                        "change_plan starts with a broad or internal code change instead of a safer validation-first step.",
+                        value=change_plan[0],
+                    )
+                )
+
+
+def validate_generated_output(parsed: object, repo_context: dict[str, Any], probe_name: str) -> dict[str, Any]:
     warnings: list[dict[str, Any]] = []
     if not isinstance(parsed, dict):
         return {"ok": True, "warnings": warnings}
@@ -430,6 +617,8 @@ def validate_generated_output(parsed: object, repo_context: dict[str, Any]) -> d
         smoke_commands = []
     for command in smoke_commands:
         warnings.extend(validate_smoke_command(command, repo_context))
+
+    add_profile_quality_warnings(probe_name, parsed, warnings)
 
     return {
         "ok": len(warnings) == 0,
@@ -724,7 +913,7 @@ def main() -> int:
         generated_text = tokenizer.decode(outputs[0][input_tokens:], skip_special_tokens=True)
 
         parsed, parse_ok, parse_error = parse_generated_json(generated_text, required_keys)
-        validation = validate_generated_output(parsed, repo_context)
+        validation = validate_generated_output(parsed, repo_context, args.probe_name)
 
         result.update({
             "ok": True,
