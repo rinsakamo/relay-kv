@@ -534,15 +534,6 @@ def validate_smoke_command(command: object, repo_context: dict[str, Any]) -> lis
         )
         return warnings
 
-    if "<" in command or ">" in command:
-        warnings.append(
-            make_warning(
-                "ShellPlaceholderInCommand",
-                "smoke_commands contains shell placeholder or redirection characters; use concrete filenames and arguments instead.",
-                command=command,
-            )
-        )
-
     try:
         parts = shlex.split(command)
     except ValueError as exc:
@@ -564,6 +555,27 @@ def validate_smoke_command(command: object, repo_context: dict[str, Any]) -> lis
             )
         )
         return warnings
+
+    for part in parts:
+        stripped = part.strip()
+        has_angle = "<" in stripped or ">" in stripped
+        is_redirection_like = stripped in {"<", ">", "<<", ">>", "1>", "2>", "&>"} or stripped.startswith(("<", ">"))
+        has_placeholder_segment = has_angle and any(token in stripped for token in ("<name>", "<case>", "<out>", "</", ".<", ">."))
+        enclosed_placeholder = (
+            len(stripped) >= 3
+            and stripped.startswith("<")
+            and stripped.endswith(">")
+            and " " not in stripped
+        )
+        if is_redirection_like or has_placeholder_segment or enclosed_placeholder:
+            warnings.append(
+                make_warning(
+                    "ShellPlaceholderInCommand",
+                    "smoke_commands contains shell placeholder or redirection-like tokens; use concrete filenames and arguments instead.",
+                    command=command,
+                    value=part,
+                )
+            )
 
     first = parts[0]
     script_token: str | None = None
