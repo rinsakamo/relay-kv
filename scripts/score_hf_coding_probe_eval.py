@@ -226,26 +226,16 @@ def choose_recommendation(rows: list[dict[str, Any]], stability: dict[str, Any])
             ],
         }
 
-    sorted_rows = sorted(
-        scored_rows,
-        key=lambda row: (
-            -(row["overall_per_length_score"]),
-            row["length"] if row.get("length") is not None else sys.maxsize,
-        ),
+    top_score = max(row["overall_per_length_score"] for row in scored_rows)
+    candidate_rows = [
+        row
+        for row in scored_rows
+        if (top_score - row["overall_per_length_score"]) <= 0.05
+    ]
+    best = min(
+        candidate_rows,
+        key=lambda row: row["length"] if row.get("length") is not None else sys.maxsize,
     )
-    best = sorted_rows[0]
-
-    if len(sorted_rows) >= 2:
-        runner_up = sorted_rows[1]
-        best_length = best.get("length")
-        runner_length = runner_up.get("length")
-        if (
-            best_length is not None
-            and runner_length is not None
-            and runner_length < best_length
-            and (best["overall_per_length_score"] - runner_up["overall_per_length_score"]) <= 0.05
-        ):
-            best = runner_up
 
     notes = [
         f"Average file Jaccard: {format_float(stability.get('average_file_jaccard'))}.",
@@ -263,8 +253,8 @@ def choose_recommendation(rows: list[dict[str, Any]], stability: dict[str, Any])
     return {
         "best_length_by_score": best.get("length"),
         "best_length_reason": (
-            f"Selected for the highest overall score of {format_float(best.get('overall_per_length_score'))}; "
-            f"tie-breaks within 0.05 prefer the smaller context length."
+            f"Top overall score was {format_float(top_score)}; among all rows within 0.05 of that score, "
+            f"selected the smallest context length with score {format_float(best.get('overall_per_length_score'))}."
         ),
         "notes": notes,
     }
