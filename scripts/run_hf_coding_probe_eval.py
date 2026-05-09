@@ -37,6 +37,13 @@ def parse_lengths(value: str) -> list[int]:
     return lengths
 
 
+def parse_probe_names(value: str) -> list[str]:
+    probe_names = [item.strip() for item in value.split(",") if item.strip()]
+    if not probe_names:
+        raise ValueError("at least one probe_name is required")
+    return probe_names
+
+
 def ensure_parent_dir(path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -49,12 +56,14 @@ def read_json_if_present(path: Path) -> dict[str, Any] | None:
 
 def make_failure_row(
     *,
+    probe_name: str,
     length: int,
     output_path: Path,
     error_type: str,
     subprocess_returncode: int | None,
 ) -> dict[str, Any]:
     return {
+        "probe_name": probe_name,
         "length": length,
         "output_path": str(output_path),
         "ok": False,
@@ -74,9 +83,15 @@ def make_failure_row(
     }
 
 
-def summarize_probe_result(length: int, output_path: Path, payload: dict[str, Any] | None) -> dict[str, Any]:
+def summarize_probe_result(
+    probe_name: str,
+    length: int,
+    output_path: Path,
+    payload: dict[str, Any] | None,
+) -> dict[str, Any]:
     if payload is None:
         return make_failure_row(
+            probe_name=probe_name,
             length=length,
             output_path=output_path,
             error_type="MissingOutput",
@@ -95,6 +110,7 @@ def summarize_probe_result(length: int, output_path: Path, payload: dict[str, An
         smoke_commands = parsed.get("smoke_commands") or []
 
     return {
+        "probe_name": payload.get("probe_name") or probe_name,
         "length": length,
         "output_path": str(output_path),
         "ok": bool(payload.get("ok", False)),
@@ -128,11 +144,12 @@ def format_number(value: Any, digits: int = 3) -> str:
 
 def make_markdown_summary(rows: list[dict[str, Any]]) -> str:
     lines = [
-        "| length | ok | parse_ok | validation_ok | warnings | input_tokens | new_tokens | elapsed_sec | new_tok_s | error_type | output_path |",
-        "|---:|---|---|---|---:|---:|---:|---:|---:|---|---|",
+        "| probe_name | length | ok | parse_ok | validation_ok | warnings | input_tokens | new_tokens | elapsed_sec | new_tok_s | error_type | output_path |",
+        "|---|---:|---|---|---|---:|---:|---:|---:|---:|---|---|",
     ]
     for row in rows:
         lines.append(
+            f"| {row['probe_name']} "
             f"| {row['length']} "
             f"| {format_number(row['ok'])} "
             f"| {format_number(row['parse_ok'])} "
@@ -148,17 +165,17 @@ def make_markdown_summary(rows: list[dict[str, Any]]) -> str:
     return "\n".join(lines)
 
 
-def build_output_path(out_dir: Path, length: int) -> Path:
-    return out_dir / f"qwen25_coder_7b_awq_probe_eval_{length}.json"
+def build_output_path(out_dir: Path, probe_name: str, length: int) -> Path:
+    return out_dir / f"qwen25_coder_7b_awq_probe_eval_{probe_name}_{length}.json"
 
 
-def run_one_length(
+def run_one_eval(
     *,
     python_bin: str,
     model: str,
+    probe_name: str,
     length: int,
     max_new_tokens: int,
-    probe_name: str,
     output_path: Path,
 ) -> tuple[dict[str, Any], int]:
     ensure_parent_dir(output_path)
@@ -180,7 +197,7 @@ def run_one_length(
         probe_name,
     ]
 
-    print(f"[run] length={length} command={shlex.join(command)}", flush=True)
+    print(f"[run] probe_name={probe_name} length={length} command={shlex.join(command)}", flush=True)
     completed = subprocess.run(
         command,
         capture_output=True,
@@ -189,13 +206,25 @@ def run_one_length(
     )
 
     if completed.stdout:
-        print(f"[stdout] length={length}\n{completed.stdout}", end="" if completed.stdout.endswith("\n") else "\n", flush=True)
+        print(
+            f"[stdout] probe_name={probe_name} length={length}\n{completed.stdout}",
+            end="" if completed.stdout.endswith("\n") else "\n",
+            flush=True,
+        )
     if completed.stderr:
-        print(f"[stderr] length={length}\n{completed.stderr}", end="" if completed.stderr.endswith("\n") else "\n", flush=True)
-    print(f"[done] length={length} returncode={completed.returncode} output={output_path}", flush=True)
+        print(
+            f"[stderr] probe_name={probe_name} length={length}\n{completed.stderr}",
+            end="" if completed.stderr.endswith("\n") else "\n",
+            flush=True,
+        )
+    print(
+        f"[done] probe_name={probe_name} length={length} returncode={completed.returncode} output={output_path}",
+        flush=True,
+    )
 
     if not output_path.exists():
         row = make_failure_row(
+            probe_name=probe_name,
             length=length,
             output_path=output_path,
             error_type="MissingOutputAfterSubprocess",
@@ -207,6 +236,7 @@ def run_one_length(
         payload = read_json_if_present(output_path)
     except json.JSONDecodeError:
         row = make_failure_row(
+            probe_name=probe_name,
             length=length,
             output_path=output_path,
             error_type="OutputJsonDecodeError",
@@ -215,6 +245,7 @@ def run_one_length(
         return row, completed.returncode
     except OSError:
         row = make_failure_row(
+            probe_name=probe_name,
             length=length,
             output_path=output_path,
             error_type="OutputJsonReadError",
@@ -223,6 +254,7 @@ def run_one_length(
         return row, completed.returncode
     except Exception:
         row = make_failure_row(
+            probe_name=probe_name,
             length=length,
             output_path=output_path,
             error_type="OutputJsonReadError",
@@ -231,9 +263,10 @@ def run_one_length(
         return row, completed.returncode
 
     try:
-        row = summarize_probe_result(length, output_path, payload)
+        row = summarize_probe_result(probe_name, length, output_path, payload)
     except Exception:
         row = make_failure_row(
+            probe_name=probe_name,
             length=length,
             output_path=output_path,
             error_type="OutputJsonReadError",
@@ -253,6 +286,7 @@ def main() -> int:
     parser.add_argument("--lengths", default=DEFAULT_LENGTHS)
     parser.add_argument("--max-new-tokens", type=int, default=DEFAULT_MAX_NEW_TOKENS)
     parser.add_argument("--probe-name", default=DEFAULT_PROBE_NAME)
+    parser.add_argument("--probe-names", default=None)
     parser.add_argument("--out-dir", type=Path, default=DEFAULT_OUT_DIR)
     parser.add_argument("--summary-out", type=Path, default=DEFAULT_SUMMARY_OUT)
     parser.add_argument("--summary-md", type=Path, default=DEFAULT_SUMMARY_MD)
@@ -260,33 +294,36 @@ def main() -> int:
     args = parser.parse_args()
 
     lengths = parse_lengths(args.lengths)
+    probe_names = parse_probe_names(args.probe_names) if args.probe_names else [args.probe_name]
     args.out_dir.mkdir(parents=True, exist_ok=True)
     ensure_parent_dir(args.summary_out)
     ensure_parent_dir(args.summary_md)
 
     rows: list[dict[str, Any]] = []
-    return_codes: dict[int, int] = {}
+    return_codes: dict[str, int] = {}
 
-    for length in lengths:
-        output_path = build_output_path(args.out_dir, length)
-        row, return_code = run_one_length(
-            python_bin=args.python,
-            model=args.model,
-            length=length,
-            max_new_tokens=args.max_new_tokens,
-            probe_name=args.probe_name,
-            output_path=output_path,
-        )
-        rows.append(row)
-        return_codes[length] = return_code
+    for probe_name in probe_names:
+        for length in lengths:
+            output_path = build_output_path(args.out_dir, probe_name, length)
+            row, return_code = run_one_eval(
+                python_bin=args.python,
+                model=args.model,
+                probe_name=probe_name,
+                length=length,
+                max_new_tokens=args.max_new_tokens,
+                output_path=output_path,
+            )
+            rows.append(row)
+            return_codes[f"{probe_name}:{length}"] = return_code
 
-    summary = {
+    summary: dict[str, Any] = {
         "script": "run_hf_coding_probe_eval.py",
         "probe_script": str(PROBE_SCRIPT),
         "model": args.model,
         "lengths": lengths,
         "max_new_tokens": args.max_new_tokens,
         "probe_name": args.probe_name,
+        "probe_names": probe_names,
         "out_dir": str(args.out_dir),
         "summary_md": str(args.summary_md),
         "rows": rows,

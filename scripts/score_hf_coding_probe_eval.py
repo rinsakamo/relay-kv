@@ -136,6 +136,9 @@ def jaccard(items_a: list[str], items_b: list[str]) -> float | None:
 
 
 def score_row(row: dict[str, Any]) -> dict[str, Any]:
+    probe_name = row.get("probe_name")
+    if not isinstance(probe_name, str) or not probe_name:
+        probe_name = "default"
     length = as_int(row.get("length"))
     ok = as_bool(row.get("ok"))
     parse_ok = as_bool(row.get("parse_ok"))
@@ -164,6 +167,7 @@ def score_row(row: dict[str, Any]) -> dict[str, Any]:
     )
 
     return {
+        "probe_name": probe_name,
         "length": length,
         "output_path": row.get("output_path"),
         "ok": ok,
@@ -185,6 +189,17 @@ def score_row(row: dict[str, Any]) -> dict[str, Any]:
         "speed_score": speed_score,
         "overall_per_length_score": overall_per_length_score,
     }
+
+
+def group_rows_by_probe_name(rows: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
+    grouped: dict[str, list[dict[str, Any]]] = {}
+    for row in rows:
+        probe_name = row.get("probe_name")
+        if not isinstance(probe_name, str) or not probe_name:
+            probe_name = "default"
+            row["probe_name"] = probe_name
+        grouped.setdefault(probe_name, []).append(row)
+    return grouped
 
 
 def build_stability(rows: list[dict[str, Any]]) -> dict[str, Any]:
@@ -266,15 +281,24 @@ def format_float(value: Any, digits: int = 3) -> str:
     return f"{float(value):.{digits}f}"
 
 
-def make_markdown(scored_rows: list[dict[str, Any]], stability: dict[str, Any], recommendation: dict[str, Any]) -> str:
-    lines = [
-        "# HF Coding Probe Eval Score",
-        "",
-        "## Per-Length Scores",
-        "",
-        "| length | overall | runtime_ok | warnings | files | commands | file_focus | command | vram | speed | error_type |",
-        "|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|",
-    ]
+def make_markdown_section(
+    scored_rows: list[dict[str, Any]],
+    stability: dict[str, Any],
+    recommendation: dict[str, Any],
+    *,
+    heading: str | None,
+) -> list[str]:
+    lines: list[str] = []
+    if heading is not None:
+        lines.extend([heading, ""])
+    lines.extend(
+        [
+            "## Per-Length Scores",
+            "",
+            "| length | overall | runtime_ok | warnings | files | commands | file_focus | command | vram | speed | error_type |",
+            "|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|",
+        ]
+    )
     for row in scored_rows:
         lines.append(
             f"| {row.get('length') if row.get('length') is not None else '-'} "
@@ -325,6 +349,36 @@ def make_markdown(scored_rows: list[dict[str, Any]], stability: dict[str, Any], 
     )
     for note in recommendation.get("notes", []):
         lines.append(f"- {note}")
+    return lines
+
+
+def make_markdown(
+    scored_rows: list[dict[str, Any]],
+    stability: dict[str, Any] | None,
+    recommendation: dict[str, Any] | None,
+    profiles: dict[str, dict[str, Any]] | None,
+) -> str:
+    lines = [
+        "# HF Coding Probe Eval Score",
+        "",
+    ]
+    if profiles is None:
+        lines.extend(make_markdown_section(scored_rows, stability or {}, recommendation or {}, heading=None))
+        return "\n".join(lines)
+
+    first = True
+    for probe_name, payload in profiles.items():
+        if not first:
+            lines.append("")
+        first = False
+        lines.extend(
+            make_markdown_section(
+                payload["rows"],
+                payload["stability"],
+                payload["recommendation"],
+                heading=f"## Profile: {probe_name}",
+            )
+        )
     return "\n".join(lines)
 
 
@@ -346,18 +400,46 @@ def main() -> int:
 
     raw_rows = summary.get("rows", [])
     scored_rows = [score_row(row if isinstance(row, dict) else {}) for row in raw_rows]
-    stability = build_stability(scored_rows)
-    recommendation = choose_recommendation(scored_rows, stability)
+    grouped_rows = group_rows_by_probe_name(scored_rows)
+    multi_profile = len(grouped_rows) > 1
 
-    output = {
+    profiles_output: dict[str, dict[str, Any]] | None = None
+    stability: dict[str, Any] | None = None
+    recommendation: dict[str, Any] | None = None
+
+    if multi_profile:
+        profiles_output = {}
+        for probe_name, profile_rows in grouped_rows.items():
+            profile_stability = build_stability(profile_rows)
+            profile_recommendation = choose_recommendation(profile_rows, profile_stability)
+            profiles_output[probe_name] = {
+                "rows": profile_rows,
+                "stability": profile_stability,
+                "recommendation": profile_recommendation,
+            }
+        stability = {
+            "type": "multi_profile",
+            "message": "Per-profile stability is available under profiles[<probe_name>].stability.",
+        }
+        recommendation = {
+            "type": "multi_profile",
+            "message": "Per-profile recommendations are available under profiles[<probe_name>].recommendation.",
+        }
+    else:
+        stability = build_stability(scored_rows)
+        recommendation = choose_recommendation(scored_rows, stability)
+
+    output: dict[str, Any] = {
         "input_summary": str(args.summary_in),
         "rows": scored_rows,
         "stability": stability,
         "recommendation": recommendation,
     }
+    if profiles_output is not None:
+        output["profiles"] = profiles_output
 
     args.score_out.write_text(json.dumps(output, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    markdown = make_markdown(scored_rows, stability, recommendation)
+    markdown = make_markdown(scored_rows, stability, recommendation, profiles_output)
     args.score_md.write_text(markdown + "\n", encoding="utf-8")
 
     print(markdown)
