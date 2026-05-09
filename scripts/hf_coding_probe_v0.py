@@ -37,9 +37,11 @@ SEVERE_RISK_PHRASES = (
     "production outage",
 )
 KNOWN_SCRIPT_OPTIONS: dict[str, set[str] | None] = {
-    "scripts/hf_model_smoke.py": {"--model", "--out", "--max-new-tokens", "--prompt", "--trust-remote-code"},
-    "scripts/hf_context_length_smoke.py": {"--model", "--lengths", "--max-new-tokens", "--out", "--trust-remote-code"},
+    "scripts/hf_model_smoke.py": {"--help", "-h", "--model", "--out", "--max-new-tokens", "--prompt", "--trust-remote-code"},
+    "scripts/hf_context_length_smoke.py": {"--help", "-h", "--model", "--lengths", "--max-new-tokens", "--out", "--trust-remote-code"},
     "scripts/hf_coding_probe_v0.py": {
+        "--help",
+        "-h",
         "--model",
         "--out",
         "--max-new-tokens",
@@ -51,6 +53,8 @@ KNOWN_SCRIPT_OPTIONS: dict[str, set[str] | None] = {
         "--trust-remote-code",
     },
     "scripts/run_hf_coding_probe_eval.py": {
+        "--help",
+        "-h",
         "--model",
         "--lengths",
         "--max-new-tokens",
@@ -64,7 +68,7 @@ KNOWN_SCRIPT_OPTIONS: dict[str, set[str] | None] = {
         "--summary-md",
         "--python",
     },
-    "scripts/score_hf_coding_probe_eval.py": {"--summary-in", "--score-out", "--score-md"},
+    "scripts/score_hf_coding_probe_eval.py": {"--help", "-h", "--summary-in", "--score-out", "--score-md"},
     "scripts/run_relaykv_pipeline.py": {
         "--help",
         "--model",
@@ -439,8 +443,10 @@ BASE_ALLOWED_COMMAND_PATTERNS: tuple[tuple[str, str], ...] = (
     ("scripts/hf_model_smoke.py", "python scripts/hf_model_smoke.py --model ~/work/hf-models/Qwen2.5-Coder-7B-Instruct-AWQ --max-new-tokens 128"),
     ("scripts/hf_context_length_smoke.py", "python scripts/hf_context_length_smoke.py --model ~/work/hf-models/Qwen2.5-Coder-7B-Instruct-AWQ --lengths 4096,8192,16384 --max-new-tokens 64"),
     ("scripts/hf_coding_probe_v0.py", "python scripts/hf_coding_probe_v0.py --model ~/work/hf-models/Qwen2.5-Coder-7B-Instruct-AWQ --probe-name relaykv_repo_entry --max-new-tokens 512 --context-tokens 4096 --out results/raw/hf_coding_probe/example.json"),
-    ("scripts/run_hf_coding_probe_eval.py", "python scripts/run_hf_coding_probe_eval.py --model ~/work/hf-models/Qwen2.5-Coder-7B-Instruct-AWQ --lengths 4096 --probe-name relaykv_repo_entry --max-new-tokens 512 --summary-out results/processed/example.json --summary-md results/processed/example.md"),
-    ("scripts/score_hf_coding_probe_eval.py", "python scripts/score_hf_coding_probe_eval.py --summary-in results/processed/example.json --score-out results/processed/example_score.json --score-md results/processed/example_score.md"),
+    ("scripts/run_hf_coding_probe_eval.py", "python scripts/run_hf_coding_probe_eval.py --model ~/work/hf-models/Qwen2.5-Coder-7B-Instruct-AWQ --lengths 4096 --probe-name relaykv_repo_entry --max-new-tokens 512 --summary-out results/processed/hf_coding_probe_eval_example_summary.json --summary-md results/processed/hf_coding_probe_eval_example_summary.md"),
+    ("scripts/score_hf_coding_probe_eval.py", "python scripts/score_hf_coding_probe_eval.py --summary-in results/processed/hf_coding_probe_eval_example_summary.json --score-out results/processed/hf_coding_probe_score_example.json --score-md results/processed/hf_coding_probe_score_example.md"),
+    ("scripts/run_hf_coding_probe_eval.py", "python scripts/run_hf_coding_probe_eval.py --help"),
+    ("scripts/score_hf_coding_probe_eval.py", "python scripts/score_hf_coding_probe_eval.py --help"),
     ("scripts/run_relaykv_pipeline.py", "python scripts/run_relaykv_pipeline.py --help"),
 )
 
@@ -464,7 +470,7 @@ def make_allowed_command_patterns(probe_name: str, case_related_files: list[str]
             "Profile-specific command guidance:",
             "- Use commands that reproduce or validate the specific bug class.",
             "- For eval-runner stale-output cases, prefer:",
-            "- python scripts/run_hf_coding_probe_eval.py --model ~/work/hf-models/Qwen2.5-Coder-7B-Instruct-AWQ --lengths 4096 --probe-names relaykv_bug_triage --case-name stale_output_review --case-text '<short case text>' --max-new-tokens 512 --summary-out results/processed/<name>.json --summary-md results/processed/<name>.md",
+            "- python scripts/run_hf_coding_probe_eval.py --model ~/work/hf-models/Qwen2.5-Coder-7B-Instruct-AWQ --lengths 4096 --probe-names relaykv_bug_triage --case-name stale_output_review --case-text 'stale output review: output_path freshness check' --max-new-tokens 512 --summary-out results/processed/hf_coding_probe_eval_stale_output_review.json --summary-md results/processed/hf_coding_probe_eval_stale_output_review.md",
             "- If exact reproduction is not possible, use: python scripts/run_hf_coding_probe_eval.py --help",
         ])
     elif probe_name == "relaykv_result_interpretation":
@@ -527,6 +533,15 @@ def validate_smoke_command(command: object, repo_context: dict[str, Any]) -> lis
             )
         )
         return warnings
+
+    if "<" in command or ">" in command:
+        warnings.append(
+            make_warning(
+                "ShellPlaceholderInCommand",
+                "smoke_commands contains shell placeholder or redirection characters; use concrete filenames and arguments instead.",
+                command=command,
+            )
+        )
 
     try:
         parts = shlex.split(command)
