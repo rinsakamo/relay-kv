@@ -15,10 +15,13 @@ from relaykv import (
     score_blocks_with_query,
     top_k_blocks,
     retrieve_blocks,
+    retrieve_blocks_by_ids,
     build_candidate_kv,
+    build_empty_candidate_kv,
     build_working_kv,
     compare_attention_outputs,
     build_three_tier_selection,
+    build_working_block_budget_decision,
 )
 
 
@@ -95,6 +98,10 @@ def run_pipeline(
     scoring_variant: str,
     prompt_type: str,
     anchor_blocks: int,
+    working_budget_blocks: int | None = None,
+    recent_budget_blocks: int | None = None,
+    anchor_budget_blocks: int | None = None,
+    retrieval_budget_blocks: int | None = None,
 ) -> dict:
     tokenizer, model, device = load_model(model_name)
 
@@ -115,7 +122,17 @@ def run_pipeline(
     layers = outputs.past_key_values.layers
     seq_len_actual = layers[0].keys.shape[2]
 
-    tier_manager = TierManager(hot_window=hot_window)
+    budget_policy_enabled = working_budget_blocks is not None
+    effective_recent_budget_blocks = recent_budget_blocks or 0
+    effective_anchor_budget_blocks = anchor_budget_blocks or 0
+    effective_retrieval_budget_blocks = retrieval_budget_blocks or 0
+    effective_hot_window = (
+        effective_recent_budget_blocks * block_size
+        if budget_policy_enabled
+        else hot_window
+    )
+
+    tier_manager = TierManager(hot_window=effective_hot_window)
     split = tier_manager.split_range(seq_len_actual)
 
     hot_kv, cold_cache = split_dynamic_cache_layers(layers, split)
@@ -133,18 +150,53 @@ def run_pipeline(
         all_blocks=all_blocks,
     )
 
-    top_scores = top_k_blocks(scores, k=min(top_k, len(scores)))
+    budget_policy_decision = None
+    if budget_policy_enabled:
+        budget_policy_decision = build_working_block_budget_decision(
+            seq_len=seq_len_actual,
+            block_size=block_size,
+            total_working_blocks=working_budget_blocks,
+            recent_blocks=effective_recent_budget_blocks,
+            anchor_blocks=effective_anchor_budget_blocks,
+            retrieval_blocks=effective_retrieval_budget_blocks,
+            scored_blocks=scores,
+        )
+        selected_retrieval_ids = set(
+            budget_policy_decision.selected.retrieved_block_ids
+        )
+        top_scores = [
+            score
+            for score in scores
+            if score.block_id in selected_retrieval_ids
+        ]
+    else:
+        top_scores = top_k_blocks(scores, k=min(top_k, len(scores)))
 
     selection = build_three_tier_selection(
         seq_len=seq_len_actual,
-        hot_window=hot_window,
-        anchor_blocks=anchor_blocks,
+        hot_window=effective_hot_window,
+        anchor_blocks=(
+            effective_anchor_budget_blocks
+            if budget_policy_enabled
+            else anchor_blocks
+        ),
         block_size=block_size,
         selected_scores=top_scores,
         layer_idx=layer_idx,
     )
 
-    retrieved = retrieve_blocks(all_blocks, top_scores)
+    if budget_policy_enabled:
+        selected_cold_block_ids = (
+            budget_policy_decision.selected.anchor_block_ids
+            + budget_policy_decision.selected.retrieved_block_ids
+        )
+        retrieved = retrieve_blocks_by_ids(
+            all_blocks,
+            layer_idx=layer_idx,
+            block_ids=selected_cold_block_ids,
+        )
+    else:
+        retrieved = retrieve_blocks(all_blocks, top_scores)
 
     selected_summaries = [s.summary() for s in top_scores]
     selected_block_ranks = list(range(len(selected_summaries)))
@@ -152,10 +204,17 @@ def run_pipeline(
     selected_block_scores = [s["score"] for s in selected_summaries]
     selected_block_spans = [[s["start"], s["end"]] for s in selected_summaries]
 
-    candidate_kv = build_candidate_kv(retrieved)
-
     hot_k = hot_kv.keys[layer_idx]
     hot_v = hot_kv.values[layer_idx]
+
+    if retrieved:
+        candidate_kv = build_candidate_kv(retrieved)
+    else:
+        candidate_kv = build_empty_candidate_kv(
+            layer_idx=layer_idx,
+            like_k=hot_k,
+            like_v=hot_v,
+        )
 
     working_kv = build_working_kv(
         candidate_kv=candidate_kv,
@@ -188,10 +247,9 @@ def run_pipeline(
     retrieved_tokens = sum(s.length for s in selection.retrieval_spans)
     live_tokens = recent_tokens + anchor_tokens + retrieved_tokens
 
-    # PyTorch prototype path currently materializes retrieval + recent only.
-    # Anchor spans are tracked for the SGLang migration boundary, but not yet
-    # concatenated into working_kv.
-    prototype_materialized_tokens = retrieved_tokens + recent_tokens
+    # PyTorch prototype path materializes selected cold blocks via candidate_kv
+    # plus recent hot tokens in working_kv.
+    prototype_materialized_tokens = candidate_k_len + recent_tokens
 
     coverage_ratio = candidate_k_len / cold_k_len if cold_k_len > 0 else 0.0
     working_ratio = working_k_len / full_k_len if full_k_len > 0 else 0.0
@@ -253,6 +311,7 @@ def run_pipeline(
         "seq_len_actual": seq_len_actual,
         "layer_idx": layer_idx,
         "hot_window": hot_window,
+        "effective_hot_window": effective_hot_window,
         "anchor_blocks": anchor_blocks,
         "block_size": block_size,
         "top_k": top_k,
@@ -273,6 +332,11 @@ def run_pipeline(
         "budget": budget,
         "selection_breakdown": selection_breakdown,
         "three_tier_selection": selection.summary(),
+        "budget_policy_decision": (
+            budget_policy_decision.summary()
+            if budget_policy_decision is not None
+            else None
+        ),
         "candidate_kv": candidate_kv.summary(),
         "working_kv": working_kv.summary(),
         "attention_compare": attention_result.summary(),
@@ -350,7 +414,43 @@ def main() -> None:
         default=0,
         help="Number of initial cold blocks to keep as anchor/sink spans",
     )
+    parser.add_argument(
+        "--working-budget-blocks",
+        type=int,
+        default=None,
+        help="Total working-set budget in blocks for budget policy mode",
+    )
+    parser.add_argument(
+        "--recent-budget-blocks",
+        type=int,
+        default=None,
+        help="Recent working-set budget in blocks for budget policy mode",
+    )
+    parser.add_argument(
+        "--anchor-budget-blocks",
+        type=int,
+        default=None,
+        help="Anchor working-set budget in blocks for budget policy mode",
+    )
+    parser.add_argument(
+        "--retrieval-budget-blocks",
+        type=int,
+        default=None,
+        help="Retrieved working-set budget in blocks for budget policy mode",
+    )
     args = parser.parse_args()
+
+    if args.working_budget_blocks is None:
+        budget_args_present = any(
+            value is not None
+            for value in (
+                args.recent_budget_blocks,
+                args.anchor_budget_blocks,
+                args.retrieval_budget_blocks,
+            )
+        )
+        if budget_args_present:
+            parser.error("--working-budget-blocks is required when budget sub-flags are provided")
 
     ensure_results_dir()
 
@@ -364,6 +464,10 @@ def main() -> None:
         scoring_variant=args.scoring_variant,
         prompt_type=args.prompt_type,
         anchor_blocks=args.anchor_blocks,
+        working_budget_blocks=args.working_budget_blocks,
+        recent_budget_blocks=args.recent_budget_blocks,
+        anchor_budget_blocks=args.anchor_budget_blocks,
+        retrieval_budget_blocks=args.retrieval_budget_blocks,
     )
 
     output_path = RESULTS_DIR / args.output

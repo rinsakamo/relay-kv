@@ -4,9 +4,15 @@ from .cold_cache import ColdCache, ColdSegment, ColdBlock
 from .kv_extract import HotKV, split_dynamic_cache_layers
 from .block_metadata import BlockMetadata, build_block_metadata, build_metadata_for_blocks
 from .block_scoring import BlockScore, score_blocks_with_query, top_k_blocks
-from .block_retrieval import RetrievedBlock, retrieve_blocks
-from .candidate_kv import CandidateKV, build_candidate_kv
+from .block_retrieval import RetrievedBlock, retrieve_blocks, retrieve_blocks_by_ids
+from .candidate_kv import CandidateKV, build_candidate_kv, build_empty_candidate_kv
 from .working_kv import WorkingKV, build_working_kv
+from .budget_policy import (
+    WorkingBlockBudgets,
+    WorkingBlockSelection,
+    WorkingBlockBudgetDecision,
+    build_working_block_budget_decision,
+)
 from .attention_compare import (
     AttentionCompareResult,
     scaled_dot_product_attention,
@@ -34,10 +40,16 @@ __all__ = [
     "top_k_blocks",
     "RetrievedBlock",
     "retrieve_blocks",
+    "retrieve_blocks_by_ids",
     "CandidateKV", 
     "build_candidate_kv",
+    "build_empty_candidate_kv",
     "WorkingKV",
     "build_working_kv",
+    "WorkingBlockBudgets",
+    "WorkingBlockSelection",
+    "WorkingBlockBudgetDecision",
+    "build_working_block_budget_decision",
     "AttentionCompareResult",
     "scaled_dot_product_attention",
     "compare_attention_outputs",
