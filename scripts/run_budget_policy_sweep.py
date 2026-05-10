@@ -134,13 +134,25 @@ def validate_case_budgets(case_name: str, case_budgets: dict[str, int]) -> None:
         )
 
 
-def make_case_summary(case_name: str, case_budgets: dict[str, int], payload: dict[str, Any]) -> dict[str, Any]:
+def make_case_summary(
+    case_name: str,
+    case_budgets: dict[str, int],
+    payload: dict[str, Any],
+    retrieval_exclude_tail_blocks: int,
+) -> dict[str, Any]:
     budget_policy_decision = payload.get("budget_policy_decision")
     if budget_policy_decision is None:
         raise ValueError(f"Budget policy decision missing for case '{case_name}'")
 
     selected = budget_policy_decision["selected"]
     working_block_ids = list(selected["working_block_ids"])
+    recent_block_ids = list(selected["recent_block_ids"])
+    anchor_block_ids = list(selected["anchor_block_ids"])
+    retrieved_block_ids = list(selected["retrieved_block_ids"])
+    retrieval_excluded_block_ids = list(payload.get("retrieval_excluded_block_ids", []))
+    excluded_tail_set = set(retrieval_excluded_block_ids)
+    recent_set = set(recent_block_ids)
+
     if len(working_block_ids) > int(case_budgets["working"]):
         raise ValueError(
             f"Case '{case_name}' exceeded working budget: "
@@ -156,10 +168,19 @@ def make_case_summary(case_name: str, case_budgets: dict[str, int], payload: dic
         "budget_ok": bool(budget_policy_decision["budget_ok"]),
         "selected": {
             "working_block_ids": working_block_ids,
-            "recent_block_ids": list(selected["recent_block_ids"]),
-            "anchor_block_ids": list(selected["anchor_block_ids"]),
-            "retrieved_block_ids": list(selected["retrieved_block_ids"]),
+            "recent_block_ids": recent_block_ids,
+            "anchor_block_ids": anchor_block_ids,
+            "retrieved_block_ids": retrieved_block_ids,
         },
+        "retrieval_exclude_tail_blocks": retrieval_exclude_tail_blocks,
+        "retrieval_excluded_block_ids": retrieval_excluded_block_ids,
+        "retrieved_overlap_with_excluded_tail": sum(
+            1 for block_id in retrieved_block_ids if block_id in excluded_tail_set
+        ),
+        "retrieved_overlap_with_recent_blocks": sum(
+            1 for block_id in retrieved_block_ids if block_id in recent_set
+        ),
+        "effective_retrieved_block_count": len(retrieved_block_ids),
         "working_k_len": payload.get("working_k_len"),
         "working_ratio": payload.get("working_ratio"),
         "coverage_ratio": payload.get("coverage_ratio"),
@@ -196,6 +217,20 @@ def make_markdown_table(case_summaries: list[dict[str, Any]]) -> str:
             f"| {case['fallback_reason'] or ''} |"
         )
 
+    return "\n".join(lines)
+
+
+def make_markdown_diagnostics(case_summaries: list[dict[str, Any]]) -> str:
+    lines = ["", "Diagnostics:"]
+    for case in case_summaries:
+        lines.append(
+            f"- {case['case_name']}: "
+            f"retrieval_exclude_tail_blocks={case['retrieval_exclude_tail_blocks']}, "
+            f"retrieval_excluded_block_ids={case['retrieval_excluded_block_ids']}, "
+            f"retrieved_overlap_with_excluded_tail={case['retrieved_overlap_with_excluded_tail']}, "
+            f"retrieved_overlap_with_recent_blocks={case['retrieved_overlap_with_recent_blocks']}, "
+            f"effective_retrieved_block_count={case['effective_retrieved_block_count']}"
+        )
     return "\n".join(lines)
 
 
@@ -263,6 +298,12 @@ def main() -> None:
         default=None,
         help="Comma-separated subset of cases to run",
     )
+    parser.add_argument(
+        "--retrieval-exclude-tail-blocks",
+        type=int,
+        default=0,
+        help="Exclude the last N full-sequence block ids from retrieval candidates",
+    )
     args = parser.parse_args()
 
     ensure_results_dir()
@@ -293,6 +334,7 @@ def main() -> None:
             recent_budget_blocks=case_budgets["recent"],
             anchor_budget_blocks=case_budgets["anchor"],
             retrieval_budget_blocks=case_budgets["retrieval"],
+            retrieval_exclude_tail_blocks=args.retrieval_exclude_tail_blocks,
         )
 
         case_summaries.append(
@@ -300,6 +342,7 @@ def main() -> None:
                 case_name=case_name,
                 case_budgets=case_budgets,
                 payload=payload,
+                retrieval_exclude_tail_blocks=args.retrieval_exclude_tail_blocks,
             )
         )
 
@@ -310,10 +353,12 @@ def main() -> None:
         "layer_idx": args.layer_idx,
         "prompt_type": args.prompt_type,
         "scoring_variant": args.scoring_variant,
+        "retrieval_exclude_tail_blocks": args.retrieval_exclude_tail_blocks,
         "cases": case_summaries,
     }
 
     markdown = make_markdown_table(case_summaries)
+    markdown += make_markdown_diagnostics(case_summaries)
 
     with args.output_json.open("w", encoding="utf-8") as f:
         json.dump(summary, f, indent=2, ensure_ascii=False)
