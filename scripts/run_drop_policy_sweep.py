@@ -127,15 +127,27 @@ def build_case_decision(
         keep_block_ids = list(all_block_ids)
         drop_block_ids: list[int] = []
     elif case_name == "drop_oldest_1":
-        drop_block_ids = [0] if total_blocks >= 1 else []
-        if total_blocks < 1:
-            fallback_reasons.append("no_blocks_available")
-        keep_block_ids = [block_id for block_id in all_block_ids if block_id not in set(drop_block_ids)]
+        if len(eviction_candidate_block_ids) < 1:
+            drop_block_ids = []
+            keep_block_ids = list(all_block_ids)
+            fallback_reasons.append("insufficient_eviction_candidates")
+        else:
+            drop_block_ids = eviction_candidate_block_ids[:1]
+            keep_block_ids = [
+                block_id for block_id in all_block_ids
+                if block_id not in set(drop_block_ids)
+            ]
     elif case_name == "drop_oldest_2":
-        drop_block_ids = [block_id for block_id in [0, 1] if block_id < total_blocks]
-        if total_blocks < 2:
-            fallback_reasons.append("insufficient_blocks_for_drop_oldest_2")
-        keep_block_ids = [block_id for block_id in all_block_ids if block_id not in set(drop_block_ids)]
+        if len(eviction_candidate_block_ids) < 2:
+            drop_block_ids = []
+            keep_block_ids = list(all_block_ids)
+            fallback_reasons.append("insufficient_eviction_candidates")
+        else:
+            drop_block_ids = eviction_candidate_block_ids[:2]
+            keep_block_ids = [
+                block_id for block_id in all_block_ids
+                if block_id not in set(drop_block_ids)
+            ]
     elif case_name == "drop_middle_2":
         drop_block_ids = get_middle_drop_block_ids(eviction_candidate_block_ids)
         if len(drop_block_ids) < 2:
