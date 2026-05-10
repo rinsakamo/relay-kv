@@ -1,0 +1,269 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import sys
+import json
+import argparse
+from pathlib import Path
+from typing import Any
+
+sys.path.append(str(Path(__file__).resolve().parents[1]))
+
+from scripts.run_relaykv_pipeline import run_pipeline
+
+
+PROCESSED_RESULTS_DIR = Path("results/processed")
+DEFAULT_OUTPUT_JSON = PROCESSED_RESULTS_DIR / "budget_policy_sweep.json"
+DEFAULT_OUTPUT_MD = PROCESSED_RESULTS_DIR / "budget_policy_sweep.md"
+DEFAULT_MODEL = "Qwen/Qwen2.5-1.5B-Instruct"
+DEFAULT_SCORING_VARIANT = "mean_only"
+DEFAULT_CASE_ORDER = [
+    "recent_only",
+    "anchor_recent",
+    "anchor_retrieval_recent",
+    "retrieval_recent",
+]
+DEFAULT_CASE_SPECS = {
+    "recent_only": {
+        "working": 3,
+        "recent": 3,
+        "anchor": 0,
+        "retrieval": 0,
+    },
+    "anchor_recent": {
+        "working": 3,
+        "recent": 2,
+        "anchor": 1,
+        "retrieval": 0,
+    },
+    "anchor_retrieval_recent": {
+        "working": 3,
+        "recent": 1,
+        "anchor": 1,
+        "retrieval": 1,
+    },
+    "retrieval_recent": {
+        "working": 3,
+        "recent": 1,
+        "anchor": 0,
+        "retrieval": 2,
+    },
+}
+
+
+def ensure_results_dir() -> None:
+    PROCESSED_RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def parse_cases(cases_arg: str | None) -> list[str]:
+    if cases_arg is None:
+        return list(DEFAULT_CASE_ORDER)
+
+    case_names = [part.strip() for part in cases_arg.split(",") if part.strip()]
+    if not case_names:
+        raise ValueError("No case names were provided to --cases")
+
+    unknown = [name for name in case_names if name not in DEFAULT_CASE_SPECS]
+    if unknown:
+        raise ValueError(f"Unsupported case names: {unknown}")
+
+    return case_names
+
+
+def format_float(value: float | None) -> str:
+    if value is None:
+        return "n/a"
+    return f"{value:.9f}"
+
+
+def make_case_summary(case_name: str, case_budgets: dict[str, int], payload: dict[str, Any]) -> dict[str, Any]:
+    budget_policy_decision = payload.get("budget_policy_decision")
+    if budget_policy_decision is None:
+        raise ValueError(f"Budget policy decision missing for case '{case_name}'")
+
+    selected = budget_policy_decision["selected"]
+    working_block_ids = list(selected["working_block_ids"])
+    if len(working_block_ids) > int(case_budgets["working"]):
+        raise ValueError(
+            f"Case '{case_name}' exceeded working budget: "
+            f"{len(working_block_ids)} > {case_budgets['working']}"
+        )
+
+    attention_compare = payload.get("attention_compare", {})
+
+    return {
+        "case_name": case_name,
+        "budgets": dict(case_budgets),
+        "budget_policy_decision": budget_policy_decision,
+        "budget_ok": bool(budget_policy_decision["budget_ok"]),
+        "selected": {
+            "working_block_ids": working_block_ids,
+            "recent_block_ids": list(selected["recent_block_ids"]),
+            "anchor_block_ids": list(selected["anchor_block_ids"]),
+            "retrieved_block_ids": list(selected["retrieved_block_ids"]),
+        },
+        "working_k_len": payload.get("working_k_len"),
+        "working_ratio": payload.get("working_ratio"),
+        "coverage_ratio": payload.get("coverage_ratio"),
+        "mean_abs_diff": attention_compare.get("mean_abs_diff"),
+        "max_abs_diff": attention_compare.get("max_abs_diff"),
+        "cosine_similarity": attention_compare.get("cosine_similarity"),
+        "fallback_reason": budget_policy_decision.get("fallback_reason"),
+        "run_identifier": (
+            f"{case_name}_seq{payload.get('seq_len_actual')}_"
+            f"layer{payload.get('layer_idx')}_block{payload.get('block_size')}"
+        ),
+    }
+
+
+def make_markdown_table(case_summaries: list[dict[str, Any]]) -> str:
+    lines = [
+        "| case | working | recent | anchor | retrieval | budget_ok | working_blocks | mean_abs_diff | max_abs_diff | working_ratio | fallback_reason |",
+        "|---|---:|---:|---:|---:|---|---|---:|---:|---:|---|",
+    ]
+
+    for case in case_summaries:
+        budgets = case["budgets"]
+        lines.append(
+            f"| {case['case_name']} "
+            f"| {budgets['working']} "
+            f"| {budgets['recent']} "
+            f"| {budgets['anchor']} "
+            f"| {budgets['retrieval']} "
+            f"| {str(case['budget_ok']).lower()} "
+            f"| {case['selected']['working_block_ids']} "
+            f"| {format_float(case['mean_abs_diff'])} "
+            f"| {format_float(case['max_abs_diff'])} "
+            f"| {format_float(case['working_ratio'])} "
+            f"| {case['fallback_reason'] or ''} |"
+        )
+
+    return "\n".join(lines)
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(
+        description="Run a lightweight RelayKV budget policy comparison sweep."
+    )
+    parser.add_argument(
+        "--model",
+        type=str,
+        default=DEFAULT_MODEL,
+        help="Model name",
+    )
+    parser.add_argument(
+        "--seq-len",
+        type=int,
+        default=128,
+        help="Target input sequence length",
+    )
+    parser.add_argument(
+        "--block-size",
+        type=int,
+        default=32,
+        help="Cold block size",
+    )
+    parser.add_argument(
+        "--layer-idx",
+        type=int,
+        default=0,
+        help="Layer index for scoring and attention comparison",
+    )
+    parser.add_argument(
+        "--prompt-type",
+        type=str,
+        default="repetitive",
+        help="Prompt type: repetitive, prose, structured",
+    )
+    parser.add_argument(
+        "--scoring-variant",
+        type=str,
+        default=DEFAULT_SCORING_VARIANT,
+        help="Scoring variant",
+    )
+    parser.add_argument(
+        "--output-json",
+        type=Path,
+        default=DEFAULT_OUTPUT_JSON,
+        help="Output JSON path under results/processed/",
+    )
+    parser.add_argument(
+        "--output-md",
+        type=Path,
+        default=DEFAULT_OUTPUT_MD,
+        help="Output Markdown path under results/processed/",
+    )
+    parser.add_argument(
+        "--working-budget-blocks",
+        type=int,
+        default=None,
+        help="Override the shared working budget for all built-in cases",
+    )
+    parser.add_argument(
+        "--cases",
+        type=str,
+        default=None,
+        help="Comma-separated subset of cases to run",
+    )
+    args = parser.parse_args()
+
+    ensure_results_dir()
+    args.output_json.parent.mkdir(parents=True, exist_ok=True)
+    args.output_md.parent.mkdir(parents=True, exist_ok=True)
+
+    case_names = parse_cases(args.cases)
+    case_summaries: list[dict[str, Any]] = []
+
+    for case_name in case_names:
+        case_budgets = dict(DEFAULT_CASE_SPECS[case_name])
+        if args.working_budget_blocks is not None:
+            case_budgets["working"] = args.working_budget_blocks
+
+        payload = run_pipeline(
+            model_name=args.model,
+            seq_len_target=args.seq_len,
+            hot_window=case_budgets["recent"] * args.block_size,
+            block_size=args.block_size,
+            top_k=max(1, case_budgets["retrieval"]),
+            layer_idx=args.layer_idx,
+            scoring_variant=args.scoring_variant,
+            prompt_type=args.prompt_type,
+            anchor_blocks=case_budgets["anchor"],
+            working_budget_blocks=case_budgets["working"],
+            recent_budget_blocks=case_budgets["recent"],
+            anchor_budget_blocks=case_budgets["anchor"],
+            retrieval_budget_blocks=case_budgets["retrieval"],
+        )
+
+        case_summaries.append(
+            make_case_summary(
+                case_name=case_name,
+                case_budgets=case_budgets,
+                payload=payload,
+            )
+        )
+
+    summary = {
+        "model": args.model,
+        "seq_len": args.seq_len,
+        "block_size": args.block_size,
+        "layer_idx": args.layer_idx,
+        "prompt_type": args.prompt_type,
+        "scoring_variant": args.scoring_variant,
+        "cases": case_summaries,
+    }
+
+    markdown = make_markdown_table(case_summaries)
+
+    with args.output_json.open("w", encoding="utf-8") as f:
+        json.dump(summary, f, indent=2, ensure_ascii=False)
+
+    args.output_md.write_text(markdown + "\n", encoding="utf-8")
+
+    print(markdown)
+    print(f"\nsaved json: {args.output_json}")
+    print(f"saved markdown: {args.output_md}")
+
+
+if __name__ == "__main__":
+    main()
