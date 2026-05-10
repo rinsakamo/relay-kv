@@ -76,6 +76,25 @@ def format_float(value: float | None) -> str:
     return f"{value:.9f}"
 
 
+def validate_case_budgets(case_name: str, case_budgets: dict[str, int]) -> None:
+    sub_budget_total = (
+        int(case_budgets["recent"])
+        + int(case_budgets["anchor"])
+        + int(case_budgets["retrieval"])
+    )
+    working_budget = int(case_budgets["working"])
+
+    if working_budget < sub_budget_total:
+        raise ValueError(
+            f"Invalid budget override for case '{case_name}': "
+            f"working={working_budget}, "
+            f"recent={case_budgets['recent']}, "
+            f"anchor={case_budgets['anchor']}, "
+            f"retrieval={case_budgets['retrieval']}, "
+            f"sub_budget_total={sub_budget_total}"
+        )
+
+
 def make_case_summary(case_name: str, case_budgets: dict[str, int], payload: dict[str, Any]) -> dict[str, Any]:
     budget_policy_decision = payload.get("budget_policy_decision")
     if budget_policy_decision is None:
@@ -218,6 +237,7 @@ def main() -> None:
         case_budgets = dict(DEFAULT_CASE_SPECS[case_name])
         if args.working_budget_blocks is not None:
             case_budgets["working"] = args.working_budget_blocks
+        validate_case_budgets(case_name, case_budgets)
 
         payload = run_pipeline(
             model_name=args.model,
