@@ -35,6 +35,26 @@ class CandidateKV:
         }
 
 
+def build_empty_candidate_kv(
+    *,
+    layer_idx: int,
+    like_k: torch.Tensor,
+    like_v: torch.Tensor,
+) -> CandidateKV:
+    empty_k = like_k[:, :, :0, :].detach().cpu()
+    empty_v = like_v[:, :, :0, :].detach().cpu()
+
+    return CandidateKV(
+        layer_idx=layer_idx,
+        start=0,
+        end=0,
+        k=empty_k,
+        v=empty_v,
+        selected_spans=[],
+        is_contiguous=True,
+    )
+
+
 def build_candidate_kv(retrieved_blocks: list[RetrievedBlock]) -> CandidateKV:
     """
     Materialize retrieved KV blocks into a contiguous tensor.

@@ -60,3 +60,35 @@ def retrieve_blocks(
         )
 
     return retrieved
+
+
+def retrieve_blocks_by_ids(
+    all_blocks: list[ColdBlock],
+    *,
+    layer_idx: int,
+    block_ids: list[int],
+) -> list[RetrievedBlock]:
+    block_map = {
+        (block.layer_idx, block.block_id): block
+        for block in all_blocks
+    }
+
+    retrieved: list[RetrievedBlock] = []
+    for block_id in block_ids:
+        key = (layer_idx, block_id)
+        if key not in block_map:
+            raise KeyError(f"Block not found for key={key}")
+
+        block = block_map[key]
+        retrieved.append(
+            RetrievedBlock(
+                layer_idx=block.layer_idx,
+                block_id=block.block_id,
+                start=block.start,
+                end=block.end,
+                k=block.k,
+                v=block.v,
+            )
+        )
+
+    return retrieved
