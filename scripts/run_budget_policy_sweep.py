@@ -140,15 +140,19 @@ def make_case_summary(
     payload: dict[str, Any],
     retrieval_exclude_tail_blocks: int,
 ) -> dict[str, Any]:
+    activation_policy_decision = payload.get("activation_policy_decision")
     budget_policy_decision = payload.get("budget_policy_decision")
     if budget_policy_decision is None:
-        raise ValueError(f"Budget policy decision missing for case '{case_name}'")
-
-    selected = budget_policy_decision["selected"]
-    working_block_ids = list(selected["working_block_ids"])
-    recent_block_ids = list(selected["recent_block_ids"])
-    anchor_block_ids = list(selected["anchor_block_ids"])
-    retrieved_block_ids = list(selected["retrieved_block_ids"])
+        working_block_ids = []
+        recent_block_ids = []
+        anchor_block_ids = []
+        retrieved_block_ids = []
+    else:
+        selected = budget_policy_decision["selected"]
+        working_block_ids = list(selected["working_block_ids"])
+        recent_block_ids = list(selected["recent_block_ids"])
+        anchor_block_ids = list(selected["anchor_block_ids"])
+        retrieved_block_ids = list(selected["retrieved_block_ids"])
     retrieval_excluded_block_ids = list(payload.get("retrieval_excluded_block_ids", []))
     excluded_tail_set = set(retrieval_excluded_block_ids)
     recent_set = set(recent_block_ids)
@@ -164,8 +168,13 @@ def make_case_summary(
     return {
         "case_name": case_name,
         "budgets": dict(case_budgets),
+        "activation_policy_decision": activation_policy_decision,
         "budget_policy_decision": budget_policy_decision,
-        "budget_ok": bool(budget_policy_decision["budget_ok"]),
+        "budget_ok": (
+            bool(budget_policy_decision["budget_ok"])
+            if budget_policy_decision is not None
+            else None
+        ),
         "selected": {
             "working_block_ids": working_block_ids,
             "recent_block_ids": recent_block_ids,
@@ -187,7 +196,11 @@ def make_case_summary(
         "mean_abs_diff": attention_compare.get("mean_abs_diff"),
         "max_abs_diff": attention_compare.get("max_abs_diff"),
         "cosine_similarity": attention_compare.get("cosine_similarity"),
-        "fallback_reason": budget_policy_decision.get("fallback_reason"),
+        "fallback_reason": (
+            budget_policy_decision.get("fallback_reason")
+            if budget_policy_decision is not None
+            else None
+        ),
         "run_identifier": (
             f"{case_name}_seq{payload.get('seq_len_actual')}_"
             f"layer{payload.get('layer_idx')}_block{payload.get('block_size')}"
@@ -304,6 +317,27 @@ def main() -> None:
         default=0,
         help="Exclude the last N full-sequence block ids from retrieval candidates",
     )
+    parser.add_argument(
+        "--activation-mode",
+        type=str,
+        choices=("diagnostic", "practical"),
+        default="diagnostic",
+        help="Whether to force RelayKV diagnostics or gate it for practical mode.",
+    )
+    parser.add_argument(
+        "--min-relaykv-seq-len",
+        type=int,
+        default=None,
+        help="Disable RelayKV in practical mode below this sequence length.",
+    )
+    parser.add_argument(
+        "--disable-relaykv-below-budget",
+        action="store_true",
+        help=(
+            "In practical mode, keep FullKV active when the sequence length "
+            "already fits within the working budget."
+        ),
+    )
     args = parser.parse_args()
 
     ensure_results_dir()
@@ -335,6 +369,9 @@ def main() -> None:
             anchor_budget_blocks=case_budgets["anchor"],
             retrieval_budget_blocks=case_budgets["retrieval"],
             retrieval_exclude_tail_blocks=args.retrieval_exclude_tail_blocks,
+            activation_mode=args.activation_mode,
+            min_relaykv_seq_len=args.min_relaykv_seq_len,
+            disable_relaykv_below_budget=args.disable_relaykv_below_budget,
         )
 
         case_summaries.append(
@@ -354,6 +391,9 @@ def main() -> None:
         "prompt_type": args.prompt_type,
         "scoring_variant": args.scoring_variant,
         "retrieval_exclude_tail_blocks": args.retrieval_exclude_tail_blocks,
+        "activation_mode": args.activation_mode,
+        "min_relaykv_seq_len": args.min_relaykv_seq_len,
+        "disable_relaykv_below_budget": args.disable_relaykv_below_budget,
         "cases": case_summaries,
     }
 
