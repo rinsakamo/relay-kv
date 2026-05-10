@@ -76,6 +76,45 @@ def format_float(value: float | None) -> str:
     return f"{value:.9f}"
 
 
+def normalize_case_budgets(
+    case_name: str,
+    base_case_budgets: dict[str, int],
+    working_override: int | None,
+) -> dict[str, int]:
+    case_budgets = dict(base_case_budgets)
+    if working_override is None:
+        validate_case_budgets(case_name, case_budgets)
+        return case_budgets
+
+    case_budgets["working"] = working_override
+
+    sub_budget_total = (
+        int(case_budgets["recent"])
+        + int(case_budgets["anchor"])
+        + int(case_budgets["retrieval"])
+    )
+    working_budget = int(case_budgets["working"])
+
+    if working_budget < sub_budget_total:
+        validate_case_budgets(case_name, case_budgets)
+
+    extra_slots = working_budget - sub_budget_total
+    if extra_slots > 0:
+        if case_name in {"recent_only", "anchor_recent"}:
+            allocation_key = "recent"
+        elif case_name in {"retrieval_recent", "anchor_retrieval_recent"}:
+            allocation_key = "retrieval"
+        elif "retrieval" in case_budgets:
+            allocation_key = "retrieval"
+        else:
+            allocation_key = "recent"
+
+        case_budgets[allocation_key] = int(case_budgets[allocation_key]) + extra_slots
+
+    validate_case_budgets(case_name, case_budgets)
+    return case_budgets
+
+
 def validate_case_budgets(case_name: str, case_budgets: dict[str, int]) -> None:
     sub_budget_total = (
         int(case_budgets["recent"])
@@ -234,10 +273,11 @@ def main() -> None:
     case_summaries: list[dict[str, Any]] = []
 
     for case_name in case_names:
-        case_budgets = dict(DEFAULT_CASE_SPECS[case_name])
-        if args.working_budget_blocks is not None:
-            case_budgets["working"] = args.working_budget_blocks
-        validate_case_budgets(case_name, case_budgets)
+        case_budgets = normalize_case_budgets(
+            case_name,
+            DEFAULT_CASE_SPECS[case_name],
+            args.working_budget_blocks,
+        )
 
         payload = run_pipeline(
             model_name=args.model,
