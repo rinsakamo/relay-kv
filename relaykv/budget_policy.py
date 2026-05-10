@@ -81,6 +81,22 @@ def _dedupe_in_order(block_ids: list[int]) -> list[int]:
     return deduped
 
 
+def _take_tail(block_ids: list[int], count: int) -> list[int]:
+    if count <= 0:
+        return []
+    if count >= len(block_ids):
+        return list(block_ids)
+    return block_ids[len(block_ids) - count:]
+
+
+def _take_head(block_ids: list[int], count: int) -> list[int]:
+    if count <= 0:
+        return []
+    if count >= len(block_ids):
+        return list(block_ids)
+    return block_ids[:count]
+
+
 def build_working_block_budget_decision(
     *,
     seq_len: int,
@@ -117,7 +133,9 @@ def build_working_block_budget_decision(
     recent_reserved = set(requested_recent)
 
     requested_anchor: list[int] = []
-    if anchor_block_ids is not None:
+    if anchor_blocks == 0:
+        requested_anchor = []
+    elif anchor_block_ids is not None:
         for block_id in anchor_block_ids:
             if block_id < 0 or block_id >= total_sequence_blocks:
                 _append_issue(issues, "anchor_block_id_out_of_range")
@@ -145,14 +163,15 @@ def build_working_block_budget_decision(
     reserved_cold = set(requested_anchor) | recent_reserved
 
     requested_retrieved: list[int] = []
-    for score in scored_blocks:
-        block_id = score.block_id
-        if block_id in reserved_cold:
-            continue
-        requested_retrieved.append(block_id)
-        reserved_cold.add(block_id)
-        if len(requested_retrieved) == retrieval_blocks:
-            break
+    if retrieval_blocks > 0:
+        for score in scored_blocks:
+            block_id = score.block_id
+            if block_id in reserved_cold:
+                continue
+            requested_retrieved.append(block_id)
+            reserved_cold.add(block_id)
+            if len(requested_retrieved) == retrieval_blocks:
+                break
 
     if len(requested_retrieved) < retrieval_blocks:
         _append_issue(issues, "insufficient_retrieval_candidates")
@@ -162,13 +181,13 @@ def build_working_block_budget_decision(
 
     remaining_slots = total_working_blocks
 
-    final_recent = requested_recent[-remaining_slots:] if remaining_slots < len(requested_recent) else list(requested_recent)
+    final_recent = _take_tail(requested_recent, remaining_slots)
     remaining_slots -= len(final_recent)
 
-    final_anchor = requested_anchor[:remaining_slots]
+    final_anchor = _take_head(requested_anchor, remaining_slots)
     remaining_slots -= len(final_anchor)
 
-    final_retrieved = requested_retrieved[:remaining_slots]
+    final_retrieved = _take_head(requested_retrieved, remaining_slots)
 
     if len(final_recent) < len(requested_recent):
         _append_issue(issues, "recent_budget_trimmed_by_total")

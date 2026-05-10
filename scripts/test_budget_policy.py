@@ -53,11 +53,48 @@ def main() -> None:
         <= fallback_decision.budgets.total_working_blocks
     )
 
+    zero_total_recent_decision = build_working_block_budget_decision(
+        seq_len=64,
+        block_size=16,
+        total_working_blocks=0,
+        recent_blocks=1,
+        anchor_blocks=0,
+        retrieval_blocks=0,
+        scored_blocks=scored_blocks,
+    )
+
+    assert not zero_total_recent_decision.budget_ok
+    assert zero_total_recent_decision.fallback_reason is not None
+    assert zero_total_recent_decision.selected.recent_block_ids == []
+    assert zero_total_recent_decision.selected.anchor_block_ids == []
+    assert zero_total_recent_decision.selected.retrieved_block_ids == []
+    assert zero_total_recent_decision.selected.working_block_ids == []
+    assert len(zero_total_recent_decision.selected.working_block_ids) == 0
+
+    zero_total_neutral_decision = build_working_block_budget_decision(
+        seq_len=64,
+        block_size=16,
+        total_working_blocks=0,
+        recent_blocks=0,
+        anchor_blocks=0,
+        retrieval_blocks=0,
+        scored_blocks=scored_blocks,
+    )
+
+    assert zero_total_neutral_decision.budget_ok
+    assert zero_total_neutral_decision.fallback_reason is None
+    assert zero_total_neutral_decision.selected.recent_block_ids == []
+    assert zero_total_neutral_decision.selected.anchor_block_ids == []
+    assert zero_total_neutral_decision.selected.retrieved_block_ids == []
+    assert zero_total_neutral_decision.selected.working_block_ids == []
+
     print(
         json.dumps(
             {
                 "budget_ok_case": ok_decision.summary(),
                 "fallback_case": fallback_decision.summary(),
+                "zero_total_recent_case": zero_total_recent_decision.summary(),
+                "zero_total_neutral_case": zero_total_neutral_decision.summary(),
             },
             indent=2,
             ensure_ascii=False,
