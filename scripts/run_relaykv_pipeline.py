@@ -22,6 +22,7 @@ from relaykv import (
     compare_attention_outputs,
     build_three_tier_selection,
     build_working_block_budget_decision,
+    build_activation_decision,
 )
 
 
@@ -103,6 +104,9 @@ def run_pipeline(
     anchor_budget_blocks: int | None = None,
     retrieval_budget_blocks: int | None = None,
     retrieval_exclude_tail_blocks: int | None = None,
+    activation_mode: str = "diagnostic",
+    min_relaykv_seq_len: int | None = None,
+    disable_relaykv_below_budget: bool = False,
 ) -> dict:
     tokenizer, model, device = load_model(model_name)
 
@@ -124,14 +128,31 @@ def run_pipeline(
     seq_len_actual = layers[0].keys.shape[2]
 
     budget_policy_enabled = working_budget_blocks is not None
+    working_budget_tokens = (
+        working_budget_blocks * block_size
+        if working_budget_blocks is not None
+        else None
+    )
+    activation_policy_decision = build_activation_decision(
+        activation_mode=activation_mode,
+        seq_len=seq_len_actual,
+        min_relaykv_seq_len=min_relaykv_seq_len,
+        working_budget_tokens=working_budget_tokens,
+        disable_relaykv_below_budget=disable_relaykv_below_budget,
+    )
+    relaykv_enabled = activation_policy_decision.relaykv_enabled
     effective_recent_budget_blocks = recent_budget_blocks or 0
     effective_anchor_budget_blocks = anchor_budget_blocks or 0
     effective_retrieval_budget_blocks = retrieval_budget_blocks or 0
     effective_retrieval_exclude_tail_blocks = retrieval_exclude_tail_blocks or 0
     effective_hot_window = (
+        seq_len_actual
+        if not relaykv_enabled
+        else (
         effective_recent_budget_blocks * block_size
         if budget_policy_enabled
         else hot_window
+        )
     )
     total_sequence_blocks = (seq_len_actual + block_size - 1) // block_size
     retrieval_excluded_block_ids = (
@@ -141,11 +162,15 @@ def run_pipeline(
                 total_sequence_blocks,
             )
         )
-        if budget_policy_enabled and effective_retrieval_exclude_tail_blocks > 0
+        if (
+            relaykv_enabled
+            and budget_policy_enabled
+            and effective_retrieval_exclude_tail_blocks > 0
+        )
         else []
     )
 
-    tier_manager = TierManager(hot_window=effective_hot_window)
+    tier_manager = TierManager(hot_window=max(1, effective_hot_window))
     split = tier_manager.split_range(seq_len_actual)
 
     hot_kv, cold_cache = split_dynamic_cache_layers(layers, split)
@@ -164,7 +189,7 @@ def run_pipeline(
     )
 
     budget_policy_decision = None
-    if budget_policy_enabled:
+    if relaykv_enabled and budget_policy_enabled:
         budget_policy_decision = build_working_block_budget_decision(
             seq_len=seq_len_actual,
             block_size=block_size,
@@ -183,6 +208,8 @@ def run_pipeline(
             for score in scores
             if score.block_id in selected_retrieval_ids
         ]
+    elif not relaykv_enabled:
+        top_scores = []
     else:
         top_scores = top_k_blocks(scores, k=min(top_k, len(scores)))
 
@@ -199,7 +226,7 @@ def run_pipeline(
         layer_idx=layer_idx,
     )
 
-    if budget_policy_enabled:
+    if relaykv_enabled and budget_policy_enabled:
         selected_cold_block_ids = (
             budget_policy_decision.selected.anchor_block_ids
             + budget_policy_decision.selected.retrieved_block_ids
@@ -209,8 +236,10 @@ def run_pipeline(
             layer_idx=layer_idx,
             block_ids=selected_cold_block_ids,
         )
-    else:
+    elif relaykv_enabled:
         retrieved = retrieve_blocks(all_blocks, top_scores)
+    else:
+        retrieved = []
 
     selected_summaries = [s.summary() for s in top_scores]
     selected_block_ranks = list(range(len(selected_summaries)))
@@ -373,6 +402,7 @@ def run_pipeline(
         "prototype_working_ratio": prototype_working_ratio,
         "budget": budget,
         "selection_breakdown": selection_breakdown,
+        "activation_policy_decision": activation_policy_decision.summary(),
         "three_tier_selection": selection.summary(),
         "budget_policy_decision": (
             budget_policy_decision.summary()
@@ -489,6 +519,27 @@ def main() -> None:
             "candidates in budget mode"
         ),
     )
+    parser.add_argument(
+        "--activation-mode",
+        type=str,
+        choices=("diagnostic", "practical"),
+        default="diagnostic",
+        help="Whether to force RelayKV diagnostics or gate it for practical mode.",
+    )
+    parser.add_argument(
+        "--min-relaykv-seq-len",
+        type=int,
+        default=None,
+        help="Disable RelayKV in practical mode below this sequence length.",
+    )
+    parser.add_argument(
+        "--disable-relaykv-below-budget",
+        action="store_true",
+        help=(
+            "In practical mode, keep FullKV active when the sequence length "
+            "already fits within the working budget."
+        ),
+    )
     args = parser.parse_args()
 
     if args.working_budget_blocks is None:
@@ -520,6 +571,9 @@ def main() -> None:
         anchor_budget_blocks=args.anchor_budget_blocks,
         retrieval_budget_blocks=args.retrieval_budget_blocks,
         retrieval_exclude_tail_blocks=args.retrieval_exclude_tail_blocks,
+        activation_mode=args.activation_mode,
+        min_relaykv_seq_len=args.min_relaykv_seq_len,
+        disable_relaykv_below_budget=args.disable_relaykv_below_budget,
     )
 
     output_path = RESULTS_DIR / args.output
