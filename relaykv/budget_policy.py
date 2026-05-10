@@ -107,6 +107,7 @@ def build_working_block_budget_decision(
     retrieval_blocks: int,
     scored_blocks: list[BlockScore],
     anchor_block_ids: list[int] | None = None,
+    retrieval_exclude_block_ids: list[int] | None = None,
 ) -> WorkingBlockBudgetDecision:
     if seq_len <= 0:
         raise ValueError("seq_len must be > 0")
@@ -161,12 +162,15 @@ def build_working_block_budget_decision(
 
     requested_anchor = _dedupe_in_order(requested_anchor)
     reserved_cold = set(requested_anchor) | recent_reserved
+    retrieval_excluded = set(retrieval_exclude_block_ids or [])
 
     requested_retrieved: list[int] = []
     if retrieval_blocks > 0:
         for score in scored_blocks:
             block_id = score.block_id
             if block_id in reserved_cold:
+                continue
+            if block_id in retrieval_excluded:
                 continue
             requested_retrieved.append(block_id)
             reserved_cold.add(block_id)
