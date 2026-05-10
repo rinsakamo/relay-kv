@@ -17,6 +17,10 @@ from .activation_policy import (
     RelayKVActivationDecision,
     build_activation_decision,
 )
+from .demotion_policy import (
+    RelayKVDemotionDecision,
+    build_demotion_decision,
+)
 from .attention_compare import (
     AttentionCompareResult,
     scaled_dot_product_attention,
@@ -56,6 +60,8 @@ __all__ = [
     "build_working_block_budget_decision",
     "RelayKVActivationDecision",
     "build_activation_decision",
+    "RelayKVDemotionDecision",
+    "build_demotion_decision",
     "AttentionCompareResult",
     "scaled_dot_product_attention",
     "compare_attention_outputs",
