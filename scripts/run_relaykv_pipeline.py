@@ -102,6 +102,7 @@ def run_pipeline(
     recent_budget_blocks: int | None = None,
     anchor_budget_blocks: int | None = None,
     retrieval_budget_blocks: int | None = None,
+    retrieval_exclude_tail_blocks: int | None = None,
 ) -> dict:
     tokenizer, model, device = load_model(model_name)
 
@@ -126,10 +127,22 @@ def run_pipeline(
     effective_recent_budget_blocks = recent_budget_blocks or 0
     effective_anchor_budget_blocks = anchor_budget_blocks or 0
     effective_retrieval_budget_blocks = retrieval_budget_blocks or 0
+    effective_retrieval_exclude_tail_blocks = retrieval_exclude_tail_blocks or 0
     effective_hot_window = (
         effective_recent_budget_blocks * block_size
         if budget_policy_enabled
         else hot_window
+    )
+    total_sequence_blocks = (seq_len_actual + block_size - 1) // block_size
+    retrieval_excluded_block_ids = (
+        list(
+            range(
+                max(0, total_sequence_blocks - effective_retrieval_exclude_tail_blocks),
+                total_sequence_blocks,
+            )
+        )
+        if budget_policy_enabled and effective_retrieval_exclude_tail_blocks > 0
+        else []
     )
 
     tier_manager = TierManager(hot_window=effective_hot_window)
@@ -160,6 +173,7 @@ def run_pipeline(
             anchor_blocks=effective_anchor_budget_blocks,
             retrieval_blocks=effective_retrieval_budget_blocks,
             scored_blocks=scores,
+            retrieval_exclude_block_ids=retrieval_excluded_block_ids,
         )
         selected_retrieval_ids = set(
             budget_policy_decision.selected.retrieved_block_ids
@@ -304,6 +318,29 @@ def run_pipeline(
         <= budget["B_total_tokens"]
     ), f"budget overflow: {budget}"
 
+    retrieved_block_ids_for_diagnostics = (
+        list(budget_policy_decision.selected.retrieved_block_ids)
+        if budget_policy_decision is not None
+        else list(selected_block_ids)
+    )
+    recent_block_ids_for_diagnostics = (
+        list(budget_policy_decision.selected.recent_block_ids)
+        if budget_policy_decision is not None
+        else []
+    )
+    retrieval_excluded_block_ids_set = set(retrieval_excluded_block_ids)
+    recent_block_ids_set = set(recent_block_ids_for_diagnostics)
+    retrieved_overlap_with_excluded_tail = sum(
+        1
+        for block_id in retrieved_block_ids_for_diagnostics
+        if block_id in retrieval_excluded_block_ids_set
+    )
+    retrieved_overlap_with_recent_blocks = sum(
+        1
+        for block_id in retrieved_block_ids_for_diagnostics
+        if block_id in recent_block_ids_set
+    )
+
     summary = {
         "model": model_name,
         "device": device,
@@ -315,6 +352,11 @@ def run_pipeline(
         "anchor_blocks": anchor_blocks,
         "block_size": block_size,
         "top_k": top_k,
+        "retrieval_exclude_tail_blocks": effective_retrieval_exclude_tail_blocks,
+        "retrieval_excluded_block_ids": retrieval_excluded_block_ids,
+        "retrieved_overlap_with_excluded_tail": retrieved_overlap_with_excluded_tail,
+        "retrieved_overlap_with_recent_blocks": retrieved_overlap_with_recent_blocks,
+        "effective_retrieved_block_count": len(retrieved_block_ids_for_diagnostics),
         "cold_range": list(split.cold_range),
         "hot_range": list(split.hot_range),
         "num_layers": len(layers),
@@ -438,6 +480,15 @@ def main() -> None:
         default=None,
         help="Retrieved working-set budget in blocks for budget policy mode",
     )
+    parser.add_argument(
+        "--retrieval-exclude-tail-blocks",
+        type=int,
+        default=0,
+        help=(
+            "Exclude the last N full-sequence block ids from retrieval "
+            "candidates in budget mode"
+        ),
+    )
     args = parser.parse_args()
 
     if args.working_budget_blocks is None:
@@ -468,6 +519,7 @@ def main() -> None:
         recent_budget_blocks=args.recent_budget_blocks,
         anchor_budget_blocks=args.anchor_budget_blocks,
         retrieval_budget_blocks=args.retrieval_budget_blocks,
+        retrieval_exclude_tail_blocks=args.retrieval_exclude_tail_blocks,
     )
 
     output_path = RESULTS_DIR / args.output
