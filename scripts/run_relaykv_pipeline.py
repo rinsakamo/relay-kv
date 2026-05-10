@@ -23,6 +23,7 @@ from relaykv import (
     build_three_tier_selection,
     build_working_block_budget_decision,
     build_activation_decision,
+    build_demotion_decision,
 )
 
 
@@ -107,6 +108,12 @@ def run_pipeline(
     activation_mode: str = "diagnostic",
     min_relaykv_seq_len: int | None = None,
     disable_relaykv_below_budget: bool = False,
+    demotion_policy_mode: str = "off",
+    target_keep_blocks: int | None = None,
+    demotion_recent_blocks: int = 0,
+    protect_boundary_blocks: int = 1,
+    protect_prefix_blocks: int = 0,
+    demotion_strategy: str = "oldest",
 ) -> dict:
     tokenizer, model, device = load_model(model_name)
 
@@ -155,6 +162,16 @@ def run_pipeline(
         )
     )
     total_sequence_blocks = (seq_len_actual + block_size - 1) // block_size
+    demotion_policy_decision = None
+    if demotion_policy_mode == "dry_run":
+        demotion_policy_decision = build_demotion_decision(
+            total_blocks=total_sequence_blocks,
+            target_keep_blocks=target_keep_blocks,
+            recent_blocks=demotion_recent_blocks,
+            protect_boundary_blocks=protect_boundary_blocks,
+            protect_prefix_blocks=protect_prefix_blocks,
+            demotion_strategy=demotion_strategy,
+        )
     retrieval_excluded_block_ids = (
         list(
             range(
@@ -403,6 +420,12 @@ def run_pipeline(
         "budget": budget,
         "selection_breakdown": selection_breakdown,
         "activation_policy_decision": activation_policy_decision.summary(),
+        "demotion_policy_mode": demotion_policy_mode,
+        "demotion_policy_decision": (
+            demotion_policy_decision.summary()
+            if demotion_policy_decision is not None
+            else None
+        ),
         "three_tier_selection": selection.summary(),
         "budget_policy_decision": (
             budget_policy_decision.summary()
@@ -540,6 +563,44 @@ def main() -> None:
             "already fits within the working budget."
         ),
     )
+    parser.add_argument(
+        "--demotion-policy-mode",
+        type=str,
+        choices=("off", "dry_run"),
+        default="off",
+        help="Enable dry-run FullKV demotion policy metadata.",
+    )
+    parser.add_argument(
+        "--target-keep-blocks",
+        type=int,
+        default=None,
+        help="Target number of full-sequence blocks to keep in demotion dry-run mode.",
+    )
+    parser.add_argument(
+        "--demotion-recent-blocks",
+        type=int,
+        default=0,
+        help="Recent block count protected by the demotion dry-run policy.",
+    )
+    parser.add_argument(
+        "--protect-boundary-blocks",
+        type=int,
+        default=1,
+        help="Boundary block count before the recent window protected from demotion.",
+    )
+    parser.add_argument(
+        "--protect-prefix-blocks",
+        type=int,
+        default=0,
+        help="Prefix block count protected from demotion only when explicitly requested.",
+    )
+    parser.add_argument(
+        "--demotion-strategy",
+        type=str,
+        choices=("oldest",),
+        default="oldest",
+        help="Dry-run demotion strategy for eviction candidates.",
+    )
     args = parser.parse_args()
 
     if args.working_budget_blocks is None:
@@ -553,6 +614,8 @@ def main() -> None:
         )
         if budget_args_present:
             parser.error("--working-budget-blocks is required when budget sub-flags are provided")
+    if args.demotion_policy_mode == "dry_run" and args.target_keep_blocks is None:
+        parser.error("--target-keep-blocks is required when --demotion-policy-mode=dry_run")
 
     ensure_results_dir()
 
@@ -574,6 +637,12 @@ def main() -> None:
         activation_mode=args.activation_mode,
         min_relaykv_seq_len=args.min_relaykv_seq_len,
         disable_relaykv_below_budget=args.disable_relaykv_below_budget,
+        demotion_policy_mode=args.demotion_policy_mode,
+        target_keep_blocks=args.target_keep_blocks,
+        demotion_recent_blocks=args.demotion_recent_blocks,
+        protect_boundary_blocks=args.protect_boundary_blocks,
+        protect_prefix_blocks=args.protect_prefix_blocks,
+        demotion_strategy=args.demotion_strategy,
     )
 
     output_path = RESULTS_DIR / args.output
