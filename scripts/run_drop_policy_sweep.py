@@ -473,6 +473,9 @@ def main() -> None:
     print(f"saved json: {args.output_json}")
     print(f"saved md: {args.output_md}")
 
+    if any(case.get("error") for case in case_summaries):
+        raise SystemExit(1)
+
 
 if __name__ == "__main__":
     main()
