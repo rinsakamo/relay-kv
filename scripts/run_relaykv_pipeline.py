@@ -9,6 +9,7 @@ import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from relaykv import (
+    RelayKVVramBudgetDecision,
     TierManager,
     split_dynamic_cache_layers,
     build_metadata_for_blocks,
@@ -89,6 +90,51 @@ def make_prompt_for_target_tokens(target_tokens: int, prompt_type: str) -> str:
         chunks.extend(words)
 
     return " ".join(chunks[:target_tokens])
+
+
+def resolve_effective_target_keep_blocks(
+    explicit_target_keep_blocks: int | None,
+    vram_budget_decision: RelayKVVramBudgetDecision | None,
+) -> dict:
+    if explicit_target_keep_blocks is not None:
+        return {
+            "effective_target_keep_blocks": explicit_target_keep_blocks,
+            "target_keep_blocks_source": "explicit_cli",
+            "fallback_reason": None,
+            "vram_budget_to_demotion_connected": False,
+        }
+
+    if vram_budget_decision is None:
+        return {
+            "effective_target_keep_blocks": None,
+            "target_keep_blocks_source": "unset",
+            "fallback_reason": "vram_budget_not_enabled",
+            "vram_budget_to_demotion_connected": False,
+        }
+
+    if not vram_budget_decision.budget_ok:
+        return {
+            "effective_target_keep_blocks": None,
+            "target_keep_blocks_source": "unset",
+            "fallback_reason": "vram_budget_not_ok",
+            "vram_budget_to_demotion_connected": False,
+        }
+
+    derived_target_keep_blocks = vram_budget_decision.derived_target_keep_blocks
+    if derived_target_keep_blocks is None:
+        return {
+            "effective_target_keep_blocks": None,
+            "target_keep_blocks_source": "unset",
+            "fallback_reason": "vram_budget_missing_derived_target",
+            "vram_budget_to_demotion_connected": False,
+        }
+
+    return {
+        "effective_target_keep_blocks": derived_target_keep_blocks,
+        "target_keep_blocks_source": "vram_budget",
+        "fallback_reason": None,
+        "vram_budget_to_demotion_connected": True,
+    }
 
 
 def run_pipeline(
@@ -175,16 +221,6 @@ def run_pipeline(
         )
     )
     total_sequence_blocks = (seq_len_actual + block_size - 1) // block_size
-    demotion_policy_decision = None
-    if demotion_policy_mode == "dry_run":
-        demotion_policy_decision = build_demotion_decision(
-            total_blocks=total_sequence_blocks,
-            target_keep_blocks=target_keep_blocks,
-            recent_blocks=demotion_recent_blocks,
-            protect_boundary_blocks=protect_boundary_blocks,
-            protect_prefix_blocks=protect_prefix_blocks,
-            demotion_strategy=demotion_strategy,
-        )
     vram_budget_decision = None
     if vram_budget_mode == "dry_run":
         if global_working_kv_budget_mib is None:
@@ -201,6 +237,22 @@ def run_pipeline(
             num_kv_heads=num_kv_heads or inferred_num_kv_heads,
             head_dim=head_dim or inferred_head_dim,
             block_size=block_size,
+        )
+    demotion_target_resolution = resolve_effective_target_keep_blocks(
+        explicit_target_keep_blocks=target_keep_blocks,
+        vram_budget_decision=vram_budget_decision,
+    )
+    demotion_policy_decision = None
+    if demotion_policy_mode == "dry_run":
+        demotion_policy_decision = build_demotion_decision(
+            total_blocks=total_sequence_blocks,
+            target_keep_blocks=demotion_target_resolution[
+                "effective_target_keep_blocks"
+            ],
+            recent_blocks=demotion_recent_blocks,
+            protect_boundary_blocks=protect_boundary_blocks,
+            protect_prefix_blocks=protect_prefix_blocks,
+            demotion_strategy=demotion_strategy,
         )
     retrieval_excluded_block_ids = (
         list(
@@ -456,6 +508,7 @@ def run_pipeline(
         "selection_breakdown": selection_breakdown,
         "activation_policy_decision": activation_policy_decision.summary(),
         "demotion_policy_mode": demotion_policy_mode,
+        "demotion_target_resolution": demotion_target_resolution,
         "demotion_policy_decision": (
             demotion_policy_decision.summary()
             if demotion_policy_decision is not None
@@ -705,8 +758,6 @@ def main() -> None:
         )
         if budget_args_present:
             parser.error("--working-budget-blocks is required when budget sub-flags are provided")
-    if args.demotion_policy_mode == "dry_run" and args.target_keep_blocks is None:
-        parser.error("--target-keep-blocks is required when --demotion-policy-mode=dry_run")
     if (
         args.vram_budget_mode == "dry_run"
         and args.global_working_kv_budget_mib is None
