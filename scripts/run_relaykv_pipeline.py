@@ -137,6 +137,26 @@ def resolve_effective_target_keep_blocks(
     }
 
 
+def require_usable_demotion_target_for_dry_run(
+    demotion_policy_mode: str,
+    demotion_target_resolution: dict,
+) -> None:
+    if demotion_policy_mode != "dry_run":
+        return
+
+    if demotion_target_resolution["effective_target_keep_blocks"] is not None:
+        return
+
+    fallback_reason = demotion_target_resolution.get("fallback_reason")
+    error_message = (
+        "demotion dry-run requires --target-keep-blocks or a usable "
+        "vram_budget_decision.derived_target_keep_blocks"
+    )
+    if fallback_reason is not None:
+        error_message = f"{error_message} (fallback_reason={fallback_reason})"
+    raise ValueError(error_message)
+
+
 def run_pipeline(
     model_name: str,
     seq_len_target: int,
@@ -241,6 +261,10 @@ def run_pipeline(
     demotion_target_resolution = resolve_effective_target_keep_blocks(
         explicit_target_keep_blocks=target_keep_blocks,
         vram_budget_decision=vram_budget_decision,
+    )
+    require_usable_demotion_target_for_dry_run(
+        demotion_policy_mode=demotion_policy_mode,
+        demotion_target_resolution=demotion_target_resolution,
     )
     demotion_policy_decision = None
     if demotion_policy_mode == "dry_run":
