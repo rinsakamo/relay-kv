@@ -1,7 +1,11 @@
+import sys
+
 import pytest
 
 from relaykv import RelayKVVramBudgetDecision
+from scripts import run_relaykv_pipeline
 from scripts.run_relaykv_pipeline import (
+    main,
     require_usable_demotion_target_for_dry_run,
     resolve_effective_target_keep_blocks,
 )
@@ -156,3 +160,51 @@ def test_demotion_dry_run_guard_rejects_not_ok_vram_budget() -> None:
             demotion_policy_mode="dry_run",
             demotion_target_resolution=resolution,
         )
+
+
+def test_main_rejects_demotion_dry_run_without_target_or_vram(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    def fail_if_called(**_: object) -> None:
+        raise AssertionError("run_pipeline should not be called")
+
+    monkeypatch.setattr(run_relaykv_pipeline, "run_pipeline", fail_if_called)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "run_relaykv_pipeline.py",
+            "--seq-len",
+            "256",
+            "--hot-window",
+            "128",
+            "--block-size",
+            "128",
+            "--top-k",
+            "1",
+            "--layer-idx",
+            "0",
+            "--prompt-type",
+            "structured",
+            "--demotion-policy-mode",
+            "dry_run",
+            "--output",
+            "relaykv_demotion_target_unset_should_fail.json",
+        ],
+    )
+
+    with pytest.raises(SystemExit) as excinfo:
+        main()
+
+    assert excinfo.value.code == 2
+    captured = capsys.readouterr()
+    assert (
+        "demotion dry-run requires --target-keep-blocks or --vram-budget-mode=dry_run"
+        in captured.err
+    )
+    assert "usage:" in captured.err
+    assert "device=cpu" not in captured.out
+    assert "device=cuda" not in captured.out
+    assert "device=cpu" not in captured.err
+    assert "device=cuda" not in captured.err

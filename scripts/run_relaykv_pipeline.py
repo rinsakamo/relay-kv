@@ -783,6 +783,14 @@ def main() -> None:
         if budget_args_present:
             parser.error("--working-budget-blocks is required when budget sub-flags are provided")
     if (
+        args.demotion_policy_mode == "dry_run"
+        and args.target_keep_blocks is None
+        and args.vram_budget_mode != "dry_run"
+    ):
+        parser.error(
+            "demotion dry-run requires --target-keep-blocks or --vram-budget-mode=dry_run"
+        )
+    if (
         args.vram_budget_mode == "dry_run"
         and args.global_working_kv_budget_mib is None
     ):
