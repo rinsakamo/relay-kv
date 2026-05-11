@@ -51,10 +51,10 @@ def classify_case(case: dict[str, Any]) -> str:
         return "case_error"
     if fallback_reason == "fullkv_within_budget":
         return "fullkv_within_budget"
-    if len(drop_block_ids) > 0:
-        return "actual_demotion"
     if fallback_reason is not None and fallback_reason != "fullkv_within_budget":
         return "demotion_failed"
+    if error is None and fallback_reason is None and len(drop_block_ids) > 0:
+        return "actual_demotion"
     return "unknown"
 
 

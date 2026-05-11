@@ -40,6 +40,15 @@ def test_classify_demotion_failed_case() -> None:
     assert classify_case(case) == "demotion_failed"
 
 
+def test_classify_partial_demotion_failed_case() -> None:
+    case = {
+        "error": None,
+        "fallback_reason": "insufficient_eviction_candidates",
+        "drop_block_ids": [0, 1],
+    }
+    assert classify_case(case) == "demotion_failed"
+
+
 def test_classify_unknown_case() -> None:
     case = {
         "error": None,
