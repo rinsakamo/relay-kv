@@ -31,6 +31,24 @@ def test_classify_fullkv_within_budget_case() -> None:
     assert classify_case(case) == "fullkv_within_budget"
 
 
+def test_classify_demotion_failed_case() -> None:
+    case = {
+        "error": None,
+        "fallback_reason": "insufficient_eviction_candidates",
+        "drop_block_ids": [],
+    }
+    assert classify_case(case) == "demotion_failed"
+
+
+def test_classify_unknown_case() -> None:
+    case = {
+        "error": None,
+        "fallback_reason": None,
+        "drop_block_ids": [],
+    }
+    assert classify_case(case) == "unknown"
+
+
 def test_classify_actual_demotion_case() -> None:
     case = {
         "error": None,
@@ -109,6 +127,7 @@ def test_markdown_generation_includes_aggregate_counts_and_case_rows() -> None:
     assert "| total_cases | 2 |" in markdown
     assert "| budget_not_ok_cases | 1 |" in markdown
     assert "| actual_demotion_cases | 1 |" in markdown
+    assert "| demotion_failed_cases | 0 |" in markdown
     assert "budget_32_concurrency_1" in markdown
 
 

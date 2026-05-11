@@ -49,10 +49,12 @@ def classify_case(case: dict[str, Any]) -> str:
         return "budget_not_ok"
     if error is not None:
         return "case_error"
-    if fallback_reason == "fullkv_within_budget" or len(drop_block_ids) == 0:
+    if fallback_reason == "fullkv_within_budget":
         return "fullkv_within_budget"
     if len(drop_block_ids) > 0:
         return "actual_demotion"
+    if fallback_reason is not None and fallback_reason != "fullkv_within_budget":
+        return "demotion_failed"
     return "unknown"
 
 
@@ -82,6 +84,7 @@ def build_aggregate_counts(case_rows: list[dict[str, Any]]) -> dict[str, int]:
         "budget_not_ok_cases": 0,
         "fullkv_within_budget_cases": 0,
         "actual_demotion_cases": 0,
+        "demotion_failed_cases": 0,
         "case_error_cases": 0,
         "unknown_cases": 0,
     }
@@ -94,6 +97,8 @@ def build_aggregate_counts(case_rows: list[dict[str, Any]]) -> dict[str, int]:
             counts["fullkv_within_budget_cases"] += 1
         elif case_class == "actual_demotion":
             counts["actual_demotion_cases"] += 1
+        elif case_class == "demotion_failed":
+            counts["demotion_failed_cases"] += 1
         elif case_class == "case_error":
             counts["case_error_cases"] += 1
         else:
