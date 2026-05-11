@@ -137,6 +137,25 @@ def resolve_effective_target_keep_blocks(
     }
 
 
+def resolve_demotion_target_resolution(
+    demotion_policy_mode: str,
+    explicit_target_keep_blocks: int | None,
+    vram_budget_decision: RelayKVVramBudgetDecision | None,
+) -> dict:
+    if demotion_policy_mode != "dry_run":
+        return {
+            "effective_target_keep_blocks": None,
+            "target_keep_blocks_source": "demotion_policy_off",
+            "fallback_reason": None,
+            "vram_budget_to_demotion_connected": False,
+        }
+
+    return resolve_effective_target_keep_blocks(
+        explicit_target_keep_blocks=explicit_target_keep_blocks,
+        vram_budget_decision=vram_budget_decision,
+    )
+
+
 def require_usable_demotion_target_for_dry_run(
     demotion_policy_mode: str,
     demotion_target_resolution: dict,
@@ -258,16 +277,17 @@ def run_pipeline(
             head_dim=head_dim or inferred_head_dim,
             block_size=block_size,
         )
-    demotion_target_resolution = resolve_effective_target_keep_blocks(
+    demotion_target_resolution = resolve_demotion_target_resolution(
+        demotion_policy_mode=demotion_policy_mode,
         explicit_target_keep_blocks=target_keep_blocks,
         vram_budget_decision=vram_budget_decision,
     )
-    require_usable_demotion_target_for_dry_run(
-        demotion_policy_mode=demotion_policy_mode,
-        demotion_target_resolution=demotion_target_resolution,
-    )
     demotion_policy_decision = None
     if demotion_policy_mode == "dry_run":
+        require_usable_demotion_target_for_dry_run(
+            demotion_policy_mode=demotion_policy_mode,
+            demotion_target_resolution=demotion_target_resolution,
+        )
         demotion_policy_decision = build_demotion_decision(
             total_blocks=total_sequence_blocks,
             target_keep_blocks=demotion_target_resolution[

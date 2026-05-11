@@ -7,6 +7,7 @@ from scripts import run_relaykv_pipeline
 from scripts.run_relaykv_pipeline import (
     main,
     require_usable_demotion_target_for_dry_run,
+    resolve_demotion_target_resolution,
     resolve_effective_target_keep_blocks,
 )
 
@@ -160,6 +161,21 @@ def test_demotion_dry_run_guard_rejects_not_ok_vram_budget() -> None:
             demotion_policy_mode="dry_run",
             demotion_target_resolution=resolution,
         )
+
+
+def test_demotion_target_resolution_reports_off_when_policy_is_off() -> None:
+    resolution = resolve_demotion_target_resolution(
+        demotion_policy_mode="off",
+        explicit_target_keep_blocks=None,
+        vram_budget_decision=make_vram_budget_decision(derived_target_keep_blocks=18),
+    )
+
+    assert resolution == {
+        "effective_target_keep_blocks": None,
+        "target_keep_blocks_source": "demotion_policy_off",
+        "fallback_reason": None,
+        "vram_budget_to_demotion_connected": False,
+    }
 
 
 def test_main_rejects_demotion_dry_run_without_target_or_vram(
