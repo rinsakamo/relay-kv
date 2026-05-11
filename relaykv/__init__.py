@@ -21,6 +21,10 @@ from .demotion_policy import (
     RelayKVDemotionDecision,
     build_demotion_decision,
 )
+from .vram_budget import (
+    RelayKVVramBudgetDecision,
+    build_vram_budget_decision,
+)
 from .attention_compare import (
     AttentionCompareResult,
     scaled_dot_product_attention,
@@ -62,6 +66,8 @@ __all__ = [
     "build_activation_decision",
     "RelayKVDemotionDecision",
     "build_demotion_decision",
+    "RelayKVVramBudgetDecision",
+    "build_vram_budget_decision",
     "AttentionCompareResult",
     "scaled_dot_product_attention",
     "compare_attention_outputs",
