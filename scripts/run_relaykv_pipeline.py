@@ -24,6 +24,7 @@ from relaykv import (
     build_working_block_budget_decision,
     build_activation_decision,
     build_demotion_decision,
+    build_vram_budget_decision,
 )
 
 
@@ -114,6 +115,15 @@ def run_pipeline(
     protect_boundary_blocks: int = 1,
     protect_prefix_blocks: int = 0,
     demotion_strategy: str = "oldest",
+    vram_budget_mode: str = "off",
+    global_residual_vram_mib: float | None = None,
+    global_working_kv_budget_mib: float | None = None,
+    target_concurrent_requests: int = 1,
+    allocation_policy: str = "equal_share",
+    kv_dtype_bytes: int = 2,
+    num_layers: int | None = None,
+    num_kv_heads: int | None = None,
+    head_dim: int | None = None,
 ) -> dict:
     tokenizer, model, device = load_model(model_name)
 
@@ -133,6 +143,9 @@ def run_pipeline(
 
     layers = outputs.past_key_values.layers
     seq_len_actual = layers[0].keys.shape[2]
+    inferred_num_layers = len(layers)
+    inferred_num_kv_heads = int(layers[0].keys.shape[1])
+    inferred_head_dim = int(layers[0].keys.shape[-1])
 
     budget_policy_enabled = working_budget_blocks is not None
     working_budget_tokens = (
@@ -171,6 +184,23 @@ def run_pipeline(
             protect_boundary_blocks=protect_boundary_blocks,
             protect_prefix_blocks=protect_prefix_blocks,
             demotion_strategy=demotion_strategy,
+        )
+    vram_budget_decision = None
+    if vram_budget_mode == "dry_run":
+        if global_working_kv_budget_mib is None:
+            raise ValueError(
+                "global_working_kv_budget_mib is required when vram_budget_mode='dry_run'"
+            )
+        vram_budget_decision = build_vram_budget_decision(
+            global_residual_vram_mib=global_residual_vram_mib,
+            global_working_kv_budget_mib=global_working_kv_budget_mib,
+            target_concurrent_requests=target_concurrent_requests,
+            allocation_policy=allocation_policy,
+            kv_dtype_bytes=kv_dtype_bytes,
+            num_layers=num_layers or inferred_num_layers,
+            num_kv_heads=num_kv_heads or inferred_num_kv_heads,
+            head_dim=head_dim or inferred_head_dim,
+            block_size=block_size,
         )
     retrieval_excluded_block_ids = (
         list(
@@ -406,6 +436,11 @@ def run_pipeline(
         "cold_range": list(split.cold_range),
         "hot_range": list(split.hot_range),
         "num_layers": len(layers),
+        "vram_budget_decision": (
+            vram_budget_decision.summary()
+            if vram_budget_decision is not None
+            else None
+        ),
         "num_all_blocks": len(all_blocks),
         "num_layer_blocks": len(layer_metadata),
         "num_selected_blocks": len(top_scores),
@@ -484,6 +519,62 @@ def main() -> None:
         type=int,
         default=27,
         help="Layer index for scoring and attention comparison",
+    )
+    parser.add_argument(
+        "--vram-budget-mode",
+        type=str,
+        choices=("off", "dry_run"),
+        default="off",
+        help="Enable metadata-only per-request VRAM budget derivation.",
+    )
+    parser.add_argument(
+        "--global-residual-vram-mib",
+        type=float,
+        default=None,
+        help="Optional residual global VRAM ceiling used to validate the working budget.",
+    )
+    parser.add_argument(
+        "--global-working-kv-budget-mib",
+        type=float,
+        default=None,
+        help="Global working KV budget in MiB for VRAM budget dry-run mode.",
+    )
+    parser.add_argument(
+        "--target-concurrent-requests",
+        type=int,
+        default=1,
+        help="Target number of concurrent requests for VRAM budget equal-share mode.",
+    )
+    parser.add_argument(
+        "--allocation-policy",
+        type=str,
+        choices=("equal_share",),
+        default="equal_share",
+        help="Per-request VRAM allocation policy for dry-run mode.",
+    )
+    parser.add_argument(
+        "--kv-dtype-bytes",
+        type=int,
+        default=2,
+        help="KV dtype size in bytes used for VRAM budget derivation.",
+    )
+    parser.add_argument(
+        "--num-layers",
+        type=int,
+        default=None,
+        help="Optional model layer count override for VRAM budget dry-run mode.",
+    )
+    parser.add_argument(
+        "--num-kv-heads",
+        type=int,
+        default=None,
+        help="Optional KV head count override for VRAM budget dry-run mode.",
+    )
+    parser.add_argument(
+        "--head-dim",
+        type=int,
+        default=None,
+        help="Optional head dimension override for VRAM budget dry-run mode.",
     )
     parser.add_argument(
         "--output",
@@ -616,6 +707,13 @@ def main() -> None:
             parser.error("--working-budget-blocks is required when budget sub-flags are provided")
     if args.demotion_policy_mode == "dry_run" and args.target_keep_blocks is None:
         parser.error("--target-keep-blocks is required when --demotion-policy-mode=dry_run")
+    if (
+        args.vram_budget_mode == "dry_run"
+        and args.global_working_kv_budget_mib is None
+    ):
+        parser.error(
+            "--global-working-kv-budget-mib is required when --vram-budget-mode=dry_run"
+        )
 
     ensure_results_dir()
 
@@ -643,6 +741,15 @@ def main() -> None:
         protect_boundary_blocks=args.protect_boundary_blocks,
         protect_prefix_blocks=args.protect_prefix_blocks,
         demotion_strategy=args.demotion_strategy,
+        vram_budget_mode=args.vram_budget_mode,
+        global_residual_vram_mib=args.global_residual_vram_mib,
+        global_working_kv_budget_mib=args.global_working_kv_budget_mib,
+        target_concurrent_requests=args.target_concurrent_requests,
+        allocation_policy=args.allocation_policy,
+        kv_dtype_bytes=args.kv_dtype_bytes,
+        num_layers=args.num_layers,
+        num_kv_heads=args.num_kv_heads,
+        head_dim=args.head_dim,
     )
 
     output_path = RESULTS_DIR / args.output
