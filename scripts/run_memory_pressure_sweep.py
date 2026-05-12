@@ -26,18 +26,23 @@ def build_synthetic_cases(
     min_selection_stability_ratio: float,
     min_estimated_net_benefit_ms: float,
 ) -> list[dict[str, Any]]:
-    below_min_seq_len = max(0, min_seq_len_for_relaykv - 1)
     active_seq_len = max(min_seq_len_for_relaykv, 1)
+    cases: list[dict[str, Any]] = []
 
-    return [
-        {
-            "case_name": "short_context",
-            "inputs": {
-                "seq_len": below_min_seq_len,
-            },
-            "expected_state": "disabled_short_context",
-        },
-        {
+    if min_seq_len_for_relaykv > 0:
+        cases.append(
+            {
+                "case_name": "short_context",
+                "inputs": {
+                    "seq_len": max(0, min_seq_len_for_relaykv - 1),
+                },
+                "expected_state": "disabled_short_context",
+            }
+        )
+
+    cases.extend(
+        [
+            {
             "case_name": "fullkv_within_budget_by_bytes",
             "inputs": {
                 "seq_len": active_seq_len,
@@ -101,19 +106,6 @@ def build_synthetic_cases(
             "expected_state": "fallback_required",
         },
         {
-            "case_name": "selection_unstable",
-            "inputs": {
-                "seq_len": active_seq_len,
-                "projected_fullkv_bytes": 16384,
-                "residual_vram_budget_bytes": 8192,
-                "labels_ready": True,
-                "host_backup_available": True,
-                "shadow_compare_passed": True,
-                "selection_stability_ratio": min_selection_stability_ratio - 0.1,
-            },
-            "expected_state": "shadow_only_warmup",
-        },
-        {
             "case_name": "net_benefit_too_low",
             "inputs": {
                 "seq_len": active_seq_len,
@@ -152,7 +144,29 @@ def build_synthetic_cases(
             },
             "expected_state": "fallback_required",
         },
-    ]
+        ]
+    )
+
+    if min_selection_stability_ratio > 0.0:
+        unstable_ratio = max(0.0, min_selection_stability_ratio - 0.1)
+        cases.insert(
+            len(cases) - 3,
+            {
+                "case_name": "selection_unstable",
+                "inputs": {
+                    "seq_len": active_seq_len,
+                    "projected_fullkv_bytes": 16384,
+                    "residual_vram_budget_bytes": 8192,
+                    "labels_ready": True,
+                    "host_backup_available": True,
+                    "shadow_compare_passed": True,
+                    "selection_stability_ratio": unstable_ratio,
+                },
+                "expected_state": "shadow_only_warmup",
+            },
+        )
+
+    return cases
 
 
 def run_memory_pressure_sweep(

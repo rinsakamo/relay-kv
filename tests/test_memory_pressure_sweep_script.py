@@ -34,3 +34,54 @@ def test_memory_pressure_sweep_script_writes_expected_json(tmp_path: Path) -> No
     assert loaded["summary"]["fullkv_within_budget_count"] >= 1
 
     assert json.loads(json.dumps(loaded)) == loaded
+
+
+def test_memory_pressure_sweep_script_skips_short_context_for_zero_min_seq(
+    tmp_path: Path,
+) -> None:
+    output_path = tmp_path / "memory_pressure_sweep_minseq0.json"
+
+    payload = run_memory_pressure_sweep(
+        output=output_path,
+        min_seq_len_for_relaykv=0,
+    )
+
+    assert output_path.exists()
+    case_names = {case["case_name"] for case in payload["cases"]}
+    assert "short_context" not in case_names
+    assert payload["summary"]["total_decisions"] == len(payload["decisions"])
+
+
+def test_memory_pressure_sweep_script_handles_small_positive_stability_threshold(
+    tmp_path: Path,
+) -> None:
+    output_path = tmp_path / "memory_pressure_sweep_stability005.json"
+
+    payload = run_memory_pressure_sweep(
+        output=output_path,
+        min_selection_stability_ratio=0.05,
+    )
+
+    assert output_path.exists()
+    case_by_name = {case["case_name"]: case for case in payload["cases"]}
+    if "selection_unstable" in case_by_name:
+        assert (
+            case_by_name["selection_unstable"]["inputs"]["selection_stability_ratio"]
+            >= 0.0
+        )
+
+
+def test_memory_pressure_sweep_script_skips_selection_unstable_for_zero_threshold(
+    tmp_path: Path,
+) -> None:
+    output_path = tmp_path / "memory_pressure_sweep_stability0.json"
+
+    payload = run_memory_pressure_sweep(
+        output=output_path,
+        min_selection_stability_ratio=0.0,
+    )
+
+    assert output_path.exists()
+    case_names = {case["case_name"] for case in payload["cases"]}
+    assert "selection_unstable" not in case_names
+    assert payload["summary"]["total_decisions"] == len(payload["decisions"])
