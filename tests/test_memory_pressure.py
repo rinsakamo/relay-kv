@@ -104,6 +104,21 @@ def test_memory_pressure_shadow_compare_failure_requires_fallback() -> None:
     assert decision.apply_blocked_reason == "shadow_compare_failed"
 
 
+def test_memory_pressure_shadow_compare_not_ready_uses_shadow_warmup() -> None:
+    decision = decide_memory_pressure_state(
+        seq_len=512,
+        min_seq_len_for_relaykv=128,
+        labels_ready=True,
+        host_backup_available=True,
+        shadow_compare_passed=None,
+    )
+
+    assert decision.state is RelayKVMemoryPressureState.SHADOW_ONLY_WARMUP
+    assert decision.execution_mode is ExecutionMode.SHADOW_ONLY
+    assert decision.apply_blocked_reason == "shadow_compare_not_ready"
+    assert decision.fallback_reason is None
+
+
 def test_memory_pressure_selection_instability_uses_shadow_warmup() -> None:
     decision = decide_memory_pressure_state(
         seq_len=512,

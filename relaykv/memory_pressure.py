@@ -178,6 +178,15 @@ def decide_memory_pressure_state(
             **decision_kwargs,
         )
 
+    if shadow_compare_passed is None:
+        return RelayKVMemoryPressureDecision(
+            state=RelayKVMemoryPressureState.SHADOW_ONLY_WARMUP,
+            execution_mode=ExecutionMode.SHADOW_ONLY,
+            apply_blocked_reason="shadow_compare_not_ready",
+            budget_pressure=budget_pressure,
+            **decision_kwargs,
+        )
+
     if (
         selection_stability_ratio is not None
         and selection_stability_ratio < min_selection_stability_ratio
