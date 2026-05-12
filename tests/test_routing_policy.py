@@ -14,6 +14,8 @@ def test_routing_policy_maps_keep_and_drop_blocks_from_demotion_dry_run() -> Non
         keep_block_ids=[1, 2, 4, 5],
         drop_block_ids=[0, 3],
         fallback_reason=None,
+        eviction_excluded_block_ids=None,
+        eviction_candidate_block_ids=None,
         estimated_working_kv_bytes=8192,
         estimated_ram_swap_bytes=0,
         estimated_ssd_read_bytes=0,
@@ -21,6 +23,7 @@ def test_routing_policy_maps_keep_and_drop_blocks_from_demotion_dry_run() -> Non
 
     assert decision.selected_active_block_ids == [1, 2, 4, 5]
     assert decision.demotion_candidate_block_ids == [0, 1, 2, 3, 4, 5]
+    assert decision.protected_block_ids == []
     assert decision.demoted_block_ids == [0, 3]
     assert decision.retrieved_block_ids == []
     assert decision.prefetched_block_ids == []
@@ -43,6 +46,21 @@ def test_routing_policy_uses_shadow_only_for_dry_run_demotion() -> None:
 
     assert decision.execution_mode is ExecutionMode.SHADOW_ONLY
     assert decision.apply_blocked_reason == "dry_run_only"
+
+
+def test_routing_policy_preserves_protected_blocks_and_excludes_them_from_candidates() -> None:
+    decision = build_routing_decision_from_demotion(
+        total_blocks=6,
+        target_keep_blocks=3,
+        keep_block_ids=[2, 4, 5],
+        drop_block_ids=[0, 1, 3],
+        fallback_reason=None,
+        eviction_excluded_block_ids=[4, 5],
+        eviction_candidate_block_ids=[0, 1, 2, 3],
+    )
+
+    assert decision.protected_block_ids == [4, 5]
+    assert decision.demotion_candidate_block_ids == [0, 1, 2, 3]
 
 
 def test_routing_policy_fullkv_within_budget_maps_to_fullkv_gpu() -> None:
@@ -76,15 +94,18 @@ def test_routing_policy_propagates_non_fullkv_fallback_reason() -> None:
 
 def test_routing_policy_summary_is_json_serializable() -> None:
     decision = build_routing_decision_from_demotion(
-        total_blocks=2,
+        total_blocks=3,
         target_keep_blocks=1,
         keep_block_ids=[1],
         drop_block_ids=[0],
         fallback_reason=None,
+        eviction_excluded_block_ids=[2],
     )
 
     summary = decision.summary()
     assert summary["execution_mode"] == "shadow_only"
+    assert summary["protected_block_ids"] == [2]
+    assert summary["demotion_candidate_block_ids"] == [0, 1]
     assert summary["estimated_materialization_latency_ms"] is None
     assert summary["estimated_policy_compute_ms"] is None
     assert summary["estimated_attention_tokens_saved"] is None
@@ -108,9 +129,13 @@ def test_routing_policy_wraps_existing_demotion_decision() -> None:
         keep_block_ids=demotion.keep_block_ids,
         drop_block_ids=demotion.drop_block_ids,
         fallback_reason=demotion.fallback_reason,
+        eviction_excluded_block_ids=demotion.eviction_excluded_block_ids,
+        eviction_candidate_block_ids=demotion.eviction_candidate_block_ids,
         dry_run_only=demotion.dry_run_only,
     )
 
     assert decision.selected_active_block_ids == demotion.keep_block_ids
+    assert decision.protected_block_ids == demotion.eviction_excluded_block_ids
+    assert decision.demotion_candidate_block_ids == demotion.eviction_candidate_block_ids
     assert decision.demoted_block_ids == demotion.drop_block_ids
     assert decision.execution_mode is ExecutionMode.SHADOW_ONLY

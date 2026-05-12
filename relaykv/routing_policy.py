@@ -10,6 +10,8 @@ def build_routing_decision_from_demotion(
     keep_block_ids: list[int],
     drop_block_ids: list[int],
     fallback_reason: str | None,
+    eviction_excluded_block_ids: list[int] | None = None,
+    eviction_candidate_block_ids: list[int] | None = None,
     dry_run_only: bool = True,
     estimated_working_kv_bytes: int | None = None,
     estimated_ram_swap_bytes: int | None = None,
@@ -23,6 +25,24 @@ def build_routing_decision_from_demotion(
     all_block_ids = list(range(total_blocks))
     keep_block_ids = list(keep_block_ids)
     drop_block_ids = list(drop_block_ids)
+    protected_block_ids = (
+        list(eviction_excluded_block_ids)
+        if eviction_excluded_block_ids is not None
+        else []
+    )
+    protected_block_id_set = set(protected_block_ids)
+    if eviction_candidate_block_ids is not None:
+        demotion_candidate_block_ids = [
+            block_id
+            for block_id in eviction_candidate_block_ids
+            if block_id not in protected_block_id_set
+        ]
+    else:
+        demotion_candidate_block_ids = [
+            block_id
+            for block_id in all_block_ids
+            if block_id not in protected_block_id_set
+        ]
 
     if fallback_reason == "fullkv_within_budget":
         execution_mode = ExecutionMode.FULLKV_GPU
@@ -38,8 +58,8 @@ def build_routing_decision_from_demotion(
     return RelayKVDecision(
         execution_mode=execution_mode,
         selected_active_block_ids=keep_block_ids,
-        protected_block_ids=[],
-        demotion_candidate_block_ids=all_block_ids,
+        protected_block_ids=protected_block_ids,
+        demotion_candidate_block_ids=demotion_candidate_block_ids,
         demoted_block_ids=drop_block_ids,
         retrieved_block_ids=[],
         prefetched_block_ids=[],
