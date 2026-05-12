@@ -123,6 +123,15 @@ def decide_memory_pressure_state(
             **decision_kwargs,
         )
 
+    if fallback_reason == "fullkv_within_budget":
+        return RelayKVMemoryPressureDecision(
+            state=RelayKVMemoryPressureState.FULLKV_WITHIN_BUDGET,
+            execution_mode=ExecutionMode.FULLKV_GPU,
+            fallback_reason=fallback_reason,
+            budget_pressure=False,
+            **decision_kwargs,
+        )
+
     if fallback_reason is not None:
         return RelayKVMemoryPressureDecision(
             state=RelayKVMemoryPressureState.FALLBACK_REQUIRED,

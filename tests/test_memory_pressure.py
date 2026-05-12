@@ -36,6 +36,20 @@ def test_memory_pressure_fullkv_within_budget_uses_fullkv_gpu() -> None:
     assert decision.apply_blocked_reason is None
 
 
+def test_memory_pressure_fullkv_within_budget_fallback_uses_fullkv_gpu() -> None:
+    decision = decide_memory_pressure_state(
+        seq_len=512,
+        min_seq_len_for_relaykv=128,
+        fallback_reason="fullkv_within_budget",
+    )
+
+    assert decision.state is RelayKVMemoryPressureState.FULLKV_WITHIN_BUDGET
+    assert decision.execution_mode is ExecutionMode.FULLKV_GPU
+    assert decision.fallback_reason == "fullkv_within_budget"
+    assert decision.apply_blocked_reason is None
+    assert decision.budget_pressure is False
+
+
 def test_memory_pressure_fallback_reason_requires_fallback() -> None:
     decision = decide_memory_pressure_state(
         seq_len=512,
