@@ -25,6 +25,18 @@ from .vram_budget import (
     RelayKVVramBudgetDecision,
     build_vram_budget_decision,
 )
+from .memory_block import (
+    KVClass,
+    ResidencyLevel,
+    PrecisionLevel,
+    RopeStatus,
+    CachePositionPolicy,
+    RelayKVMemoryBlock,
+)
+from .routing_decision import (
+    ExecutionMode,
+    RelayKVDecision,
+)
 from .attention_compare import (
     AttentionCompareResult,
     scaled_dot_product_attention,
@@ -68,6 +80,14 @@ __all__ = [
     "build_demotion_decision",
     "RelayKVVramBudgetDecision",
     "build_vram_budget_decision",
+    "KVClass",
+    "ResidencyLevel",
+    "PrecisionLevel",
+    "RopeStatus",
+    "CachePositionPolicy",
+    "RelayKVMemoryBlock",
+    "ExecutionMode",
+    "RelayKVDecision",
     "AttentionCompareResult",
     "scaled_dot_product_attention",
     "compare_attention_outputs",
