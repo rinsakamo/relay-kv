@@ -34,6 +34,20 @@ def test_routing_policy_maps_keep_and_drop_blocks_from_demotion_dry_run() -> Non
     assert decision.estimated_ssd_read_bytes == 0
 
 
+def test_routing_policy_uses_apply_vram_working_for_non_dry_run_demotion() -> None:
+    decision = build_routing_decision_from_demotion(
+        total_blocks=4,
+        target_keep_blocks=2,
+        keep_block_ids=[2, 3],
+        drop_block_ids=[0, 1],
+        fallback_reason=None,
+        dry_run_only=False,
+    )
+
+    assert decision.execution_mode is ExecutionMode.APPLY_VRAM_WORKING
+    assert decision.apply_blocked_reason is None
+
+
 def test_routing_policy_uses_shadow_only_for_dry_run_demotion() -> None:
     decision = build_routing_decision_from_demotion(
         total_blocks=4,

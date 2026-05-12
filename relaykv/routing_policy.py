@@ -46,6 +46,10 @@ def build_routing_decision_from_demotion(
 
     if fallback_reason == "fullkv_within_budget":
         execution_mode = ExecutionMode.FULLKV_GPU
+    elif fallback_reason is not None:
+        execution_mode = ExecutionMode.SHADOW_ONLY
+    elif drop_block_ids and not dry_run_only:
+        execution_mode = ExecutionMode.APPLY_VRAM_WORKING
     else:
         execution_mode = ExecutionMode.SHADOW_ONLY
 
