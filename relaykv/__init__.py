@@ -37,6 +37,9 @@ from .routing_decision import (
     ExecutionMode,
     RelayKVDecision,
 )
+from .routing_policy import (
+    build_routing_decision_from_demotion,
+)
 from .attention_compare import (
     AttentionCompareResult,
     scaled_dot_product_attention,
@@ -88,6 +91,7 @@ __all__ = [
     "RelayKVMemoryBlock",
     "ExecutionMode",
     "RelayKVDecision",
+    "build_routing_decision_from_demotion",
     "AttentionCompareResult",
     "scaled_dot_product_attention",
     "compare_attention_outputs",

@@ -6,8 +6,10 @@ from enum import Enum
 
 class ExecutionMode(str, Enum):
     FULL_ATTENTION = "full_attention"
+    FULLKV_GPU = "fullkv_gpu"
     RELAYKV_ROUTED = "relaykv_routed"
     SHADOW_COMPARE = "shadow_compare"
+    SHADOW_ONLY = "shadow_only"
 
 
 @dataclass(frozen=True)
@@ -21,13 +23,13 @@ class RelayKVDecision:
     prefetched_block_ids: list[int]
     reused_block_ids: list[int]
     newly_retrieved_block_ids: list[int]
-    estimated_working_kv_bytes: int
-    estimated_ram_swap_bytes: int
-    estimated_ssd_read_bytes: int
-    estimated_materialization_latency_ms: float
-    estimated_policy_compute_ms: float
-    estimated_attention_tokens_saved: int
-    estimated_net_benefit_ms: float
+    estimated_working_kv_bytes: int | None
+    estimated_ram_swap_bytes: int | None
+    estimated_ssd_read_bytes: int | None
+    estimated_materialization_latency_ms: float | None
+    estimated_policy_compute_ms: float | None
+    estimated_attention_tokens_saved: int | None
+    estimated_net_benefit_ms: float | None
     fallback_reason: str | None
     apply_blocked_reason: str | None
     shadow_compare_passed: bool | None
