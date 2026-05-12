@@ -50,10 +50,12 @@ def build_routing_decision_from_demotion(
         execution_mode = ExecutionMode.SHADOW_ONLY
 
     apply_blocked_reason: str | None = None
-    if dry_run_only:
-        apply_blocked_reason = "dry_run_only"
-    elif fallback_reason is not None and fallback_reason != "fullkv_within_budget":
+    if fallback_reason is not None and fallback_reason != "fullkv_within_budget":
         apply_blocked_reason = fallback_reason
+    elif fallback_reason == "fullkv_within_budget":
+        apply_blocked_reason = None
+    elif dry_run_only:
+        apply_blocked_reason = "dry_run_only"
 
     return RelayKVDecision(
         execution_mode=execution_mode,

@@ -84,7 +84,7 @@ def test_routing_policy_propagates_non_fullkv_fallback_reason() -> None:
         keep_block_ids=[2, 3, 4],
         drop_block_ids=[0, 1],
         fallback_reason="insufficient_eviction_candidates",
-        dry_run_only=False,
+        dry_run_only=True,
     )
 
     assert decision.execution_mode is ExecutionMode.SHADOW_ONLY
@@ -111,6 +111,20 @@ def test_routing_policy_summary_is_json_serializable() -> None:
     assert summary["estimated_attention_tokens_saved"] is None
     assert summary["estimated_net_benefit_ms"] is None
     assert json.loads(json.dumps(summary)) == summary
+
+
+def test_routing_policy_fullkv_within_budget_clears_blocker_even_in_dry_run() -> None:
+    decision = build_routing_decision_from_demotion(
+        total_blocks=3,
+        target_keep_blocks=4,
+        keep_block_ids=[0, 1, 2],
+        drop_block_ids=[],
+        fallback_reason="fullkv_within_budget",
+        dry_run_only=True,
+    )
+
+    assert decision.execution_mode is ExecutionMode.FULLKV_GPU
+    assert decision.apply_blocked_reason is None
 
 
 def test_routing_policy_wraps_existing_demotion_decision() -> None:
