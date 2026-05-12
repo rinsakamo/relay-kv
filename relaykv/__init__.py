@@ -45,6 +45,9 @@ from .memory_pressure import (
     RelayKVMemoryPressureDecision,
     decide_memory_pressure_state,
 )
+from .memory_pressure_summary import (
+    summarize_memory_pressure_decisions,
+)
 from .attention_compare import (
     AttentionCompareResult,
     scaled_dot_product_attention,
@@ -100,6 +103,7 @@ __all__ = [
     "RelayKVMemoryPressureState",
     "RelayKVMemoryPressureDecision",
     "decide_memory_pressure_state",
+    "summarize_memory_pressure_decisions",
     "AttentionCompareResult",
     "scaled_dot_product_attention",
     "compare_attention_outputs",
