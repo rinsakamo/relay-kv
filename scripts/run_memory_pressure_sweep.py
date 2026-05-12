@@ -9,10 +9,8 @@ from typing import Any
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
-from relaykv import (
-    decide_memory_pressure_state,
-    summarize_memory_pressure_decisions,
-)
+from relaykv.memory_pressure import decide_memory_pressure_state
+from relaykv.memory_pressure_summary import summarize_memory_pressure_decisions
 
 
 DEFAULT_OUTPUT_JSON = Path(
