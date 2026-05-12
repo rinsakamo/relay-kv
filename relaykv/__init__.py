@@ -40,6 +40,11 @@ from .routing_decision import (
 from .routing_policy import (
     build_routing_decision_from_demotion,
 )
+from .memory_pressure import (
+    RelayKVMemoryPressureState,
+    RelayKVMemoryPressureDecision,
+    decide_memory_pressure_state,
+)
 from .attention_compare import (
     AttentionCompareResult,
     scaled_dot_product_attention,
@@ -92,6 +97,9 @@ __all__ = [
     "ExecutionMode",
     "RelayKVDecision",
     "build_routing_decision_from_demotion",
+    "RelayKVMemoryPressureState",
+    "RelayKVMemoryPressureDecision",
+    "decide_memory_pressure_state",
     "AttentionCompareResult",
     "scaled_dot_product_attention",
     "compare_attention_outputs",
