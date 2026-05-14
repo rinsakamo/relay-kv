@@ -13,6 +13,8 @@ The current prototype is still small-scale, but the main empirical trend is alre
 
 Unless otherwise noted, the comparisons below should be interpreted as **prototype-stage empirical findings**, not formal guarantees.
 
+For related next-step evaluation framing beyond the current prototype measurements, see [evaluation_targets.md](evaluation_targets.md).
+
 ---
 
 ## Main Findings
