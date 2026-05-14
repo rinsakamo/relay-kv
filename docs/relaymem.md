@@ -74,3 +74,5 @@ RelayMEM is currently a **design target**, not a claimed implementation in this 
 The present repository mainly implements RelayKV prototype components and supporting routing/budget schemas. RelayMEM is documented here so the architectural boundary stays clear while the RelayKV prototype remains the primary implemented path.
 
 As a lightweight bridge for logs and experiments, `relaykv/relaymem.py` provides log-only schema objects for retrieval results and context assembly plans. It does not implement any concrete RAG backend.
+
+For memory-side records, `relaykv/relaymem_records.py` defines log-only records for Profile Memory, Episode Memory, Summary Memory, Structured Memory, and KV Checkpoint Metadata. It does not implement storage, retrieval, embedding, or concrete RAG backends.
