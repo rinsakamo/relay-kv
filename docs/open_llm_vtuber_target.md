@@ -17,11 +17,13 @@ The intended boundary is:
 
 - **RelayMEM** in the memory / agent layer
 - **RelayKV** in the local LLM backend / KV budget layer
+- **RelayStack runtime policy** across memory recall, VRAM reservation, and fallback decisions
 
 In other words:
 
 - RelayMEM chooses what older summaries, profile facts, episodes, retrieved knowledge, or structured memory entries should enter active context
 - RelayKV manages how the resulting active-context KV working set fits inside the live VRAM budget
+- RelayStack plans when to stay in low-latency mode, when to retrieve deeper memory, and when to propose user-gated fallback
 
 ## 12GB VRAM target
 
@@ -54,6 +56,23 @@ As a schema/log-only step, `relaykv/vram_reservation.py` provides residual VRAM 
 
 RelayStack dry-run now combines RelayMEM context assembly, User-Gated Fallback fields, and VRAM reservation accounting into one no-model/no-GPU planning JSON for local AI Vtuber-style scenarios.
 
+A representative planning artifact should make the residual budget explicit:
+
+```text
+runtime mode
+model weight reservation
+ASR reservation
+TTS reservation
+avatar / animation reservation
+safety margin
+residual KV budget
+RelayMEM retrieval mode
+RelayKV activation state
+fallback proposal
+```
+
+This makes RelayStack useful as a low-VRAM runtime planner even before real model or engine integration.
+
 ## Demo comparison
 
 The practical demo comparison should stay cautious:
@@ -67,6 +86,27 @@ The comparison is useful if it can show one or more of the following without ove
 - better recall of prior profile or episode details
 - more stable runtime behavior under the same VRAM constraints
 - clearer operator control over when slower fallback behavior is allowed
+- explicit planning for whether the remaining KV budget is sufficient for the requested mode
+
+## Near-term path
+
+The near-term Open-LLM-VTuber path should remain documentation, schema, and dry-run oriented:
+
+```text
+RelayMEM Fast Recall backend
+  ↓
+prompt preview / CLI memory assistant smoke
+  ↓
+RelayStack practical runtime planning JSON
+  ↓
+HF max-context / FullKV baseline quality smoke
+  ↓
+pressure-triggered RelayKV shadow policy
+  ↓
+actual runtime adapter selection
+```
+
+This avoids tying the project too early to a specific UI or backend while still keeping the product target concrete.
 
 ## Caution
 
