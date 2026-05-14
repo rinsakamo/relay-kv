@@ -42,6 +42,18 @@ from .relaymem import (
     RelayMEMRetrievalResult,
     build_relaymem_context_assembly_plan,
 )
+from .relaymem_records import (
+    RelayMEMEpisodeKind,
+    RelayMEMEpisodeRecord,
+    RelayMEMKVCheckpointMetadata,
+    RelayMEMProfileKind,
+    RelayMEMProfileRecord,
+    RelayMEMRecordStatus,
+    RelayMEMStructuredRecord,
+    RelayMEMSummaryKind,
+    RelayMEMSummaryRecord,
+    summarize_relaymem_records,
+)
 
 _LAZY_EXPORTS = {
     "TierManager": ("relaykv.tier_manager", "TierManager"),
@@ -185,6 +197,16 @@ __all__ = [
     "RelayMEMContextItem",
     "RelayMEMContextAssemblyPlan",
     "build_relaymem_context_assembly_plan",
+    "RelayMEMProfileKind",
+    "RelayMEMEpisodeKind",
+    "RelayMEMSummaryKind",
+    "RelayMEMRecordStatus",
+    "RelayMEMProfileRecord",
+    "RelayMEMEpisodeRecord",
+    "RelayMEMSummaryRecord",
+    "RelayMEMStructuredRecord",
+    "RelayMEMKVCheckpointMetadata",
+    "summarize_relaymem_records",
     "AttentionCompareResult",
     "scaled_dot_product_attention",
     "compare_attention_outputs",
