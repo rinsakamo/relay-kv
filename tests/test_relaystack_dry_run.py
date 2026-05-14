@@ -44,14 +44,55 @@ def test_relaystack_dry_run_writes_expected_json(tmp_path: Path) -> None:
     assert "context_assembly_plan" in loaded["relaymem"]
     assert "selected_items" in loaded["relaymem"]["context_assembly_plan"]
     assert "vram_reservation_decision" in loaded["relaykv"]
+    assert loaded["relaykv"]["relaykv_routing_allowed"] is True
     assert (
         "available_working_kv_budget_mib"
         in loaded["relaykv"]["vram_reservation_decision"]
     )
+    assert loaded["relaykv"]["memory_pressure_decision"] is not None
     assert loaded["user_gated_fallback"]["approval_required"] is True
     assert loaded["user_gated_fallback"]["proposed_retrieval_mode"] == "deep_recall"
     assert loaded["user_gated_fallback"]["fallback_if_denied"] == "fast_recall"
     assert json.loads(json.dumps(loaded)) == loaded
+
+
+def test_relaystack_dry_run_blocks_routing_when_no_kv_budget(tmp_path: Path) -> None:
+    output_path = tmp_path / "relaystack_dry_run_no_kv_budget.json"
+    repo_root = Path(__file__).resolve().parents[1]
+    env = os.environ.copy()
+    env["PYTHONPATH"] = str(repo_root)
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "scripts/run_relaystack_dry_run.py",
+            "--output",
+            str(output_path),
+            "--min-working-kv-budget-mib",
+            "2048",
+        ],
+        cwd=repo_root,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    with output_path.open(encoding="utf-8") as f:
+        loaded = json.load(f)
+
+    assert loaded["relaykv"]["vram_reservation_decision"]["status"] in {
+        "no_kv_budget",
+        "over_budget",
+    }
+    assert loaded["relaykv"]["memory_pressure_decision"] is None
+    assert loaded["relaykv"]["relaykv_routing_allowed"] is False
+    assert (
+        loaded["relaykv"]["memory_pressure_note"]
+        == "skipped: vram reservation status is not ok"
+    )
+    assert "relaykv_routed_ready" not in json.dumps(loaded)
 
 
 def test_relaystack_dry_run_disable_approval_gate(tmp_path: Path) -> None:

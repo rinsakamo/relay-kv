@@ -15,6 +15,7 @@ from relaykv import (
     RelayMEMRetrievalMode,
     RelayMEMRetrievalResult,
     RelayKVVramReservation,
+    RelayKVVramReservationStatus,
     build_relaymem_context_assembly_plan,
     build_vram_reservation_budget_decision,
     decide_memory_pressure_state,
@@ -173,34 +174,41 @@ def run_relaystack_dry_run(
         min_working_kv_budget_mib=min_working_kv_budget_mib,
     )
 
-    memory_pressure_note = None
-    projected_fullkv_bytes = (reservation.total_vram_mib * MIB_BYTES) // 2
-    residual_vram_budget_bytes = (
-        vram_reservation_decision.available_working_kv_budget_mib * MIB_BYTES
+    relaykv_routing_allowed = (
+        vram_reservation_decision.status == RelayKVVramReservationStatus.OK
     )
-    try:
-        memory_pressure_decision_obj = decide_memory_pressure_state(
-            seq_len=8192,
-            min_seq_len_for_relaykv=2048,
-            projected_fullkv_bytes=projected_fullkv_bytes,
-            residual_vram_budget_bytes=residual_vram_budget_bytes,
-            labels_ready=True,
-            host_backup_available=True,
-            shadow_compare_passed=True,
-            selection_stability_ratio=0.92,
-            estimated_net_benefit_ms=3.5,
-            min_estimated_net_benefit_ms=0.0,
-        )
-        memory_pressure_decision = memory_pressure_decision_obj.summary()
-        memory_pressure_summary = summarize_memory_pressure_decisions(
-            [memory_pressure_decision_obj]
-        )
-    except Exception:
+    if not relaykv_routing_allowed:
         memory_pressure_decision = None
         memory_pressure_summary = None
-        memory_pressure_note = "skipped: no lightweight safe helper selected"
+        memory_pressure_note = "skipped: vram reservation status is not ok"
     else:
-        memory_pressure_note = "included: lightweight memory pressure helper"
+        projected_fullkv_bytes = (reservation.total_vram_mib * MIB_BYTES) // 2
+        residual_vram_budget_bytes = (
+            vram_reservation_decision.available_working_kv_budget_mib * MIB_BYTES
+        )
+        try:
+            memory_pressure_decision_obj = decide_memory_pressure_state(
+                seq_len=8192,
+                min_seq_len_for_relaykv=2048,
+                projected_fullkv_bytes=projected_fullkv_bytes,
+                residual_vram_budget_bytes=residual_vram_budget_bytes,
+                labels_ready=True,
+                host_backup_available=True,
+                shadow_compare_passed=True,
+                selection_stability_ratio=0.92,
+                estimated_net_benefit_ms=3.5,
+                min_estimated_net_benefit_ms=0.0,
+            )
+            memory_pressure_decision = memory_pressure_decision_obj.summary()
+            memory_pressure_summary = summarize_memory_pressure_decisions(
+                [memory_pressure_decision_obj]
+            )
+        except Exception:
+            memory_pressure_decision = None
+            memory_pressure_summary = None
+            memory_pressure_note = "skipped: no lightweight safe helper selected"
+        else:
+            memory_pressure_note = "included: lightweight memory pressure helper"
 
     user_gated_fallback = {
         "approval_required": approval_required,
@@ -239,6 +247,7 @@ def run_relaystack_dry_run(
         "relaykv": {
             "vram_reservation": reservation.summary(),
             "vram_reservation_decision": vram_reservation_decision.summary(),
+            "relaykv_routing_allowed": relaykv_routing_allowed,
             "memory_pressure_decision": memory_pressure_decision,
             "memory_pressure_summary": memory_pressure_summary,
             "memory_pressure_note": memory_pressure_note,
@@ -251,6 +260,7 @@ def run_relaystack_dry_run(
             "available_working_kv_budget_mib": (
                 vram_reservation_decision.available_working_kv_budget_mib
             ),
+            "relaykv_routing_allowed": relaykv_routing_allowed,
             "memory_pressure_included": memory_pressure_decision is not None,
         },
     }
