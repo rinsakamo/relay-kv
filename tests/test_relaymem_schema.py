@@ -72,6 +72,24 @@ def test_retrieval_result_rejects_confidence_above_one() -> None:
         make_result(confidence=1.1)
 
 
+def test_retrieval_result_allows_bm25_like_score_greater_than_one() -> None:
+    result = make_result(
+        retrieval_backend=RelayMEMBackendKind.BM25,
+        score=12.5,
+    )
+
+    assert result.score == 12.5
+
+
+def test_retrieval_result_allows_out_of_range_vector_like_score() -> None:
+    result = make_result(
+        retrieval_backend=RelayMEMBackendKind.VECTOR,
+        score=-3.25,
+    )
+
+    assert result.score == -3.25
+
+
 def test_context_assembly_respects_token_budget() -> None:
     plan = build_relaymem_context_assembly_plan(
         query="character continuity",
@@ -104,6 +122,30 @@ def test_context_assembly_records_dropped_memory_ids() -> None:
 
     assert plan.dropped_memory_ids == ["mem-2"]
     assert [item.memory_id for item in plan.selected_items] == ["mem-1", "mem-3"]
+
+
+def test_context_assembly_uses_zero_priority_for_out_of_range_score() -> None:
+    plan = build_relaymem_context_assembly_plan(
+        query="older sparse evidence",
+        retrieval_mode=RelayMEMRetrievalMode.FAST_RECALL,
+        backend_kind=RelayMEMBackendKind.BM25,
+        retrieval_results=[
+            make_result(
+                memory_id="mem-1",
+                retrieval_backend=RelayMEMBackendKind.BM25,
+                score=8.0,
+                confidence=None,
+            ),
+            make_result(
+                memory_id="mem-2",
+                retrieval_backend=RelayMEMBackendKind.VECTOR,
+                score=-0.5,
+                confidence=None,
+            ),
+        ],
+    )
+
+    assert [item.priority for item in plan.selected_items] == [0.0, 0.0]
 
 
 def test_deep_recall_evidence_chain_can_be_represented_without_backend_dependency() -> None:

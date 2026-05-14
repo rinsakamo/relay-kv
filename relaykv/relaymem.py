@@ -45,6 +45,21 @@ def _require_unit_interval(value: float | None, field_name: str) -> None:
         raise ValueError(f"{field_name} must be between 0 and 1")
 
 
+def _require_numeric(value: float | None, field_name: str) -> None:
+    if value is None:
+        return
+    if not isinstance(value, (int, float)):
+        raise ValueError(f"{field_name} must be numeric")
+
+
+def _priority_from_retrieval_result(result: RelayMEMRetrievalResult) -> float:
+    if result.confidence is not None:
+        return result.confidence
+    if result.score is not None and 0.0 <= float(result.score) <= 1.0:
+        return float(result.score)
+    return 0.0
+
+
 @dataclass(frozen=True)
 class RelayMEMRetrievalResult:
     memory_id: str
@@ -61,7 +76,7 @@ class RelayMEMRetrievalResult:
         _require_non_empty(self.memory_id, "memory_id")
         _require_non_empty(self.text, "text")
         _require_non_negative(self.estimated_tokens, "estimated_tokens")
-        _require_unit_interval(self.score, "score")
+        _require_numeric(self.score, "score")
         _require_unit_interval(self.confidence, "confidence")
 
     def summary(self) -> dict:
@@ -169,11 +184,7 @@ def build_relaymem_context_assembly_plan(
             dropped_memory_ids.append(result.memory_id)
             continue
 
-        priority = (
-            result.score
-            if result.score is not None
-            else (result.confidence if result.confidence is not None else 0.0)
-        )
+        priority = _priority_from_retrieval_result(result)
         selected_items.append(
             RelayMEMContextItem(
                 context_item_id=f"context_item:{result.memory_id}",
