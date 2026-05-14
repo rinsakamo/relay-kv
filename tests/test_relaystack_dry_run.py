@@ -1,0 +1,125 @@
+import json
+import os
+from pathlib import Path
+import subprocess
+import sys
+
+
+def test_relaystack_dry_run_writes_expected_json(tmp_path: Path) -> None:
+    output_path = tmp_path / "relaystack_dry_run.json"
+    repo_root = Path(__file__).resolve().parents[1]
+    env = os.environ.copy()
+    env["PYTHONPATH"] = str(repo_root)
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "scripts/run_relaystack_dry_run.py",
+            "--output",
+            str(output_path),
+        ],
+        cwd=repo_root,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert output_path.exists()
+
+    with output_path.open(encoding="utf-8") as f:
+        loaded = json.load(f)
+
+    assert set(loaded.keys()) == {
+        "metadata",
+        "runtime_policy",
+        "relaymem",
+        "relaykv",
+        "user_gated_fallback",
+        "summary",
+    }
+    assert loaded["metadata"]["no_model_loaded"] is True
+    assert loaded["metadata"]["no_gpu_inspection"] is True
+    assert "context_assembly_plan" in loaded["relaymem"]
+    assert "selected_items" in loaded["relaymem"]["context_assembly_plan"]
+    assert "vram_reservation_decision" in loaded["relaykv"]
+    assert (
+        "available_working_kv_budget_mib"
+        in loaded["relaykv"]["vram_reservation_decision"]
+    )
+    assert loaded["user_gated_fallback"]["approval_required"] is True
+    assert loaded["user_gated_fallback"]["proposed_retrieval_mode"] == "deep_recall"
+    assert loaded["user_gated_fallback"]["fallback_if_denied"] == "fast_recall"
+    assert json.loads(json.dumps(loaded)) == loaded
+
+
+def test_relaystack_dry_run_disable_approval_gate(tmp_path: Path) -> None:
+    output_path = tmp_path / "relaystack_dry_run_no_gate.json"
+    repo_root = Path(__file__).resolve().parents[1]
+    env = os.environ.copy()
+    env["PYTHONPATH"] = str(repo_root)
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "scripts/run_relaystack_dry_run.py",
+            "--output",
+            str(output_path),
+            "--disable-approval-gate",
+        ],
+        cwd=repo_root,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    with output_path.open(encoding="utf-8") as f:
+        loaded = json.load(f)
+
+    assert loaded["user_gated_fallback"]["approval_required"] is False
+
+
+def test_relaystack_dry_run_runs_when_model_and_gpu_imports_are_blocked(
+    tmp_path: Path,
+) -> None:
+    output_path = tmp_path / "relaystack_dry_run_blocked.json"
+    repo_root = Path(__file__).resolve().parents[1]
+    script = f"""
+import builtins
+from pathlib import Path
+
+real_import = builtins.__import__
+
+def blocked_import(name, *args, **kwargs):
+    if name in {{"torch", "pynvml", "transformers", "requests", "httpx"}}:
+        raise ModuleNotFoundError(f"blocked import: {{name}}")
+    return real_import(name, *args, **kwargs)
+
+builtins.__import__ = blocked_import
+
+from scripts.run_relaystack_dry_run import run_relaystack_dry_run
+
+out = Path({str(output_path)!r})
+payload = run_relaystack_dry_run(output=out)
+print(out.exists())
+print(payload["metadata"]["no_model_loaded"])
+print(payload["metadata"]["no_gpu_inspection"])
+"""
+    env = os.environ.copy()
+    env["PYTHONPATH"] = str(repo_root)
+    result = subprocess.run(
+        [sys.executable, "-c", script],
+        cwd=repo_root,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert output_path.exists()
+    stdout_lines = [line.strip() for line in result.stdout.splitlines() if line.strip()]
+    assert stdout_lines[-3:] == ["True", "True", "True"]
