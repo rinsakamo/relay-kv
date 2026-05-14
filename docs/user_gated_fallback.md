@@ -72,3 +72,5 @@ The important property is that the system communicates the tradeoff clearly inst
 ## Status
 
 User-Gated Fallback is a **design-level runtime policy**, not a claimed end-to-end implementation in the current repository.
+
+As a schema/log-only step, `relaykv/routing_decision.py` and `relaykv/relaymem.py` now include approval-related fields for fallback and memory-recall proposals. This does not implement runtime approval UX.

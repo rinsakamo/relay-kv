@@ -10,6 +10,12 @@ class ExecutionMode(str, Enum):
     RELAYKV_ROUTED = "relaykv_routed"
     SHADOW_COMPARE = "shadow_compare"
     SHADOW_ONLY = "shadow_only"
+    PROPOSE_FALLBACK = "propose_fallback"
+    WAIT_USER_APPROVAL = "wait_user_approval"
+    APPLY_RAM_BACKED = "apply_ram_backed"
+    FALLBACK_FULLKV_RAM = "fallback_fullkv_ram"
+    FALLBACK_FULLKV_TIERED = "fallback_fullkv_tiered"
+    FALLBACK_RECENT_ANCHOR = "fallback_recent_anchor"
 
 
 @dataclass(frozen=True)
@@ -34,6 +40,11 @@ class RelayKVDecision:
     apply_blocked_reason: str | None
     shadow_compare_passed: bool | None
     selection_stability_ratio: float | None
+    approval_required: bool = False
+    approval_reason: str | None = None
+    proposed_fallback_mode: ExecutionMode | None = None
+    user_visible_message: str | None = None
+    fallback_if_denied: ExecutionMode | None = None
 
     def summary(self) -> dict:
         return {
@@ -57,4 +68,17 @@ class RelayKVDecision:
             "apply_blocked_reason": self.apply_blocked_reason,
             "shadow_compare_passed": self.shadow_compare_passed,
             "selection_stability_ratio": self.selection_stability_ratio,
+            "approval_required": self.approval_required,
+            "approval_reason": self.approval_reason,
+            "proposed_fallback_mode": (
+                self.proposed_fallback_mode.value
+                if self.proposed_fallback_mode is not None
+                else None
+            ),
+            "user_visible_message": self.user_visible_message,
+            "fallback_if_denied": (
+                self.fallback_if_denied.value
+                if self.fallback_if_denied is not None
+                else None
+            ),
         }

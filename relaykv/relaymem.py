@@ -138,6 +138,8 @@ class RelayMEMContextAssemblyPlan:
     approval_required: bool
     approval_reason: str | None
     user_visible_message: str | None
+    proposed_retrieval_mode: RelayMEMRetrievalMode | None = None
+    fallback_if_denied: RelayMEMRetrievalMode | None = None
 
     def __post_init__(self) -> None:
         _require_non_empty(self.query, "query")
@@ -157,6 +159,16 @@ class RelayMEMContextAssemblyPlan:
             "approval_required": self.approval_required,
             "approval_reason": self.approval_reason,
             "user_visible_message": self.user_visible_message,
+            "proposed_retrieval_mode": (
+                self.proposed_retrieval_mode.value
+                if self.proposed_retrieval_mode is not None
+                else None
+            ),
+            "fallback_if_denied": (
+                self.fallback_if_denied.value
+                if self.fallback_if_denied is not None
+                else None
+            ),
         }
 
 
@@ -169,6 +181,8 @@ def build_relaymem_context_assembly_plan(
     approval_required: bool = False,
     approval_reason: str | None = None,
     user_visible_message: str | None = None,
+    proposed_retrieval_mode: RelayMEMRetrievalMode | None = None,
+    fallback_if_denied: RelayMEMRetrievalMode | None = None,
 ) -> RelayMEMContextAssemblyPlan:
     _require_non_empty(query, "query")
     if token_budget is not None:
@@ -211,4 +225,6 @@ def build_relaymem_context_assembly_plan(
         approval_required=approval_required,
         approval_reason=approval_reason,
         user_visible_message=user_visible_message,
+        proposed_retrieval_mode=proposed_retrieval_mode,
+        fallback_if_denied=fallback_if_denied,
     )

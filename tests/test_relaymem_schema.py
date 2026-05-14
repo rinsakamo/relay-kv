@@ -167,12 +167,17 @@ def test_deep_recall_evidence_chain_can_be_represented_without_backend_dependenc
         approval_required=True,
         approval_reason="deeper recall requested",
         user_visible_message="May I search older memory?",
+        proposed_retrieval_mode=RelayMEMRetrievalMode.DEEP_RECALL,
+        fallback_if_denied=RelayMEMRetrievalMode.FAST_RECALL,
     )
 
     assert plan.retrieval_mode is RelayMEMRetrievalMode.DEEP_RECALL
     assert plan.backend_kind is RelayMEMBackendKind.EVIDENCE_CHAIN
     assert plan.selected_items[0].priority == 0.9
     assert plan.summary()["backend_kind"] == "evidence_chain"
+    assert plan.summary()["approval_required"] is True
+    assert plan.summary()["proposed_retrieval_mode"] == "deep_recall"
+    assert plan.summary()["fallback_if_denied"] == "fast_recall"
 
 
 def test_import_from_relaykv_stays_torch_free() -> None:
