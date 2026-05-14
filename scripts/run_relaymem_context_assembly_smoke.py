@@ -19,6 +19,7 @@ from relaykv import (
 
 
 DEFAULT_OUTPUT = Path("results/processed/relaymem_context_assembly_smoke.json")
+DEFAULT_TOKEN_BUDGET = 140
 
 
 def build_synthetic_retrieval_results() -> list[RelayMEMRetrievalResult]:
@@ -132,7 +133,7 @@ def make_summary(
 def run_relaymem_context_assembly_smoke(
     *,
     output: Path = DEFAULT_OUTPUT,
-    token_budget: int = 100,
+    token_budget: int = DEFAULT_TOKEN_BUDGET,
 ) -> dict[str, Any]:
     retrieval_results = build_synthetic_retrieval_results()
     plan_obj = build_relaymem_context_assembly_plan(
@@ -178,7 +179,7 @@ def main() -> int:
     parser.add_argument(
         "--token-budget",
         type=int,
-        default=100,
+        default=DEFAULT_TOKEN_BUDGET,
         help="Token budget for RelayMEM context assembly.",
     )
     args = parser.parse_args()
