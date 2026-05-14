@@ -52,6 +52,8 @@ RelayKV is then responsible for treating that remaining KV budget as a managed w
 
 As a schema/log-only step, `relaykv/vram_reservation.py` provides residual VRAM budget calculation for local multimodal stacks such as LLM + TTS + ASR + avatar. It does not inspect hardware or change runtime behavior.
 
+RelayStack dry-run now combines RelayMEM context assembly, User-Gated Fallback fields, and VRAM reservation accounting into one no-model/no-GPU planning JSON for local AI Vtuber-style scenarios.
+
 ## Demo comparison
 
 The practical demo comparison should stay cautious:
