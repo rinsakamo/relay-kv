@@ -33,6 +33,15 @@ from .memory_pressure import (
 from .memory_pressure_summary import (
     summarize_memory_pressure_decisions,
 )
+from .relaymem import (
+    RelayMEMBackendKind,
+    RelayMEMContextAssemblyPlan,
+    RelayMEMContextItem,
+    RelayMEMMemorySource,
+    RelayMEMRetrievalMode,
+    RelayMEMRetrievalResult,
+    build_relaymem_context_assembly_plan,
+)
 
 _LAZY_EXPORTS = {
     "TierManager": ("relaykv.tier_manager", "TierManager"),
@@ -169,6 +178,13 @@ __all__ = [
     "RelayKVMemoryPressureDecision",
     "decide_memory_pressure_state",
     "summarize_memory_pressure_decisions",
+    "RelayMEMRetrievalMode",
+    "RelayMEMBackendKind",
+    "RelayMEMMemorySource",
+    "RelayMEMRetrievalResult",
+    "RelayMEMContextItem",
+    "RelayMEMContextAssemblyPlan",
+    "build_relaymem_context_assembly_plan",
     "AttentionCompareResult",
     "scaled_dot_product_attention",
     "compare_attention_outputs",

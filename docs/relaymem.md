@@ -72,3 +72,5 @@ Profile Memory should be understood as a general memory category. Viewer-specifi
 RelayMEM is currently a **design target**, not a claimed implementation in this repository.
 
 The present repository mainly implements RelayKV prototype components and supporting routing/budget schemas. RelayMEM is documented here so the architectural boundary stays clear while the RelayKV prototype remains the primary implemented path.
+
+As a lightweight bridge for logs and experiments, `relaykv/relaymem.py` provides log-only schema objects for retrieval results and context assembly plans. It does not implement any concrete RAG backend.
