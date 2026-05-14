@@ -5,6 +5,8 @@
 
 **RelayKV** is a research prototype for a VRAM-aware active-context KV routing layer and tiered KV memory manager for local LLM inference.
 
+RelayKV should be understood as a **fixed-VRAM-budget decode-time KV working-set controller**, not as a simple KV-cache reduction algorithm. Its goal is to keep the active decode-time KV working set inside the residual VRAM budget left after model weights and other local runtime components are accounted for.
+
 It is intended to extend the amount of *usable active context under fixed VRAM* by routing and managing KV blocks across GPU, RAM, and colder tiers. It does **not** extend a model's trained or supported maximum context length by itself.
 
 ## Current Status
@@ -42,6 +44,24 @@ The current project direction is **RelayStack**:
 - **Runtime policy**: request-time policy that decides when to stay in low-latency mode, when to retrieve older memory, and when to require explicit user approval for fallback behavior
 
 RelayStack is the broader system direction. The repository today is still centered on the RelayKV prototype path and supporting policy/design work.
+
+RelayStack is **not** a RAG replacement. It is a memory/context/KV-budget orchestration layer that can combine RAG-like retrieval, hierarchical memory, active-context assembly, fixed-budget KV routing, VRAM reservation, and fallback policy.
+
+The intended responsibility split is:
+
+```text
+RAG or retrieval backend
+  retrieves external evidence or memory candidates
+
+RelayMEM
+  selects and assembles memories into active context
+
+RelayKV
+  controls the decode-time KV working set under a fixed VRAM budget
+
+RelayStack
+  coordinates RelayMEM, RelayKV, VRAM reservation, and fallback policy
+```
 
 ## Evaluation Targets
 
