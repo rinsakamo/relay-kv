@@ -54,6 +54,12 @@ from .relaymem_records import (
     RelayMEMSummaryRecord,
     summarize_relaymem_records,
 )
+from .vram_reservation import (
+    RelayKVVramReservation,
+    RelayKVVramReservationStatus,
+    RelayKVVramBudgetDecision as RelayKVVramReservationBudgetDecision,
+    build_vram_budget_decision as build_vram_reservation_budget_decision,
+)
 
 _LAZY_EXPORTS = {
     "TierManager": ("relaykv.tier_manager", "TierManager"),
@@ -177,6 +183,10 @@ __all__ = [
     "build_demotion_decision",
     "RelayKVVramBudgetDecision",
     "build_vram_budget_decision",
+    "RelayKVVramReservationStatus",
+    "RelayKVVramReservation",
+    "RelayKVVramReservationBudgetDecision",
+    "build_vram_reservation_budget_decision",
     "KVClass",
     "ResidencyLevel",
     "PrecisionLevel",
