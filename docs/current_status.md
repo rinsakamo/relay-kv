@@ -78,6 +78,7 @@ The repository currently implements or prototypes the following pieces:
 - demotion dry-run decisions
 - memory-block schemas and routing-decision schemas for future runtime integration
 - RelayMEM schema objects for retrieval results and context assembly plans
+- RelayMEM Fast Recall backend v1 for stdlib-only keyword-based memory recall
 - RelayMEM record schemas for profile, episode, summary, structured, and KV checkpoint metadata records
 - User-Gated Fallback schema fields
 - VRAM reservation schema and smoke path
@@ -103,31 +104,32 @@ The next work should keep model/GPU/runtime risk low until RelayMEM and RelaySta
 
 ```text
 Phase 6:
-  RelayMEM Fast Recall backend
+  Completed: RelayMEM Fast Recall backend v1
+
+Phase 6.5:
+  Current: RelayMEM prompt preview / user-gated fallback planning
+  Scope: schema and smoke only. No model, GPU, runtime, or KV path is called.
 
 Phase 7:
-  RelayMEM prompt preview / CLI memory assistant smoke
-
-Phase 8:
   RelayStack runtime planning artifact practical configuration
 
-Phase 9:
+Phase 8:
   HF max-context / FullKV baseline quality smoke
 
-Phase 10:
+Phase 9:
   RelayKV pressure-triggered shadow policy quality test
 
-Phase 11:
+Phase 10:
   RelayKV fixed-budget working-set dry-run policy
 
-Phase 12:
+Phase 11:
   Runtime adapter selection and restart
   Choose SGLang, vLLM, HF, or another adapter target for the next integration pass.
 
-Phase 13:
+Phase 12:
   Safe materialization / shadow attention compare
 
-Phase 14:
+Phase 13:
   Gated apply / fallback integration
 ```
 
