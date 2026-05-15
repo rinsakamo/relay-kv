@@ -47,6 +47,11 @@ from .relaymem_fast_recall import (
     relaymem_record_to_fast_recall_candidate,
     search_relaymem_fast_recall,
 )
+from .relaymem_prompt_preview import (
+    RelayMEMPromptPreviewItem,
+    RelayMEMPromptPreviewPlan,
+    build_relaymem_prompt_preview_plan,
+)
 from .relaymem_records import (
     RelayMEMEpisodeKind,
     RelayMEMEpisodeRecord,
@@ -215,6 +220,9 @@ __all__ = [
     "RelayMEMFastRecallCandidate",
     "relaymem_record_to_fast_recall_candidate",
     "search_relaymem_fast_recall",
+    "RelayMEMPromptPreviewItem",
+    "RelayMEMPromptPreviewPlan",
+    "build_relaymem_prompt_preview_plan",
     "RelayMEMProfileKind",
     "RelayMEMEpisodeKind",
     "RelayMEMSummaryKind",
