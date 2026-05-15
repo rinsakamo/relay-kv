@@ -32,26 +32,52 @@ def _truncate_preview_text(text: str, max_preview_chars: int) -> str:
     return f"{truncated}..."
 
 
+def _retrieval_mode_label(retrieval_mode: RelayMEMRetrievalMode) -> str:
+    if retrieval_mode is RelayMEMRetrievalMode.DEEP_RECALL:
+        return "Deep Recall"
+    if retrieval_mode is RelayMEMRetrievalMode.FAST_RECALL:
+        return "Fast Recall"
+    return retrieval_mode.value.replace("_", " ").title()
+
+
 def _default_user_visible_message(
     *,
+    retrieval_mode: RelayMEMRetrievalMode,
     approval_required: bool,
     preview_item_count: int,
     dropped_memory_ids: list[str],
     fallback_reason: str | None,
 ) -> str:
+    mode_label = _retrieval_mode_label(retrieval_mode)
     if fallback_reason == "no_retrieval_results":
-        return "Fast Recall found no memory to preview for this query."
+        return f"{mode_label} found no memory to preview for this query."
     if fallback_reason is not None:
         if dropped_memory_ids:
-            return "Fast Recall found matching memory, but it was omitted from the prompt preview because the token budget would be exceeded."
-        return "Fast Recall prepared a prompt preview with a fallback condition."
+            return (
+                f"{mode_label} found matching memory, but it was omitted from the "
+                "prompt preview because the token budget would be exceeded."
+            )
+        return f"{mode_label} prepared a prompt preview with a fallback condition."
     if dropped_memory_ids:
-        return "Fast Recall prepared a partial prompt preview because the token budget would be exceeded."
+        return (
+            f"{mode_label} prepared a partial prompt preview because the token "
+            "budget would be exceeded."
+        )
     if preview_item_count == 0:
-        return "Fast Recall found no memory to preview for this query."
+        return f"{mode_label} found no memory to preview for this query."
     if approval_required:
-        return "Fast Recall prepared a prompt preview. User approval is required before applying it."
-    return "Fast Recall prepared a prompt preview that can be applied to active context."
+        if retrieval_mode is RelayMEMRetrievalMode.DEEP_RECALL:
+            return (
+                f"{mode_label} prepared a prompt preview. "
+                "Apply these deeper memories to active context?"
+            )
+        return f"{mode_label} prepared a prompt preview. Apply these memories to active context?"
+    if retrieval_mode is RelayMEMRetrievalMode.DEEP_RECALL:
+        return (
+            f"{mode_label} prepared a prompt preview that can be applied "
+            "without user approval."
+        )
+    return f"{mode_label} prepared a prompt preview that can be applied without user approval."
 
 
 @dataclass(frozen=True)
@@ -191,6 +217,7 @@ def build_relaymem_prompt_preview_plan(
     resolved_user_visible_message = user_visible_message
     if resolved_user_visible_message is None:
         resolved_user_visible_message = _default_user_visible_message(
+            retrieval_mode=retrieval_mode,
             approval_required=approval_required,
             preview_item_count=len(preview_items),
             dropped_memory_ids=context_plan.dropped_memory_ids,

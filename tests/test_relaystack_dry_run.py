@@ -42,7 +42,10 @@ def test_relaystack_dry_run_writes_expected_json(tmp_path: Path) -> None:
     assert loaded["metadata"]["no_model_loaded"] is True
     assert loaded["metadata"]["no_gpu_inspection"] is True
     assert "context_assembly_plan" in loaded["relaymem"]
+    assert "prompt_preview_plan" in loaded["relaymem"]
     assert "selected_items" in loaded["relaymem"]["context_assembly_plan"]
+    assert "preview_items" in loaded["relaymem"]["prompt_preview_plan"]
+    assert loaded["relaymem"]["prompt_preview_plan"]["retrieval_mode"] == "deep_recall"
     assert "vram_reservation_decision" in loaded["relaykv"]
     assert loaded["relaykv"]["relaykv_routing_allowed"] is True
     assert (
@@ -53,6 +56,50 @@ def test_relaystack_dry_run_writes_expected_json(tmp_path: Path) -> None:
     assert loaded["user_gated_fallback"]["approval_required"] is True
     assert loaded["user_gated_fallback"]["proposed_retrieval_mode"] == "deep_recall"
     assert loaded["user_gated_fallback"]["fallback_if_denied"] == "fast_recall"
+    assert "deep" in loaded["user_gated_fallback"]["user_visible_message"].lower()
+    assert "fast recall prepared" not in loaded["user_gated_fallback"][
+        "user_visible_message"
+    ].lower()
+    assert loaded["relaymem"]["context_assembly_plan"]["approval_required"] is True
+    assert loaded["relaymem"]["context_assembly_plan"]["approval_reason"] is not None
+    assert loaded["relaymem"]["context_assembly_plan"]["user_visible_message"] is not None
+    assert "deep" in loaded["relaymem"]["context_assembly_plan"][
+        "user_visible_message"
+    ].lower()
+    assert (
+        loaded["user_gated_fallback"]["approval_required"]
+        == loaded["relaymem"]["prompt_preview_plan"]["approval_required"]
+    )
+    assert (
+        loaded["user_gated_fallback"]["approval_reason"]
+        == loaded["relaymem"]["prompt_preview_plan"]["approval_reason"]
+    )
+    assert (
+        loaded["user_gated_fallback"]["fallback_if_denied"]
+        == loaded["relaymem"]["prompt_preview_plan"]["fallback_if_denied"]
+    )
+    assert (
+        loaded["user_gated_fallback"]["fallback_reason"]
+        == loaded["relaymem"]["prompt_preview_plan"]["fallback_reason"]
+    )
+    assert (
+        loaded["user_gated_fallback"]["user_visible_message"]
+        == loaded["relaymem"]["prompt_preview_plan"]["user_visible_message"]
+    )
+    assert (
+        loaded["user_gated_fallback"]["can_apply_without_user_approval"]
+        == loaded["relaymem"]["prompt_preview_plan"][
+            "can_apply_without_user_approval"
+        ]
+    )
+    assert loaded["summary"]["preview_item_count"] == len(
+        loaded["relaymem"]["prompt_preview_plan"]["preview_items"]
+    )
+    assert loaded["summary"]["prompt_preview_dropped_memory_count"] == len(
+        loaded["relaymem"]["prompt_preview_plan"]["dropped_memory_ids"]
+    )
+    assert loaded["summary"]["prompt_preview_approval_required"] is True
+    assert loaded["summary"]["prompt_preview_can_apply_without_user_approval"] is False
     assert json.loads(json.dumps(loaded)) == loaded
 
 
@@ -121,6 +168,74 @@ def test_relaystack_dry_run_disable_approval_gate(tmp_path: Path) -> None:
         loaded = json.load(f)
 
     assert loaded["user_gated_fallback"]["approval_required"] is False
+    assert loaded["user_gated_fallback"]["proposed_retrieval_mode"] is None
+    assert loaded["relaymem"]["prompt_preview_plan"]["approval_required"] is False
+    assert (
+        loaded["relaymem"]["prompt_preview_plan"]["can_apply_without_user_approval"]
+        is True
+    )
+    assert loaded["user_gated_fallback"]["can_apply_without_user_approval"] is True
+    assert not loaded["user_gated_fallback"]["approval_reason"]
+    assert loaded["user_gated_fallback"]["fallback_if_denied"] is None
+    assert (
+        loaded["relaymem"]["prompt_preview_plan"]["retrieval_mode"] == "deep_recall"
+    )
+    assert "deep" in loaded["user_gated_fallback"]["user_visible_message"].lower()
+    assert "Apply these Fast Recall memories" not in loaded["user_gated_fallback"][
+        "user_visible_message"
+    ]
+    assert "fast recall prepared" not in loaded["user_gated_fallback"][
+        "user_visible_message"
+    ].lower()
+
+
+def test_relaystack_dry_run_tight_budget_uses_prompt_preview_fallback(
+    tmp_path: Path,
+) -> None:
+    output_path = tmp_path / "relaystack_dry_run_tight_budget.json"
+    repo_root = Path(__file__).resolve().parents[1]
+    env = os.environ.copy()
+    env["PYTHONPATH"] = str(repo_root)
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "scripts/run_relaystack_dry_run.py",
+            "--output",
+            str(output_path),
+            "--token-budget",
+            "1",
+        ],
+        cwd=repo_root,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    with output_path.open(encoding="utf-8") as f:
+        loaded = json.load(f)
+
+    prompt_preview_plan = loaded["relaymem"]["prompt_preview_plan"]
+    assert prompt_preview_plan["retrieval_mode"] == "deep_recall"
+    assert prompt_preview_plan["fallback_reason"] == "token_budget_exceeded"
+    assert prompt_preview_plan["can_apply_without_user_approval"] is False
+    assert (
+        prompt_preview_plan["dropped_memory_ids"]
+        or prompt_preview_plan["preview_items"] == []
+    )
+    assert "Apply these Fast Recall memories" not in prompt_preview_plan[
+        "user_visible_message"
+    ]
+    assert "deep" in prompt_preview_plan["user_visible_message"].lower()
+    assert "budget" in prompt_preview_plan["user_visible_message"].lower() or "fallback" in prompt_preview_plan["user_visible_message"].lower()
+    assert "fast recall" not in prompt_preview_plan["user_visible_message"].lower()
+    assert loaded["user_gated_fallback"]["fallback_reason"] == "token_budget_exceeded"
+    assert loaded["user_gated_fallback"]["can_apply_without_user_approval"] is False
+    assert "deep" in loaded["user_gated_fallback"]["user_visible_message"].lower()
+    assert "fast recall" not in loaded["user_gated_fallback"]["user_visible_message"].lower()
+    assert loaded["summary"]["prompt_preview_fallback_reason"] == "token_budget_exceeded"
 
 
 def test_relaystack_dry_run_runs_when_model_and_gpu_imports_are_blocked(

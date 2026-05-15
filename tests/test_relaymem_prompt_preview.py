@@ -123,6 +123,21 @@ def test_approval_required_blocks_can_apply_without_user_approval() -> None:
     assert plan.can_apply_without_user_approval is False
 
 
+def test_deep_recall_approval_message_mentions_deeper_memory_recall() -> None:
+    results = make_fast_recall_results()
+
+    plan = build_relaymem_prompt_preview_plan(
+        query="RelayStack VRAM Fast Recall phase preview",
+        retrieval_results=results,
+        retrieval_mode=RelayMEMRetrievalMode.DEEP_RECALL,
+        approval_required=True,
+        approval_reason="user confirmation required",
+    )
+
+    assert "deep" in plan.user_visible_message.lower()
+    assert "fast recall prepared" not in plan.user_visible_message.lower()
+
+
 def test_no_approval_allows_apply_when_results_exist_and_no_blocking_fallback() -> None:
     results = make_fast_recall_results()
 
@@ -137,6 +152,22 @@ def test_no_approval_allows_apply_when_results_exist_and_no_blocking_fallback() 
     assert plan.dropped_memory_ids == []
     assert plan.fallback_reason is None
     assert plan.can_apply_without_user_approval is True
+
+
+def test_deep_recall_no_approval_message_mentions_deeper_memory_recall() -> None:
+    results = make_fast_recall_results()
+
+    plan = build_relaymem_prompt_preview_plan(
+        query="RelayStack VRAM Fast Recall phase preview",
+        retrieval_results=results,
+        retrieval_mode=RelayMEMRetrievalMode.DEEP_RECALL,
+        approval_required=False,
+        token_budget=200,
+    )
+
+    assert plan.can_apply_without_user_approval is True
+    assert "deep" in plan.user_visible_message.lower()
+    assert "fast recall prepared" not in plan.user_visible_message.lower()
 
 
 def test_explicit_fallback_reason_blocks_auto_apply_without_budget_drop() -> None:
@@ -167,6 +198,7 @@ def test_token_budget_records_dropped_memory_ids_and_fallback_reason() -> None:
     assert plan.dropped_memory_ids
     assert plan.fallback_reason == "token_budget_exceeded"
     assert plan.can_apply_without_user_approval is False
+    assert "fast recall" in plan.user_visible_message.lower()
 
 
 def test_drop_all_results_does_not_report_no_memory_found() -> None:
@@ -198,6 +230,7 @@ def test_drop_all_results_mentions_budget_or_fallback() -> None:
         "budget" in plan.user_visible_message.lower()
         or "fallback" in plan.user_visible_message.lower()
     )
+    assert "fast recall" in plan.user_visible_message.lower()
 
 
 def test_empty_retrieval_results_produce_empty_preview_plan() -> None:
@@ -212,6 +245,37 @@ def test_empty_retrieval_results_produce_empty_preview_plan() -> None:
     assert plan.fallback_reason == "no_retrieval_results"
     assert plan.can_apply_without_user_approval is False
     assert plan.user_visible_message == "Fast Recall found no memory to preview for this query."
+
+
+def test_deep_recall_empty_preview_uses_deep_recall_wording() -> None:
+    plan = build_relaymem_prompt_preview_plan(
+        query="RelayStack VRAM Fast Recall phase preview",
+        retrieval_results=[],
+        retrieval_mode=RelayMEMRetrievalMode.DEEP_RECALL,
+        approval_required=False,
+    )
+
+    assert plan.fallback_reason == "no_retrieval_results"
+    assert "deep recall" in plan.user_visible_message.lower()
+    assert "fast recall" not in plan.user_visible_message.lower()
+
+
+def test_deep_recall_tight_budget_uses_deep_recall_budget_wording() -> None:
+    results = make_fast_recall_results()
+
+    plan = build_relaymem_prompt_preview_plan(
+        query="RelayStack VRAM Fast Recall phase preview",
+        retrieval_results=results,
+        retrieval_mode=RelayMEMRetrievalMode.DEEP_RECALL,
+        approval_required=True,
+        token_budget=1,
+    )
+
+    assert plan.fallback_reason == "token_budget_exceeded"
+    assert plan.preview_items == []
+    assert "deep recall" in plan.user_visible_message.lower()
+    assert "budget" in plan.user_visible_message.lower()
+    assert "fast recall" not in plan.user_visible_message.lower()
 
 
 def test_import_from_relaykv_with_prompt_preview_stays_torch_free() -> None:
