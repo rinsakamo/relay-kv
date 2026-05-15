@@ -168,6 +168,37 @@ def test_token_budget_records_dropped_memory_ids_and_fallback_reason() -> None:
     assert plan.can_apply_without_user_approval is False
 
 
+def test_drop_all_results_does_not_report_no_memory_found() -> None:
+    results = make_fast_recall_results()
+
+    plan = build_relaymem_prompt_preview_plan(
+        query="RelayStack VRAM Fast Recall phase preview",
+        retrieval_results=results,
+        token_budget=1,
+    )
+
+    assert plan.preview_items == []
+    assert plan.dropped_memory_ids
+    assert "found no memory" not in plan.user_visible_message.lower()
+
+
+def test_drop_all_results_mentions_budget_or_fallback() -> None:
+    results = make_fast_recall_results()
+
+    plan = build_relaymem_prompt_preview_plan(
+        query="RelayStack VRAM Fast Recall phase preview",
+        retrieval_results=results,
+        token_budget=1,
+    )
+
+    assert plan.preview_items == []
+    assert plan.fallback_reason == "token_budget_exceeded"
+    assert (
+        "budget" in plan.user_visible_message.lower()
+        or "fallback" in plan.user_visible_message.lower()
+    )
+
+
 def test_empty_retrieval_results_produce_empty_preview_plan() -> None:
     plan = build_relaymem_prompt_preview_plan(
         query="RelayStack VRAM Fast Recall phase preview",
@@ -179,6 +210,7 @@ def test_empty_retrieval_results_produce_empty_preview_plan() -> None:
     assert plan.dropped_memory_ids == []
     assert plan.fallback_reason == "no_retrieval_results"
     assert plan.can_apply_without_user_approval is False
+    assert plan.user_visible_message == "Fast Recall found no memory to preview for this query."
 
 
 def test_import_from_relaykv_with_prompt_preview_stays_torch_free() -> None:

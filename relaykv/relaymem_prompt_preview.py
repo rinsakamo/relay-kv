@@ -39,14 +39,18 @@ def _default_user_visible_message(
     dropped_memory_ids: list[str],
     fallback_reason: str | None,
 ) -> str:
+    if fallback_reason == "no_retrieval_results":
+        return "Fast Recall found no memory to preview for this query."
+    if fallback_reason is not None:
+        if dropped_memory_ids:
+            return "Fast Recall found matching memory, but it was omitted from the prompt preview because the token budget would be exceeded."
+        return "Fast Recall prepared a prompt preview with a fallback condition."
+    if dropped_memory_ids:
+        return "Fast Recall prepared a partial prompt preview because the token budget would be exceeded."
     if preview_item_count == 0:
         return "Fast Recall found no memory to preview for this query."
     if approval_required:
         return "Fast Recall prepared a prompt preview. User approval is required before applying it."
-    if dropped_memory_ids:
-        return "Fast Recall prepared a partial prompt preview because the token budget would be exceeded."
-    if fallback_reason is not None:
-        return "Fast Recall prepared a prompt preview with a fallback note."
     return "Fast Recall prepared a prompt preview that can be applied to active context."
 
 
