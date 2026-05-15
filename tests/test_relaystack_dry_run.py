@@ -211,6 +211,7 @@ def test_relaystack_dry_run_tight_budget_uses_prompt_preview_fallback(
         loaded = json.load(f)
 
     prompt_preview_plan = loaded["relaymem"]["prompt_preview_plan"]
+    assert prompt_preview_plan["retrieval_mode"] == "deep_recall"
     assert prompt_preview_plan["fallback_reason"] == "token_budget_exceeded"
     assert prompt_preview_plan["can_apply_without_user_approval"] is False
     assert (
@@ -220,12 +221,13 @@ def test_relaystack_dry_run_tight_budget_uses_prompt_preview_fallback(
     assert "Apply these Fast Recall memories" not in prompt_preview_plan[
         "user_visible_message"
     ]
-    assert "deep recall" not in prompt_preview_plan["user_visible_message"].lower()
-    assert "deeper memory recall" not in prompt_preview_plan[
-        "user_visible_message"
-    ].lower()
+    assert "deep" in prompt_preview_plan["user_visible_message"].lower()
+    assert "budget" in prompt_preview_plan["user_visible_message"].lower() or "fallback" in prompt_preview_plan["user_visible_message"].lower()
+    assert "fast recall" not in prompt_preview_plan["user_visible_message"].lower()
     assert loaded["user_gated_fallback"]["fallback_reason"] == "token_budget_exceeded"
     assert loaded["user_gated_fallback"]["can_apply_without_user_approval"] is False
+    assert "deep" in loaded["user_gated_fallback"]["user_visible_message"].lower()
+    assert "fast recall" not in loaded["user_gated_fallback"]["user_visible_message"].lower()
     assert loaded["summary"]["prompt_preview_fallback_reason"] == "token_budget_exceeded"
 
 
