@@ -19,6 +19,7 @@ from .relaymem_records import (
 )
 
 _TOKEN_RE = re.compile(r"[\w]+", re.UNICODE)
+_OVERLAP_WEIGHT = 0.35
 
 _SOURCE_BASE_PRIORITY = {
     RelayMEMMemorySource.PROFILE: 0.55,
@@ -188,7 +189,7 @@ def _score_candidate(
     overlap_ratio = len(overlap_tokens) / max(1, len(query_tokens))
     source_priority = _SOURCE_BASE_PRIORITY.get(candidate.memory_source, 0.0)
     importance_bonus = _clamp_unit(candidate.importance) * 0.15
-    score = overlap_ratio + source_priority + importance_bonus
+    score = source_priority + importance_bonus + (_OVERLAP_WEIGHT * overlap_ratio)
     return score, overlap_tokens
 
 
