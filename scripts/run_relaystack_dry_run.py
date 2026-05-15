@@ -20,6 +20,7 @@ from relaykv import (
     build_relaymem_prompt_preview_plan,
     build_vram_reservation_budget_decision,
     decide_memory_pressure_state,
+    decide_relaystack_final_routing,
     summarize_memory_pressure_decisions,
 )
 
@@ -221,6 +222,14 @@ def run_relaystack_dry_run(
         else:
             memory_pressure_note = "included: lightweight memory pressure helper"
 
+    final_routing_decision = decide_relaystack_final_routing(
+        prompt_preview_plan=prompt_preview_plan,
+        vram_reservation_decision=vram_reservation_decision,
+        memory_pressure_decision=memory_pressure_decision,
+        relaykv_routing_allowed=relaykv_routing_allowed,
+        approval_gate_enabled=not disable_approval_gate,
+    )
+
     user_gated_fallback = {
         "approval_required": prompt_preview_plan.approval_required,
         "approval_reason": prompt_preview_plan.approval_reason,
@@ -268,6 +277,9 @@ def run_relaystack_dry_run(
             "memory_pressure_summary": memory_pressure_summary,
             "memory_pressure_note": memory_pressure_note,
         },
+        "relaystack": {
+            "final_routing_decision": final_routing_decision.summary(),
+        },
         "user_gated_fallback": user_gated_fallback,
         "summary": {
             "retrieval_result_count": len(retrieval_results),
@@ -287,6 +299,13 @@ def run_relaystack_dry_run(
             ),
             "relaykv_routing_allowed": relaykv_routing_allowed,
             "memory_pressure_included": memory_pressure_decision is not None,
+            "final_routing_state": final_routing_decision.state.value,
+            "relaymem_apply_allowed": final_routing_decision.relaymem_apply_allowed,
+            "final_relaykv_routing_allowed": (
+                final_routing_decision.relaykv_routing_allowed
+            ),
+            "final_blocking_reasons": list(final_routing_decision.blocking_reasons),
+            "final_fallback_reason": final_routing_decision.fallback_reason,
         },
     }
 
@@ -338,6 +357,19 @@ def main() -> int:
                 ],
                 "available_working_kv_budget_mib": payload["summary"][
                     "available_working_kv_budget_mib"
+                ],
+                "final_routing_state": payload["summary"]["final_routing_state"],
+                "relaymem_apply_allowed": payload["summary"][
+                    "relaymem_apply_allowed"
+                ],
+                "final_relaykv_routing_allowed": payload["summary"][
+                    "final_relaykv_routing_allowed"
+                ],
+                "final_blocking_reasons": payload["summary"][
+                    "final_blocking_reasons"
+                ],
+                "final_fallback_reason": payload["summary"][
+                    "final_fallback_reason"
                 ],
             },
             ensure_ascii=False,

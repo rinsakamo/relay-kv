@@ -83,7 +83,7 @@ The repository currently implements or prototypes the following pieces:
 - RelayMEM record schemas for profile, episode, summary, structured, and KV checkpoint metadata records
 - User-Gated Fallback schema fields
 - VRAM reservation schema and smoke path
-- RelayStack no-model/no-GPU dry-run JSON combining RelayMEM retrieval results, context assembly, prompt preview planning, RelayKV, VRAM reservation, runtime policy, and fallback fields
+- RelayStack no-model/no-GPU dry-run JSON combining RelayMEM retrieval results, context assembly, prompt preview planning, final routing decisions, RelayKV, VRAM reservation, runtime policy, and fallback fields
 
 ## Design-only or not yet integrated
 
@@ -112,26 +112,30 @@ Phase 6.5:
   Scope: schema and smoke only. No model, GPU, runtime, or KV path is called.
 
 Phase 7:
-  Current: RelayStack dry-run artifact includes RelayMEM prompt_preview_plan
+  Completed: RelayStack dry-run artifact includes RelayMEM prompt_preview_plan
   Scope: dry-run planning only. No model, GPU, runtime, attention, KV, or scheduler path is called.
 
 Phase 8:
-  HF max-context / FullKV baseline quality smoke
+  Current: RelayStack final routing decision dry-run layer
+  Scope: schema and dry-run planning only. No model, GPU, runtime, attention, KV, or scheduler path is called.
 
 Phase 9:
-  RelayKV pressure-triggered shadow policy quality test
+  HF max-context / FullKV baseline quality smoke
 
 Phase 10:
-  RelayKV fixed-budget working-set dry-run policy
+  RelayKV pressure-triggered shadow policy quality test
 
 Phase 11:
+  RelayKV fixed-budget working-set dry-run policy
+
+Phase 12:
   Runtime adapter selection and restart
   Choose SGLang, vLLM, HF, or another adapter target for the next integration pass.
 
-Phase 12:
+Phase 13:
   Safe materialization / shadow attention compare
 
-Phase 13:
+Phase 14:
   Gated apply / fallback integration
 ```
 

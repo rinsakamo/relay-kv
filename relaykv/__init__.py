@@ -64,6 +64,11 @@ from .relaymem_records import (
     RelayMEMSummaryRecord,
     summarize_relaymem_records,
 )
+from .relaystack_final_decision import (
+    RelayStackFinalRoutingDecision,
+    RelayStackFinalRoutingState,
+    decide_relaystack_final_routing,
+)
 from .vram_reservation import (
     RelayKVVramReservation,
     RelayKVVramReservationStatus,
@@ -233,6 +238,9 @@ __all__ = [
     "RelayMEMStructuredRecord",
     "RelayMEMKVCheckpointMetadata",
     "summarize_relaymem_records",
+    "RelayStackFinalRoutingDecision",
+    "RelayStackFinalRoutingState",
+    "decide_relaystack_final_routing",
     "AttentionCompareResult",
     "scaled_dot_product_attention",
     "compare_attention_outputs",
