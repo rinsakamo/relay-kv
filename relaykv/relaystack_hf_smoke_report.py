@@ -130,19 +130,41 @@ def _extract_error(row: dict[str, Any]) -> tuple[str | None, str | None]:
     )
 
 
-def _extract_cuda_metrics(row: dict[str, Any]) -> tuple[float | None, float | None]:
-    after = row.get("after")
-    if not isinstance(after, dict):
-        after = row.get("after_error")
-    if not isinstance(after, dict):
+def _is_oom_error(error_payload: dict[str, Any] | None) -> bool:
+    if not isinstance(error_payload, dict):
+        return False
+    error_type = error_payload.get("type")
+    error_message = error_payload.get("message")
+    error_type_text = str(error_type).lower() if error_type is not None else ""
+    error_message_text = (
+        str(error_message).lower() if error_message is not None else ""
+    )
+    if "torch.cuda.outofmemoryerror" in error_type_text:
+        return True
+    if "outofmemoryerror" in error_type_text:
+        return True
+    return "oom" in error_type_text or "oom" in error_message_text
+
+
+def _extract_cuda_peak_mib(snapshot: dict[str, Any]) -> tuple[float | None, float | None]:
+    if not isinstance(snapshot, dict):
         return None, None
-    cuda = after.get("cuda")
+    cuda = snapshot.get("cuda")
+    if not isinstance(cuda, dict):
+        cuda = snapshot
     if not isinstance(cuda, dict):
         return None, None
     return (
         _as_float(cuda.get("peak_allocated_mib")),
         _as_float(cuda.get("peak_reserved_mib")),
     )
+
+
+def _extract_cuda_metrics(row: dict[str, Any]) -> tuple[float | None, float | None]:
+    after = row.get("after")
+    if not isinstance(after, dict):
+        after = row.get("after_error")
+    return _extract_cuda_peak_mib(after)
 
 
 def _build_context_rows(rows: list[dict[str, Any]]) -> list[RelayStackHFContextRowSummary]:
@@ -244,8 +266,14 @@ def build_relaystack_hf_smoke_report(
         for row in context_rows
         if row.peak_allocated_mib is not None
     ]
-    any_oom = any(
-        row.error_type == "torch.cuda.OutOfMemoryError" for row in context_rows
+    load_peak_allocated_mib, load_peak_reserved_mib = _extract_cuda_peak_mib(hf_load)
+    if load_peak_reserved_mib is not None:
+        peak_reserved_values.append(load_peak_reserved_mib)
+    if load_peak_allocated_mib is not None:
+        peak_allocated_values.append(load_peak_allocated_mib)
+    any_oom = _is_oom_error(hf_load.get("error")) or any(
+        _is_oom_error({"type": row.error_type, "message": row.error_message})
+        for row in context_rows
     )
     hf_load_ok = bool(hf_load.get("ok"))
     max_ok_context_tokens = max(ok_contexts) if ok_contexts else None

@@ -193,6 +193,44 @@ def test_build_relaystack_hf_smoke_report_load_failed() -> None:
     assert "relaystack_waiting_for_user_approval" in report.report_notes
 
 
+def test_build_relaystack_hf_smoke_report_load_time_oom() -> None:
+    hf_payload = {
+        "script": "hf_context_length_smoke.py",
+        "model": "synthetic/model",
+        "env": {
+            "torch": "synthetic-torch",
+            "cuda_version_torch": "synthetic-cuda",
+            "transformers": "synthetic-transformers",
+        },
+        "load": {
+            "ok": False,
+            "error": {
+                "type": "OutOfMemoryError",
+                "message": "CUDA out of memory",
+            },
+            "cuda": {
+                "peak_allocated_mib": 10000.0,
+                "peak_reserved_mib": 11800.0,
+            },
+        },
+        "results": [],
+    }
+    relaystack_payload = _make_relaystack_payload()
+
+    report = build_relaystack_hf_smoke_report(
+        hf_smoke_payload=hf_payload,
+        relaystack_payload=relaystack_payload,
+    )
+
+    assert report.hf_load_ok is False
+    assert report.any_oom is True
+    assert report.measured_vram_pressure_level == "oom_observed"
+    assert "hf_load_failed" in report.report_notes
+    assert "hf_oom_observed" in report.report_notes
+    assert report.max_peak_allocated_mib == 10000.0
+    assert report.max_peak_reserved_mib == 11800.0
+
+
 def test_build_relaystack_hf_smoke_report_relaymem_only_note() -> None:
     hf_payload = _make_hf_payload(
         rows=[
