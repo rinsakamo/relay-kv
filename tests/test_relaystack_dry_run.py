@@ -53,6 +53,7 @@ def test_relaystack_dry_run_writes_expected_json(tmp_path: Path) -> None:
     )
     assert loaded["relaykv"]["memory_pressure_decision"] is not None
     assert loaded["user_gated_fallback"]["approval_required"] is True
+    assert loaded["user_gated_fallback"]["proposed_retrieval_mode"] == "deep_recall"
     assert loaded["user_gated_fallback"]["fallback_if_denied"] == "fast_recall"
     assert (
         loaded["user_gated_fallback"]["approval_required"]
@@ -156,6 +157,7 @@ def test_relaystack_dry_run_disable_approval_gate(tmp_path: Path) -> None:
         loaded = json.load(f)
 
     assert loaded["user_gated_fallback"]["approval_required"] is False
+    assert loaded["user_gated_fallback"]["proposed_retrieval_mode"] is None
     assert loaded["relaymem"]["prompt_preview_plan"]["approval_required"] is False
     assert (
         loaded["relaymem"]["prompt_preview_plan"]["can_apply_without_user_approval"]

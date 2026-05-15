@@ -218,6 +218,11 @@ def run_relaystack_dry_run(
     user_gated_fallback = {
         "approval_required": prompt_preview_plan.approval_required,
         "approval_reason": prompt_preview_plan.approval_reason,
+        "proposed_retrieval_mode": (
+            proposed_retrieval_mode.value
+            if proposed_retrieval_mode is not None
+            else None
+        ),
         "fallback_if_denied": (
             prompt_preview_plan.fallback_if_denied.value
             if prompt_preview_plan.fallback_if_denied is not None
