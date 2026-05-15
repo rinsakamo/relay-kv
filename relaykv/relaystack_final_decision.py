@@ -91,6 +91,9 @@ def decide_relaystack_final_routing(
 ) -> RelayStackFinalRoutingDecision:
     vram_status = vram_reservation_decision.status.value
     memory_pressure_state = _memory_pressure_state_value(memory_pressure_decision)
+    vram_budget_ok = (
+        vram_reservation_decision.status is RelayKVVramReservationStatus.OK
+    )
     proposed_retrieval_mode = (
         prompt_preview_plan.retrieval_mode
         if prompt_preview_plan.approval_required
@@ -99,34 +102,9 @@ def decide_relaystack_final_routing(
     fallback_reason = prompt_preview_plan.fallback_reason
     blocking_reasons: list[str] = []
 
-    if vram_reservation_decision.status is not RelayKVVramReservationStatus.OK:
-        blocking_reasons.append(f"vram_status:{vram_status}")
-        relaymem_apply_allowed = (
-            prompt_preview_plan.can_apply_without_user_approval
-            if not prompt_preview_plan.approval_required
-            else False
-        )
-        return RelayStackFinalRoutingDecision(
-            state=RelayStackFinalRoutingState.BLOCKED_NO_KV_BUDGET,
-            relaymem_apply_allowed=relaymem_apply_allowed,
-            relaykv_routing_allowed=False,
-            approval_required=prompt_preview_plan.approval_required,
-            can_apply_without_user_approval=(
-                prompt_preview_plan.can_apply_without_user_approval
-            ),
-            fallback_reason=fallback_reason,
-            blocking_reasons=blocking_reasons,
-            selected_retrieval_mode=(
-                prompt_preview_plan.retrieval_mode if relaymem_apply_allowed else None
-            ),
-            proposed_retrieval_mode=proposed_retrieval_mode,
-            fallback_if_denied=prompt_preview_plan.fallback_if_denied,
-            vram_status=vram_status,
-            memory_pressure_state=memory_pressure_state,
-            user_visible_message=prompt_preview_plan.user_visible_message,
-        )
-
     if fallback_reason is not None:
+        if not vram_budget_ok:
+            blocking_reasons.append(f"vram_status:{vram_status}")
         blocking_reasons.append(fallback_reason)
         return RelayStackFinalRoutingDecision(
             state=RelayStackFinalRoutingState.FALLBACK_SAFE_BASELINE,
@@ -140,6 +118,42 @@ def decide_relaystack_final_routing(
             blocking_reasons=blocking_reasons,
             selected_retrieval_mode=None,
             proposed_retrieval_mode=None,
+            fallback_if_denied=prompt_preview_plan.fallback_if_denied,
+            vram_status=vram_status,
+            memory_pressure_state=memory_pressure_state,
+            user_visible_message=prompt_preview_plan.user_visible_message,
+        )
+
+    if not vram_budget_ok:
+        blocking_reasons.append(f"vram_status:{vram_status}")
+        if prompt_preview_plan.can_apply_without_user_approval:
+            return RelayStackFinalRoutingDecision(
+                state=RelayStackFinalRoutingState.RELAYMEM_ONLY,
+                relaymem_apply_allowed=True,
+                relaykv_routing_allowed=False,
+                approval_required=False,
+                can_apply_without_user_approval=True,
+                fallback_reason=None,
+                blocking_reasons=blocking_reasons,
+                selected_retrieval_mode=prompt_preview_plan.retrieval_mode,
+                proposed_retrieval_mode=None,
+                fallback_if_denied=prompt_preview_plan.fallback_if_denied,
+                vram_status=vram_status,
+                memory_pressure_state=memory_pressure_state,
+                user_visible_message=prompt_preview_plan.user_visible_message,
+            )
+        return RelayStackFinalRoutingDecision(
+            state=RelayStackFinalRoutingState.BLOCKED_NO_KV_BUDGET,
+            relaymem_apply_allowed=False,
+            relaykv_routing_allowed=False,
+            approval_required=prompt_preview_plan.approval_required,
+            can_apply_without_user_approval=(
+                prompt_preview_plan.can_apply_without_user_approval
+            ),
+            fallback_reason=fallback_reason,
+            blocking_reasons=blocking_reasons,
+            selected_retrieval_mode=None,
+            proposed_retrieval_mode=proposed_retrieval_mode,
             fallback_if_denied=prompt_preview_plan.fallback_if_denied,
             vram_status=vram_status,
             memory_pressure_state=memory_pressure_state,

@@ -152,6 +152,7 @@ def test_relaystack_dry_run_blocks_routing_when_no_kv_budget(tmp_path: Path) -> 
     final_decision = loaded["relaystack"]["final_routing_decision"]
     assert final_decision["state"] == "blocked_no_kv_budget"
     assert final_decision["relaykv_routing_allowed"] is False
+    assert final_decision["relaymem_apply_allowed"] is False
     assert any(
         "vram_status" in reason or "no_kv_budget" in reason
         for reason in final_decision["blocking_reasons"]
@@ -161,6 +162,51 @@ def test_relaystack_dry_run_blocks_routing_when_no_kv_budget(tmp_path: Path) -> 
         == "skipped: vram reservation status is not ok"
     )
     assert "relaykv_routed_ready" not in json.dumps(loaded)
+
+
+def test_relaystack_dry_run_no_kv_budget_preserves_relaymem_only_when_ungated(
+    tmp_path: Path,
+) -> None:
+    output_path = tmp_path / "relaystack_dry_run_no_kv_relaymem_only.json"
+    repo_root = Path(__file__).resolve().parents[1]
+    env = os.environ.copy()
+    env["PYTHONPATH"] = str(repo_root)
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "scripts/run_relaystack_dry_run.py",
+            "--output",
+            str(output_path),
+            "--disable-approval-gate",
+            "--min-working-kv-budget-mib",
+            "2048",
+        ],
+        cwd=repo_root,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    with output_path.open(encoding="utf-8") as f:
+        loaded = json.load(f)
+
+    assert loaded["relaykv"]["vram_reservation_decision"]["status"] != "ok"
+    assert (
+        loaded["relaymem"]["prompt_preview_plan"]["can_apply_without_user_approval"]
+        is True
+    )
+    final_decision = loaded["relaystack"]["final_routing_decision"]
+    assert final_decision["state"] == "relaymem_only"
+    assert final_decision["relaymem_apply_allowed"] is True
+    assert final_decision["relaykv_routing_allowed"] is False
+    assert final_decision["selected_retrieval_mode"] == "deep_recall"
+    assert any(
+        "vram_status" in reason or "no_kv_budget" in reason
+        for reason in final_decision["blocking_reasons"]
+    )
 
 
 def test_relaystack_dry_run_disable_approval_gate(tmp_path: Path) -> None:
