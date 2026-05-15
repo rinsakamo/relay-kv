@@ -267,9 +267,13 @@ def test_relaystack_dry_run_tight_budget_uses_prompt_preview_fallback(
     assert "fast recall" not in loaded["user_gated_fallback"]["user_visible_message"].lower()
     assert loaded["summary"]["prompt_preview_fallback_reason"] == "token_budget_exceeded"
     final_decision = loaded["relaystack"]["final_routing_decision"]
+    assert final_decision["state"] != "waiting_for_user_approval"
     assert final_decision["state"] != "relaymem_and_relaykv_ready"
+    assert final_decision["state"] == "fallback_safe_baseline"
     assert final_decision["relaymem_apply_allowed"] is False
     assert final_decision["fallback_reason"] == "token_budget_exceeded"
+    assert "token_budget_exceeded" in final_decision["blocking_reasons"]
+    assert final_decision["blocking_reasons"] != ["user_approval_required"]
     assert (
         loaded["summary"]["final_fallback_reason"] == "token_budget_exceeded"
         or "token_budget_exceeded" in loaded["summary"]["final_blocking_reasons"]
