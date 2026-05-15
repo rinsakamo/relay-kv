@@ -34,6 +34,7 @@ def _truncate_preview_text(text: str, max_preview_chars: int) -> str:
 
 def _default_user_visible_message(
     *,
+    retrieval_mode: RelayMEMRetrievalMode,
     approval_required: bool,
     preview_item_count: int,
     dropped_memory_ids: list[str],
@@ -50,6 +51,11 @@ def _default_user_visible_message(
     if preview_item_count == 0:
         return "Fast Recall found no memory to preview for this query."
     if approval_required:
+        if retrieval_mode is RelayMEMRetrievalMode.DEEP_RECALL:
+            return (
+                "RelayMEM prepared a deeper memory recall preview. "
+                "User approval is required before applying it."
+            )
         return "Fast Recall prepared a prompt preview. User approval is required before applying it."
     return "Fast Recall prepared a prompt preview that can be applied to active context."
 
@@ -191,6 +197,7 @@ def build_relaymem_prompt_preview_plan(
     resolved_user_visible_message = user_visible_message
     if resolved_user_visible_message is None:
         resolved_user_visible_message = _default_user_visible_message(
+            retrieval_mode=retrieval_mode,
             approval_required=approval_required,
             preview_item_count=len(preview_items),
             dropped_memory_ids=context_plan.dropped_memory_ids,

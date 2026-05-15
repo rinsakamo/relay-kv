@@ -55,6 +55,10 @@ def test_relaystack_dry_run_writes_expected_json(tmp_path: Path) -> None:
     assert loaded["user_gated_fallback"]["approval_required"] is True
     assert loaded["user_gated_fallback"]["proposed_retrieval_mode"] == "deep_recall"
     assert loaded["user_gated_fallback"]["fallback_if_denied"] == "fast_recall"
+    assert "deep" in loaded["user_gated_fallback"]["user_visible_message"].lower()
+    assert "fast recall prepared" not in loaded["user_gated_fallback"][
+        "user_visible_message"
+    ].lower()
     assert (
         loaded["user_gated_fallback"]["approval_required"]
         == loaded["relaymem"]["prompt_preview_plan"]["approval_required"]
@@ -166,6 +170,12 @@ def test_relaystack_dry_run_disable_approval_gate(tmp_path: Path) -> None:
     assert loaded["user_gated_fallback"]["can_apply_without_user_approval"] is True
     assert not loaded["user_gated_fallback"]["approval_reason"]
     assert loaded["user_gated_fallback"]["fallback_if_denied"] is None
+    assert "deep recall" not in loaded["user_gated_fallback"][
+        "user_visible_message"
+    ].lower()
+    assert "deeper memory recall" not in loaded["user_gated_fallback"][
+        "user_visible_message"
+    ].lower()
     assert "Apply these Fast Recall memories" not in loaded["user_gated_fallback"][
         "user_visible_message"
     ]
@@ -209,6 +219,10 @@ def test_relaystack_dry_run_tight_budget_uses_prompt_preview_fallback(
     assert "Apply these Fast Recall memories" not in prompt_preview_plan[
         "user_visible_message"
     ]
+    assert "deep recall" not in prompt_preview_plan["user_visible_message"].lower()
+    assert "deeper memory recall" not in prompt_preview_plan[
+        "user_visible_message"
+    ].lower()
     assert loaded["user_gated_fallback"]["fallback_reason"] == "token_budget_exceeded"
     assert loaded["user_gated_fallback"]["can_apply_without_user_approval"] is False
     assert loaded["summary"]["prompt_preview_fallback_reason"] == "token_budget_exceeded"
