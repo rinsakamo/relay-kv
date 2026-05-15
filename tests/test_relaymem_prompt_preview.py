@@ -262,3 +262,36 @@ def test_prompt_preview_smoke_no_approval_omits_approval_ux(tmp_path: Path) -> N
     assert not plan["approval_reason"]
     assert plan["fallback_if_denied"] is None
     assert "Apply these Fast Recall memories" not in plan["user_visible_message"]
+
+
+def test_prompt_preview_smoke_tight_budget_uses_budget_message(tmp_path: Path) -> None:
+    output_path = tmp_path / "relaymem_prompt_preview_tight_budget.json"
+    repo_root = Path(__file__).resolve().parents[1]
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "scripts/run_relaymem_prompt_preview_smoke.py",
+            "--token-budget",
+            "1",
+            "--output",
+            str(output_path),
+        ],
+        cwd=repo_root,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+
+    assert completed.stdout
+    payload = json.loads(output_path.read_text(encoding="utf-8"))
+    plan = payload["preview_plan"]
+    assert plan["approval_required"] is True
+    assert plan["can_apply_without_user_approval"] is False
+    assert plan["fallback_reason"] == "token_budget_exceeded"
+    assert plan["preview_items"] == []
+    assert "Apply these Fast Recall memories" not in plan["user_visible_message"]
+    assert (
+        "budget" in plan["user_visible_message"].lower()
+        or "fallback" in plan["user_visible_message"].lower()
+    )

@@ -119,11 +119,6 @@ def run_relaymem_prompt_preview_smoke(
         if approval_required
         else None
     )
-    user_visible_message = (
-        "Apply these Fast Recall memories to active context?"
-        if approval_required
-        else None
-    )
     fallback_if_denied = (
         RelayMEMRetrievalMode.FAST_RECALL
         if approval_required
@@ -136,7 +131,6 @@ def run_relaymem_prompt_preview_smoke(
         token_budget=token_budget,
         approval_required=approval_required,
         approval_reason=approval_reason,
-        user_visible_message=user_visible_message,
         fallback_if_denied=fallback_if_denied,
         max_preview_chars=120,
     )
