@@ -193,8 +193,10 @@ def build_relaymem_prompt_preview_plan(
             fallback_reason=resolved_fallback_reason,
         )
 
-    can_apply_without_user_approval = not approval_required and not bool(
-        context_plan.dropped_memory_ids
+    can_apply_without_user_approval = (
+        not approval_required
+        and not bool(context_plan.dropped_memory_ids)
+        and resolved_fallback_reason is None
     )
 
     return RelayMEMPromptPreviewPlan(

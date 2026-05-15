@@ -138,6 +138,22 @@ def test_no_approval_allows_apply_when_results_exist_and_no_blocking_fallback() 
     assert plan.can_apply_without_user_approval is True
 
 
+def test_explicit_fallback_reason_blocks_auto_apply_without_budget_drop() -> None:
+    results = make_fast_recall_results()
+
+    plan = build_relaymem_prompt_preview_plan(
+        query="RelayStack VRAM Fast Recall phase preview",
+        retrieval_results=results,
+        approval_required=False,
+        token_budget=200,
+        fallback_reason="caller_requested_manual_review",
+    )
+
+    assert plan.dropped_memory_ids == []
+    assert plan.fallback_reason == "caller_requested_manual_review"
+    assert plan.can_apply_without_user_approval is False
+
+
 def test_token_budget_records_dropped_memory_ids_and_fallback_reason() -> None:
     results = make_fast_recall_results()
 
@@ -162,7 +178,7 @@ def test_empty_retrieval_results_produce_empty_preview_plan() -> None:
     assert plan.preview_items == []
     assert plan.dropped_memory_ids == []
     assert plan.fallback_reason == "no_retrieval_results"
-    assert plan.can_apply_without_user_approval is True
+    assert plan.can_apply_without_user_approval is False
 
 
 def test_import_from_relaykv_with_prompt_preview_stays_torch_free() -> None:
