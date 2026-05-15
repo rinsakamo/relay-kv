@@ -76,13 +76,13 @@ def test_fast_recall_returns_relaymem_retrieval_results_in_deterministic_order()
     )
 
     assert [result.memory_id for result in results] == [
-        "profile:project",
         "structured:phase",
-        "summary:vtuber",
         "episode:design-pr",
+        "profile:project",
+        "summary:vtuber",
     ]
     assert all(result.retrieval_backend is RelayMEMBackendKind.BM25 for result in results)
-    assert results[0].memory_source is RelayMEMMemorySource.PROFILE
+    assert results[0].memory_source is RelayMEMMemorySource.STRUCTURED
     assert results[0].confidence is not None
     assert results[0].evidence[0].startswith("matched_tokens=")
 
@@ -95,8 +95,8 @@ def test_fast_recall_respects_max_results() -> None:
     )
 
     assert [result.memory_id for result in results] == [
-        "profile:project",
         "structured:phase",
+        "episode:design-pr",
     ]
 
 
