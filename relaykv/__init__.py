@@ -69,6 +69,11 @@ from .relaystack_final_decision import (
     RelayStackFinalRoutingState,
     decide_relaystack_final_routing,
 )
+from .relaystack_hf_smoke_report import (
+    RelayStackHFContextRowSummary,
+    RelayStackHFSmokeReport,
+    build_relaystack_hf_smoke_report,
+)
 from .vram_reservation import (
     RelayKVVramReservation,
     RelayKVVramReservationStatus,
@@ -241,6 +246,9 @@ __all__ = [
     "RelayStackFinalRoutingDecision",
     "RelayStackFinalRoutingState",
     "decide_relaystack_final_routing",
+    "RelayStackHFContextRowSummary",
+    "RelayStackHFSmokeReport",
+    "build_relaystack_hf_smoke_report",
     "AttentionCompareResult",
     "scaled_dot_product_attention",
     "compare_attention_outputs",
