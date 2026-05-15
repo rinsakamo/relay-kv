@@ -27,6 +27,8 @@ def test_relaystack_dry_run_writes_expected_json(tmp_path: Path) -> None:
 
     assert result.returncode == 0, result.stderr
     assert output_path.exists()
+    stdout_summary = json.loads(result.stdout)
+    assert stdout_summary["final_routing_state"] == "waiting_for_user_approval"
 
     with output_path.open(encoding="utf-8") as f:
         loaded = json.load(f)
@@ -36,6 +38,7 @@ def test_relaystack_dry_run_writes_expected_json(tmp_path: Path) -> None:
         "runtime_policy",
         "relaymem",
         "relaykv",
+        "relaystack",
         "user_gated_fallback",
         "summary",
     }
@@ -53,6 +56,13 @@ def test_relaystack_dry_run_writes_expected_json(tmp_path: Path) -> None:
         in loaded["relaykv"]["vram_reservation_decision"]
     )
     assert loaded["relaykv"]["memory_pressure_decision"] is not None
+    final_decision = loaded["relaystack"]["final_routing_decision"]
+    assert final_decision["state"] == "waiting_for_user_approval"
+    assert final_decision["relaymem_apply_allowed"] is False
+    assert final_decision["approval_required"] is True
+    assert "user_approval_required" in final_decision["blocking_reasons"]
+    assert final_decision["proposed_retrieval_mode"] == "deep_recall"
+    assert final_decision["fallback_if_denied"] == "fast_recall"
     assert loaded["user_gated_fallback"]["approval_required"] is True
     assert loaded["user_gated_fallback"]["proposed_retrieval_mode"] == "deep_recall"
     assert loaded["user_gated_fallback"]["fallback_if_denied"] == "fast_recall"
@@ -100,6 +110,10 @@ def test_relaystack_dry_run_writes_expected_json(tmp_path: Path) -> None:
     )
     assert loaded["summary"]["prompt_preview_approval_required"] is True
     assert loaded["summary"]["prompt_preview_can_apply_without_user_approval"] is False
+    assert loaded["summary"]["final_routing_state"] == "waiting_for_user_approval"
+    assert loaded["summary"]["relaymem_apply_allowed"] is False
+    assert loaded["summary"]["final_relaykv_routing_allowed"] is False
+    assert "user_approval_required" in loaded["summary"]["final_blocking_reasons"]
     assert json.loads(json.dumps(loaded)) == loaded
 
 
@@ -135,6 +149,13 @@ def test_relaystack_dry_run_blocks_routing_when_no_kv_budget(tmp_path: Path) -> 
     }
     assert loaded["relaykv"]["memory_pressure_decision"] is None
     assert loaded["relaykv"]["relaykv_routing_allowed"] is False
+    final_decision = loaded["relaystack"]["final_routing_decision"]
+    assert final_decision["state"] == "blocked_no_kv_budget"
+    assert final_decision["relaykv_routing_allowed"] is False
+    assert any(
+        "vram_status" in reason or "no_kv_budget" in reason
+        for reason in final_decision["blocking_reasons"]
+    )
     assert (
         loaded["relaykv"]["memory_pressure_note"]
         == "skipped: vram reservation status is not ok"
@@ -187,6 +208,15 @@ def test_relaystack_dry_run_disable_approval_gate(tmp_path: Path) -> None:
     assert "fast recall prepared" not in loaded["user_gated_fallback"][
         "user_visible_message"
     ].lower()
+    final_decision = loaded["relaystack"]["final_routing_decision"]
+    assert final_decision["approval_required"] is False
+    assert final_decision["relaymem_apply_allowed"] is True
+    assert final_decision["state"] in {
+        "relaymem_and_relaykv_ready",
+        "relaymem_only",
+    }
+    if final_decision["state"] == "relaymem_and_relaykv_ready":
+        assert final_decision["relaykv_routing_allowed"] is True
 
 
 def test_relaystack_dry_run_tight_budget_uses_prompt_preview_fallback(
@@ -236,6 +266,14 @@ def test_relaystack_dry_run_tight_budget_uses_prompt_preview_fallback(
     assert "deep" in loaded["user_gated_fallback"]["user_visible_message"].lower()
     assert "fast recall" not in loaded["user_gated_fallback"]["user_visible_message"].lower()
     assert loaded["summary"]["prompt_preview_fallback_reason"] == "token_budget_exceeded"
+    final_decision = loaded["relaystack"]["final_routing_decision"]
+    assert final_decision["state"] != "relaymem_and_relaykv_ready"
+    assert final_decision["relaymem_apply_allowed"] is False
+    assert final_decision["fallback_reason"] == "token_budget_exceeded"
+    assert (
+        loaded["summary"]["final_fallback_reason"] == "token_budget_exceeded"
+        or "token_budget_exceeded" in loaded["summary"]["final_blocking_reasons"]
+    )
 
 
 def test_relaystack_dry_run_runs_when_model_and_gpu_imports_are_blocked(
