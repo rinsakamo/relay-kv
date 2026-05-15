@@ -84,6 +84,7 @@ The repository currently implements or prototypes the following pieces:
 - User-Gated Fallback schema fields
 - VRAM reservation schema and smoke path
 - RelayStack no-model/no-GPU dry-run JSON combining RelayMEM retrieval results, context assembly, prompt preview planning, final routing decisions, RelayKV, VRAM reservation, runtime policy, and fallback fields
+- RelayStack HF smoke report layer that joins a synthetic-or-real HF context-length smoke artifact with a RelayStack dry-run artifact
 
 ## Design-only or not yet integrated
 
@@ -116,11 +117,12 @@ Phase 7:
   Scope: dry-run planning only. No model, GPU, runtime, attention, KV, or scheduler path is called.
 
 Phase 8:
-  Current: RelayStack final routing decision dry-run layer
+  Completed: RelayStack final routing decision dry-run layer
   Scope: schema and dry-run planning only. No model, GPU, runtime, attention, KV, or scheduler path is called.
 
 Phase 9:
-  HF max-context / FullKV baseline quality smoke
+  Current: HF smoke artifact + RelayStack dry-run report layer
+  Scope: report/join only with synthetic-artifact tests. No model, GPU, runtime, attention, KV, or scheduler path is changed.
 
 Phase 10:
   RelayKV pressure-triggered shadow policy quality test
