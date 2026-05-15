@@ -79,10 +79,11 @@ The repository currently implements or prototypes the following pieces:
 - memory-block schemas and routing-decision schemas for future runtime integration
 - RelayMEM schema objects for retrieval results and context assembly plans
 - RelayMEM Fast Recall backend v1 for stdlib-only keyword-based memory recall
+- RelayMEM prompt preview / user-gated fallback planning schemas and smoke path
 - RelayMEM record schemas for profile, episode, summary, structured, and KV checkpoint metadata records
 - User-Gated Fallback schema fields
 - VRAM reservation schema and smoke path
-- RelayStack no-model/no-GPU dry-run JSON combining RelayMEM, RelayKV, VRAM reservation, runtime policy, and fallback fields
+- RelayStack no-model/no-GPU dry-run JSON combining RelayMEM retrieval results, context assembly, prompt preview planning, RelayKV, VRAM reservation, runtime policy, and fallback fields
 
 ## Design-only or not yet integrated
 
@@ -107,11 +108,12 @@ Phase 6:
   Completed: RelayMEM Fast Recall backend v1
 
 Phase 6.5:
-  Current: RelayMEM prompt preview / user-gated fallback planning
+  Completed: RelayMEM prompt preview / user-gated fallback planning
   Scope: schema and smoke only. No model, GPU, runtime, or KV path is called.
 
 Phase 7:
-  RelayStack runtime planning artifact practical configuration
+  Current: RelayStack dry-run artifact includes RelayMEM prompt_preview_plan
+  Scope: dry-run planning only. No model, GPU, runtime, attention, KV, or scheduler path is called.
 
 Phase 8:
   HF max-context / FullKV baseline quality smoke

@@ -17,6 +17,7 @@ from relaykv import (
     RelayKVVramReservation,
     RelayKVVramReservationStatus,
     build_relaymem_context_assembly_plan,
+    build_relaymem_prompt_preview_plan,
     build_vram_reservation_budget_decision,
     decide_memory_pressure_state,
     summarize_memory_pressure_decisions,
@@ -131,11 +132,6 @@ def run_relaystack_dry_run(
         if approval_required
         else None
     )
-    user_visible_message = (
-        "少し昔の記憶を深く探してもいい？"
-        if approval_required
-        else None
-    )
     proposed_retrieval_mode = (
         RelayMEMRetrievalMode.DEEP_RECALL
         if approval_required
@@ -155,8 +151,17 @@ def run_relaystack_dry_run(
         token_budget=token_budget,
         approval_required=approval_required,
         approval_reason=approval_reason,
-        user_visible_message=user_visible_message,
         proposed_retrieval_mode=proposed_retrieval_mode,
+        fallback_if_denied=retrieval_fallback_if_denied,
+    )
+    prompt_preview_plan = build_relaymem_prompt_preview_plan(
+        query="Plan a live low-latency AI Vtuber response with optional deeper memory recall.",
+        retrieval_results=retrieval_results,
+        retrieval_mode=RelayMEMRetrievalMode.DEEP_RECALL,
+        backend_kind=RelayMEMBackendKind.EVIDENCE_CHAIN,
+        token_budget=token_budget,
+        approval_required=approval_required,
+        approval_reason=approval_reason,
         fallback_if_denied=retrieval_fallback_if_denied,
     )
 
@@ -211,19 +216,18 @@ def run_relaystack_dry_run(
             memory_pressure_note = "included: lightweight memory pressure helper"
 
     user_gated_fallback = {
-        "approval_required": approval_required,
-        "approval_reason": approval_reason,
-        "proposed_retrieval_mode": (
-            proposed_retrieval_mode.value
-            if proposed_retrieval_mode is not None
-            else None
-        ),
+        "approval_required": prompt_preview_plan.approval_required,
+        "approval_reason": prompt_preview_plan.approval_reason,
         "fallback_if_denied": (
-            retrieval_fallback_if_denied.value
-            if retrieval_fallback_if_denied is not None
+            prompt_preview_plan.fallback_if_denied.value
+            if prompt_preview_plan.fallback_if_denied is not None
             else None
         ),
-        "user_visible_message": user_visible_message,
+        "fallback_reason": prompt_preview_plan.fallback_reason,
+        "user_visible_message": prompt_preview_plan.user_visible_message,
+        "can_apply_without_user_approval": (
+            prompt_preview_plan.can_apply_without_user_approval
+        ),
     }
 
     payload = {
@@ -243,6 +247,7 @@ def run_relaystack_dry_run(
         "relaymem": {
             "retrieval_results": [item.summary() for item in retrieval_results],
             "context_assembly_plan": context_assembly_plan.summary(),
+            "prompt_preview_plan": prompt_preview_plan.summary(),
         },
         "relaykv": {
             "vram_reservation": reservation.summary(),
@@ -257,6 +262,15 @@ def run_relaystack_dry_run(
             "retrieval_result_count": len(retrieval_results),
             "selected_item_count": len(context_assembly_plan.selected_items),
             "dropped_memory_count": len(context_assembly_plan.dropped_memory_ids),
+            "preview_item_count": len(prompt_preview_plan.preview_items),
+            "prompt_preview_dropped_memory_count": len(
+                prompt_preview_plan.dropped_memory_ids
+            ),
+            "prompt_preview_approval_required": prompt_preview_plan.approval_required,
+            "prompt_preview_can_apply_without_user_approval": (
+                prompt_preview_plan.can_apply_without_user_approval
+            ),
+            "prompt_preview_fallback_reason": prompt_preview_plan.fallback_reason,
             "available_working_kv_budget_mib": (
                 vram_reservation_decision.available_working_kv_budget_mib
             ),
@@ -304,6 +318,13 @@ def main() -> int:
                 "ok": True,
                 "out": str(args.output),
                 "approval_required": payload["user_gated_fallback"]["approval_required"],
+                "preview_item_count": payload["summary"]["preview_item_count"],
+                "can_apply_without_user_approval": payload["summary"][
+                    "prompt_preview_can_apply_without_user_approval"
+                ],
+                "prompt_preview_fallback_reason": payload["summary"][
+                    "prompt_preview_fallback_reason"
+                ],
                 "available_working_kv_budget_mib": payload["summary"][
                     "available_working_kv_budget_mib"
                 ],
