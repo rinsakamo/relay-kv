@@ -132,6 +132,11 @@ def run_relaystack_dry_run(
         if approval_required
         else None
     )
+    context_user_visible_message = (
+        "Deep Recall may add latency in live-low-latency mode. Apply these deeper memories to active context?"
+        if approval_required
+        else None
+    )
     proposed_retrieval_mode = (
         RelayMEMRetrievalMode.DEEP_RECALL
         if approval_required
@@ -151,6 +156,7 @@ def run_relaystack_dry_run(
         token_budget=token_budget,
         approval_required=approval_required,
         approval_reason=approval_reason,
+        user_visible_message=context_user_visible_message,
         proposed_retrieval_mode=proposed_retrieval_mode,
         fallback_if_denied=retrieval_fallback_if_denied,
     )

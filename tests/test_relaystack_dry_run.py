@@ -45,6 +45,7 @@ def test_relaystack_dry_run_writes_expected_json(tmp_path: Path) -> None:
     assert "prompt_preview_plan" in loaded["relaymem"]
     assert "selected_items" in loaded["relaymem"]["context_assembly_plan"]
     assert "preview_items" in loaded["relaymem"]["prompt_preview_plan"]
+    assert loaded["relaymem"]["prompt_preview_plan"]["retrieval_mode"] == "deep_recall"
     assert "vram_reservation_decision" in loaded["relaykv"]
     assert loaded["relaykv"]["relaykv_routing_allowed"] is True
     assert (
@@ -57,6 +58,12 @@ def test_relaystack_dry_run_writes_expected_json(tmp_path: Path) -> None:
     assert loaded["user_gated_fallback"]["fallback_if_denied"] == "fast_recall"
     assert "deep" in loaded["user_gated_fallback"]["user_visible_message"].lower()
     assert "fast recall prepared" not in loaded["user_gated_fallback"][
+        "user_visible_message"
+    ].lower()
+    assert loaded["relaymem"]["context_assembly_plan"]["approval_required"] is True
+    assert loaded["relaymem"]["context_assembly_plan"]["approval_reason"] is not None
+    assert loaded["relaymem"]["context_assembly_plan"]["user_visible_message"] is not None
+    assert "deep" in loaded["relaymem"]["context_assembly_plan"][
         "user_visible_message"
     ].lower()
     assert (
