@@ -21,12 +21,12 @@ from .relaymem_records import (
 _TOKEN_RE = re.compile(r"[\w]+", re.UNICODE)
 
 _SOURCE_BASE_PRIORITY = {
-    RelayMEMMemorySource.PROFILE: 0.16,
-    RelayMEMMemorySource.STRUCTURED: 0.12,
-    RelayMEMMemorySource.SUMMARY: 0.10,
-    RelayMEMMemorySource.EPISODE: 0.08,
-    RelayMEMMemorySource.RAG_CHUNK: 0.05,
-    RelayMEMMemorySource.KV_CHECKPOINT_METADATA: 0.02,
+    RelayMEMMemorySource.PROFILE: 0.55,
+    RelayMEMMemorySource.STRUCTURED: 0.28,
+    RelayMEMMemorySource.SUMMARY: 0.22,
+    RelayMEMMemorySource.EPISODE: 0.02,
+    RelayMEMMemorySource.RAG_CHUNK: 0.04,
+    RelayMEMMemorySource.KV_CHECKPOINT_METADATA: 0.01,
 }
 
 
@@ -185,10 +185,10 @@ def _score_candidate(
 ) -> tuple[float, list[str]]:
     candidate_tokens = set(_tokenize(candidate.text))
     overlap_tokens = sorted(query_tokens & candidate_tokens)
-    overlap_count = len(overlap_tokens)
+    overlap_ratio = len(overlap_tokens) / max(1, len(query_tokens))
     source_priority = _SOURCE_BASE_PRIORITY.get(candidate.memory_source, 0.0)
-    importance_bonus = _clamp_unit(candidate.importance) * 0.2
-    score = float(overlap_count) + source_priority + importance_bonus
+    importance_bonus = _clamp_unit(candidate.importance) * 0.15
+    score = overlap_ratio + source_priority + importance_bonus
     return score, overlap_tokens
 
 
@@ -242,7 +242,7 @@ def search_relaymem_fast_recall(
 
     results: list[RelayMEMRetrievalResult] = []
     for score, candidate, overlap_tokens in scored:
-        confidence = _clamp_unit(score / (len(query_tokens) + 0.5))
+        confidence = _clamp_unit(score / 1.5)
         evidence = [f"matched_tokens={','.join(overlap_tokens)}"]
         if candidate.recency_hint:
             evidence.append(f"recency_hint={candidate.recency_hint}")
