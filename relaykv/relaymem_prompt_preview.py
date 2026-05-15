@@ -53,11 +53,16 @@ def _default_user_visible_message(
     if approval_required:
         if retrieval_mode is RelayMEMRetrievalMode.DEEP_RECALL:
             return (
-                "RelayMEM prepared a deeper memory recall preview. "
-                "User approval is required before applying it."
+                "Deep Recall prepared a prompt preview. "
+                "Apply these deeper memories to active context?"
             )
-        return "Fast Recall prepared a prompt preview. User approval is required before applying it."
-    return "Fast Recall prepared a prompt preview that can be applied to active context."
+        return "Fast Recall prepared a prompt preview. Apply these memories to active context?"
+    if retrieval_mode is RelayMEMRetrievalMode.DEEP_RECALL:
+        return (
+            "Deep Recall prepared a prompt preview that can be applied "
+            "without user approval."
+        )
+    return "Fast Recall prepared a prompt preview that can be applied without user approval."
 
 
 @dataclass(frozen=True)
