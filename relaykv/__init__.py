@@ -42,6 +42,11 @@ from .relaymem import (
     RelayMEMRetrievalResult,
     build_relaymem_context_assembly_plan,
 )
+from .relaymem_fast_recall import (
+    RelayMEMFastRecallCandidate,
+    relaymem_record_to_fast_recall_candidate,
+    search_relaymem_fast_recall,
+)
 from .relaymem_records import (
     RelayMEMEpisodeKind,
     RelayMEMEpisodeRecord,
@@ -207,6 +212,9 @@ __all__ = [
     "RelayMEMContextItem",
     "RelayMEMContextAssemblyPlan",
     "build_relaymem_context_assembly_plan",
+    "RelayMEMFastRecallCandidate",
+    "relaymem_record_to_fast_recall_candidate",
+    "search_relaymem_fast_recall",
     "RelayMEMProfileKind",
     "RelayMEMEpisodeKind",
     "RelayMEMSummaryKind",
