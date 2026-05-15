@@ -1,6 +1,7 @@
 import subprocess
 import sys
 from pathlib import Path
+import json
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
@@ -233,3 +234,31 @@ def test_import_from_relaykv_with_prompt_preview_stays_torch_free() -> None:
     )
 
     assert completed.stdout.strip() == "ok"
+
+
+def test_prompt_preview_smoke_no_approval_omits_approval_ux(tmp_path: Path) -> None:
+    output_path = tmp_path / "relaymem_prompt_preview_no_approval.json"
+    repo_root = Path(__file__).resolve().parents[1]
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "scripts/run_relaymem_prompt_preview_smoke.py",
+            "--no-approval-required",
+            "--output",
+            str(output_path),
+        ],
+        cwd=repo_root,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+
+    assert completed.stdout
+    payload = json.loads(output_path.read_text(encoding="utf-8"))
+    plan = payload["preview_plan"]
+    assert plan["approval_required"] is False
+    assert plan["can_apply_without_user_approval"] is True
+    assert not plan["approval_reason"]
+    assert plan["fallback_if_denied"] is None
+    assert "Apply these Fast Recall memories" not in plan["user_visible_message"]

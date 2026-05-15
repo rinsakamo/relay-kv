@@ -25,7 +25,7 @@ from relaykv import (
 
 DEFAULT_OUTPUT = Path("results/processed/relaymem_prompt_preview_smoke.json")
 DEFAULT_QUERY = "RelayStack low VRAM Fast Recall memory planning"
-DEFAULT_TOKEN_BUDGET = 72
+DEFAULT_TOKEN_BUDGET = 160
 
 
 def build_synthetic_records() -> list[object]:
@@ -114,15 +114,30 @@ def run_relaymem_prompt_preview_smoke(
         records=records,
         max_results=max_results,
     )
+    approval_reason = (
+        "prompt preview should be confirmed before insertion"
+        if approval_required
+        else None
+    )
+    user_visible_message = (
+        "Apply these Fast Recall memories to active context?"
+        if approval_required
+        else None
+    )
+    fallback_if_denied = (
+        RelayMEMRetrievalMode.FAST_RECALL
+        if approval_required
+        else None
+    )
     preview_plan_obj = build_relaymem_prompt_preview_plan(
         query=query,
         retrieval_results=retrieval_results,
         retrieval_mode=RelayMEMRetrievalMode.FAST_RECALL,
         token_budget=token_budget,
         approval_required=approval_required,
-        approval_reason="prompt preview should be confirmed before insertion",
-        user_visible_message="Apply these Fast Recall memories to active context?",
-        fallback_if_denied=RelayMEMRetrievalMode.FAST_RECALL,
+        approval_reason=approval_reason,
+        user_visible_message=user_visible_message,
+        fallback_if_denied=fallback_if_denied,
         max_preview_chars=120,
     )
     preview_plan = preview_plan_obj.summary()
