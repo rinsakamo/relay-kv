@@ -162,9 +162,12 @@ def _select_anchor_candidates(
     budget_blocks: int,
 ) -> RelayKVClassBlockSelection:
     eligible = sorted(
-        [candidate for candidate in candidates if candidate.block_id not in selected_ids],
+        [
+            candidate
+            for candidate in candidates
+            if candidate.block_id not in selected_ids and candidate.is_anchor
+        ],
         key=lambda candidate: (
-            not candidate.is_anchor,
             -_score_value(candidate),
             candidate.block_id,
         ),
@@ -299,6 +302,8 @@ def build_relaykv_fixed_budget_block_selection_decision(
 
     if selected_block_count_by_class["recent"] < class_budget_counts["recent"]:
         notes.append("recent_budget_underfilled_due_to_recent_candidate_filter")
+    if selected_block_count_by_class["anchor"] < class_budget_counts["anchor"]:
+        notes.append("anchor_budget_underfilled_due_to_anchor_candidate_filter")
 
     materialized_working_tokens = sum(selected_token_estimate_by_class.values())
     estimated_working_tokens = (

@@ -105,6 +105,56 @@ def test_fixed_budget_block_selection_recent_only_uses_recent_candidates() -> No
     assert "recent_budget_underfilled_due_to_recent_candidate_filter" in decision.notes
 
 
+def test_fixed_budget_block_selection_anchor_only_uses_anchor_candidates() -> None:
+    candidates = [
+        RelayKVBlockCandidate(
+            block_id=0,
+            token_start=0,
+            token_end=64,
+            score=10.0,
+            is_recent=False,
+            is_anchor=True,
+            is_retrieval_candidate=True,
+        ),
+        RelayKVBlockCandidate(
+            block_id=1,
+            token_start=64,
+            token_end=128,
+            score=9.0,
+            is_recent=False,
+            is_anchor=False,
+            is_retrieval_candidate=True,
+        ),
+        RelayKVBlockCandidate(
+            block_id=2,
+            token_start=128,
+            token_end=192,
+            score=8.0,
+            is_recent=True,
+            is_anchor=False,
+            is_retrieval_candidate=False,
+        ),
+    ]
+    decision = build_relaykv_fixed_budget_block_selection_decision(
+        fixed_budget_decision=build_relaykv_fixed_budget_working_set_decision(
+            config=RelayKVFixedBudgetConfig(
+                total_working_budget_tokens=512,
+                recent_budget_tokens=64,
+                anchor_budget_tokens=192,
+                retrieved_budget_tokens=64,
+                block_size=64,
+            )
+        ),
+        candidates=candidates,
+        block_size=64,
+    )
+
+    assert decision.selected_block_ids_by_class["anchor"] == [0]
+    assert 1 not in decision.selected_block_ids_by_class["anchor"]
+    assert 2 not in decision.selected_block_ids_by_class["anchor"]
+    assert "anchor_budget_underfilled_due_to_anchor_candidate_filter" in decision.notes
+
+
 def test_fixed_budget_block_selection_rejected_and_overflow_are_json_safe() -> None:
     decision = build_relaykv_fixed_budget_block_selection_decision(
         fixed_budget_decision=build_relaykv_fixed_budget_working_set_decision(
