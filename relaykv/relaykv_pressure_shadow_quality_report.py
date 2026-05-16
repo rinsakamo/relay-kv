@@ -122,6 +122,22 @@ def _expected_pressure_context_tokens(
     )
 
 
+def _extract_report_model(relaystack_hf_report_payload: dict[str, Any]) -> str | None:
+    for key in ("hf_model", "model"):
+        value = relaystack_hf_report_payload.get(key)
+        if value is not None:
+            return str(value)
+    return None
+
+
+def _extract_pipeline_model(relaykv_pipeline_payload: dict[str, Any]) -> str | None:
+    for key in ("model",):
+        value = relaykv_pipeline_payload.get(key)
+        if value is not None:
+            return str(value)
+    return None
+
+
 def build_relaykv_pressure_shadow_quality_report(
     *,
     relaystack_hf_report_payload: dict[str, Any],
@@ -139,6 +155,8 @@ def build_relaykv_pressure_shadow_quality_report(
     expected_context_tokens = _expected_pressure_context_tokens(
         relaystack_hf_report_payload
     )
+    expected_model = _extract_report_model(relaystack_hf_report_payload)
+    observed_model = _extract_pipeline_model(relaykv_pipeline_payload)
 
     quality = _build_quality_summary(relaykv_pipeline_payload)
     quality_summary = quality.summary() if quality is not None else None
@@ -148,6 +166,8 @@ def build_relaykv_pressure_shadow_quality_report(
         notes.append("shadow_quality_test_recommended_from_pressure_signals")
     else:
         notes.append("shadow_quality_test_not_recommended")
+    if expected_model is None or observed_model is None:
+        notes.append("model_comparison_unavailable")
 
     if quality is None:
         notes.append("relaykv_pipeline_attention_compare_missing")
@@ -159,6 +179,16 @@ def build_relaykv_pressure_shadow_quality_report(
     elif not recommended:
         notes.append("quality_metrics_present_but_pressure_not_recommended")
         quality_status = "not_recommended"
+    elif (
+        expected_model is not None
+        and observed_model is not None
+        and expected_model != observed_model
+    ):
+        notes.append(
+            "pressure_model_mismatch:"
+            f"expected={expected_model}:observed={observed_model}"
+        )
+        quality_status = "recommended_quality_model_mismatch"
     elif (
         expected_context_tokens is not None
         and quality.seq_len is not None

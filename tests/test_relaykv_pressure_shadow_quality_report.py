@@ -13,8 +13,10 @@ def _make_relaystack_hf_report_payload(
     *,
     recommended: bool,
     reason: str | None,
+    hf_model: str = "Qwen/Qwen2.5-1.5B-Instruct",
 ) -> dict:
     return {
+        "hf_model": hf_model,
         "relaykv_shadow_quality_test_recommended": recommended,
         "relaykv_shadow_quality_test_reason": reason,
         "relaykv_shadow_quality_test_inputs": {
@@ -30,8 +32,10 @@ def _make_pipeline_payload(
     *,
     mean_abs_diff: float | None = 0.005,
     max_abs_diff: float | None = 0.05,
+    model: str = "Qwen/Qwen2.5-1.5B-Instruct",
 ) -> dict:
     payload = {
+        "model": model,
         "seq_len_actual": 8192,
         "layer_idx": 14,
         "prompt_type": "structured",
@@ -98,6 +102,28 @@ def test_pressure_shadow_quality_report_context_mismatch() -> None:
     assert report.quality_status == "recommended_quality_context_mismatch"
     assert "recommended_quality_within_threshold" != report.quality_status
     assert any("expected=8192:observed=1024" in note for note in report.notes)
+
+
+def test_pressure_shadow_quality_report_model_mismatch() -> None:
+    report = build_relaykv_pressure_shadow_quality_report(
+        relaystack_hf_report_payload=_make_relaystack_hf_report_payload(
+            recommended=True,
+            reason="oom_observed",
+            hf_model="Qwen/Qwen2.5-Coder-7B-Instruct-AWQ",
+        ),
+        relaykv_pipeline_payload=_make_pipeline_payload(
+            model="Qwen/Qwen2.5-1.5B-Instruct",
+        ),
+    )
+
+    assert report.shadow_quality_test_recommended is True
+    assert report.quality_status == "recommended_quality_model_mismatch"
+    assert "recommended_quality_within_threshold" != report.quality_status
+    assert any(
+        "expected=Qwen/Qwen2.5-Coder-7B-Instruct-AWQ:observed=Qwen/Qwen2.5-1.5B-Instruct"
+        in note
+        for note in report.notes
+    )
 
 
 def test_pressure_shadow_quality_report_not_recommended() -> None:
