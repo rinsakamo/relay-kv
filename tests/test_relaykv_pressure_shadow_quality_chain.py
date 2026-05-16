@@ -146,3 +146,38 @@ print(summary["final_quality_status"])
     assert result.returncode == 0, result.stderr
     stdout_lines = [line.strip() for line in result.stdout.splitlines() if line.strip()]
     assert stdout_lines[-2:] == ["synthetic", "recommended_quality_within_threshold"]
+
+
+def test_pressure_shadow_quality_chain_resolves_relative_output_dir_from_caller_cwd(
+    tmp_path: Path,
+) -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    env = os.environ.copy()
+    env["PYTHONPATH"] = str(repo_root)
+    relative_output_dir = Path("relaykv_reltest")
+    expected_output_dir = tmp_path / relative_output_dir
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(repo_root / "scripts/run_relaykv_pressure_shadow_quality_chain.py"),
+            "--output-dir",
+            str(relative_output_dir),
+        ],
+        cwd=tmp_path,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+
+    for artifact_name in [
+        "chain_summary.json",
+        "relaykv_pressure_shadow_quality_report.json",
+    ]:
+        artifact_path = expected_output_dir / artifact_name
+        assert artifact_path.exists()
+        with artifact_path.open(encoding="utf-8") as f:
+            json.load(f)

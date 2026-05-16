@@ -10,6 +10,10 @@ from pathlib import Path
 from typing import Any
 
 
+def _resolve_user_path(path: Path) -> Path:
+    return path.expanduser().resolve()
+
+
 def build_synthetic_hf_context_smoke_payload() -> dict[str, Any]:
     return {
         "script": "hf_context_length_smoke.py",
@@ -113,6 +117,9 @@ def run_relaykv_pressure_shadow_quality_chain(
     relaykv_pipeline_json: Path | None = None,
 ) -> dict[str, Any]:
     repo_root = Path(__file__).resolve().parents[1]
+    output_dir = _resolve_user_path(output_dir)
+    if relaykv_pipeline_json is not None:
+        relaykv_pipeline_json = _resolve_user_path(relaykv_pipeline_json)
     output_dir.mkdir(parents=True, exist_ok=True)
 
     relaystack_dry_run_path = output_dir / "relaystack_dry_run.json"
@@ -266,17 +273,23 @@ def main() -> int:
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--relaykv-pipeline-json", type=Path, default=None)
     args = parser.parse_args()
+    output_dir = _resolve_user_path(args.output_dir)
+    relaykv_pipeline_json = (
+        _resolve_user_path(args.relaykv_pipeline_json)
+        if args.relaykv_pipeline_json is not None
+        else None
+    )
 
     summary = run_relaykv_pressure_shadow_quality_chain(
-        output_dir=args.output_dir,
-        relaykv_pipeline_json=args.relaykv_pipeline_json,
+        output_dir=output_dir,
+        relaykv_pipeline_json=relaykv_pipeline_json,
     )
     print(
         json.dumps(
             {
                 "ok": True,
-                "out": str(args.output_dir / "relaykv_pressure_shadow_quality_report.json"),
-                "chain_summary": str(args.output_dir / "chain_summary.json"),
+                "out": str(output_dir / "relaykv_pressure_shadow_quality_report.json"),
+                "chain_summary": str(output_dir / "chain_summary.json"),
                 "mode": summary["mode"],
                 "final_quality_status": summary["final_quality_status"],
                 "shadow_quality_test_recommended": summary[
