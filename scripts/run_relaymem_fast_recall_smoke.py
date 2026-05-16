@@ -20,6 +20,7 @@ from relaykv import (
     RelayMEMStructuredRecord,
     RelayMEMSummaryKind,
     RelayMEMSummaryRecord,
+    build_default_fast_recall_backend_capabilities,
     build_relaymem_context_assembly_plan,
     search_relaymem_fast_recall,
 )
@@ -114,6 +115,7 @@ def run_relaymem_fast_recall_smoke(
     max_results: int = 4,
 ) -> dict[str, Any]:
     records = build_synthetic_records()
+    backend_capabilities = build_default_fast_recall_backend_capabilities()
     retrieval_results = search_relaymem_fast_recall(
         query=query,
         records=records,
@@ -135,6 +137,7 @@ def run_relaymem_fast_recall_smoke(
             "synthetic": True,
             "stdlib_only": True,
             "external_backend_called": False,
+            "backend_capabilities": backend_capabilities.summary(),
             "notes": (
                 "Offline RelayMEM Fast Recall smoke path. Uses synthetic records, "
                 "keyword/token overlap scoring, and existing RelayMEM context assembly."
