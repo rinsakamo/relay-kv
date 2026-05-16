@@ -88,6 +88,38 @@ Backend candidates include:
 - **Evidence-chain retrieval**
 - **External RAG service**
 
+## Backend Resource Contract
+
+RelayMEM backends should be designed as CPU-side memory and control-plane components by default. RelayStack treats GPU memory as the critical resource for model weights, active KV blocks, RelayKV working-set control, and attention execution. Long-term memory storage and retrieval should therefore avoid consuming VRAM unless an optional accelerator is explicitly enabled.
+
+The default backend contract is:
+
+- **CPU-first**: the backend must be able to run on CPU without CUDA, GPU kernels, or model-runtime dependencies.
+- **VRAM-zero by default**: the backend must not reserve GPU memory in the normal RelayMEM path.
+- **Disk-backed or remote-backed**: persistent memory should live in files, SQLite, Postgres, GBrain, a vector/search service, or another CPU/IO-oriented store.
+- **Engine-agnostic**: the backend must not depend on SGLang, vLLM, Hugging Face runtime internals, KV pools, attention backends, or scheduler state.
+- **Latency-tiered**: low-latency recall and deeper recall should be separable so the live path can use a cheap backend while deeper indexing or evidence-chain retrieval runs outside the critical path.
+
+Optional GPU use is allowed only as an accelerator for clearly bounded tasks such as embedding generation, reranking, summarization, or compression. Such use should remain disableable and must not be a hard requirement for the backend. Under VRAM pressure, RelayStack should be able to fall back to a CPU-only memory path rather than competing with RelayKV's residual VRAM budget.
+
+Backend capability metadata should eventually make these properties explicit, for example:
+
+```text
+RelayMEMBackendCapabilities
+  runs_on_cpu: true
+  requires_gpu: false
+  uses_vram: false
+  disk_backed: true | false
+  local_first: true | false
+  remote_allowed: true | false
+  supports_hybrid_search: true | false
+  supports_graph: true | false
+  supports_timeline: true | false
+  supports_compaction: true | false
+```
+
+GBrain fits this model as a possible long-term memory backend candidate when used behind the RelayMEM backend boundary. It should not replace RelayMEM itself. RelayMEM should continue to own memory policy, context assembly, conflict handling, and the boundary to RelayKV.
+
 ### Runtime use
 
 - **`LIVE_LOW_LATENCY`**: fast retrieval only
