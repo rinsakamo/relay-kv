@@ -74,6 +74,7 @@ from .relaystack_final_decision import (
 from .relaystack_hf_smoke_report import (
     RelayStackHFContextRowSummary,
     RelayStackHFSmokeReport,
+    build_relaykv_shadow_quality_test_plan_fields,
     build_relaystack_hf_smoke_report,
 )
 from .vram_reservation import (
@@ -252,6 +253,7 @@ __all__ = [
     "decide_relaystack_final_routing",
     "RelayStackHFContextRowSummary",
     "RelayStackHFSmokeReport",
+    "build_relaykv_shadow_quality_test_plan_fields",
     "build_relaystack_hf_smoke_report",
     "AttentionCompareResult",
     "scaled_dot_product_attention",

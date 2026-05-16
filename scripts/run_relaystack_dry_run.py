@@ -19,6 +19,7 @@ from relaykv import (
     build_relaymem_context_assembly_plan,
     build_default_fast_recall_backend_capabilities,
     build_relaymem_prompt_preview_plan,
+    build_relaykv_shadow_quality_test_plan_fields,
     build_vram_reservation_budget_decision,
     decide_memory_pressure_state,
     decide_relaystack_final_routing,
@@ -258,6 +259,27 @@ def run_relaystack_dry_run(
         and prompt_preview_plan.fallback_reason is None
         else None
     )
+    shadow_quality_test_plan = build_relaykv_shadow_quality_test_plan_fields(
+        any_oom=False,
+        first_failed_context_tokens=None,
+        measured_vram_pressure_level=None,
+        vram_reservation_status=vram_reservation_decision.status.value,
+        available_working_kv_budget_mib=(
+            vram_reservation_decision.available_working_kv_budget_mib
+        ),
+        memory_pressure_state=(
+            memory_pressure_decision["state"]
+            if isinstance(memory_pressure_decision, dict)
+            else None
+        ),
+        memory_pressure_budget_pressure=(
+            memory_pressure_decision["budget_pressure"]
+            if isinstance(memory_pressure_decision, dict)
+            and isinstance(memory_pressure_decision.get("budget_pressure"), bool)
+            else None
+        ),
+        final_routing_state=final_routing_decision.state.value,
+    )
 
     payload = {
         "metadata": {
@@ -288,6 +310,15 @@ def run_relaystack_dry_run(
             "memory_pressure_decision": memory_pressure_decision,
             "memory_pressure_summary": memory_pressure_summary,
             "memory_pressure_note": memory_pressure_note,
+            "relaykv_shadow_quality_test_recommended": (
+                shadow_quality_test_plan["relaykv_shadow_quality_test_recommended"]
+            ),
+            "relaykv_shadow_quality_test_reason": (
+                shadow_quality_test_plan["relaykv_shadow_quality_test_reason"]
+            ),
+            "relaykv_shadow_quality_test_inputs": (
+                shadow_quality_test_plan["relaykv_shadow_quality_test_inputs"]
+            ),
         },
         "relaystack": {
             "final_routing_decision": final_routing_decision.summary(),
@@ -311,6 +342,12 @@ def run_relaystack_dry_run(
             ),
             "relaykv_routing_allowed": relaykv_routing_allowed,
             "memory_pressure_included": memory_pressure_decision is not None,
+            "relaykv_shadow_quality_test_recommended": (
+                shadow_quality_test_plan["relaykv_shadow_quality_test_recommended"]
+            ),
+            "relaykv_shadow_quality_test_reason": (
+                shadow_quality_test_plan["relaykv_shadow_quality_test_reason"]
+            ),
             "final_routing_state": final_routing_decision.state.value,
             "relaymem_apply_allowed": final_routing_decision.relaymem_apply_allowed,
             "final_relaykv_routing_allowed": (
@@ -369,6 +406,12 @@ def main() -> int:
                 ],
                 "available_working_kv_budget_mib": payload["summary"][
                     "available_working_kv_budget_mib"
+                ],
+                "relaykv_shadow_quality_test_recommended": payload["summary"][
+                    "relaykv_shadow_quality_test_recommended"
+                ],
+                "relaykv_shadow_quality_test_reason": payload["summary"][
+                    "relaykv_shadow_quality_test_reason"
                 ],
                 "final_routing_state": payload["summary"]["final_routing_state"],
                 "relaymem_apply_allowed": payload["summary"][

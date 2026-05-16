@@ -60,6 +60,9 @@ class RelayStackHFSmokeReport:
     relaystack_predicted_kv_budget_ok: bool
     hf_all_lengths_ok: bool
     observed_max_context_tokens: int | None
+    relaykv_shadow_quality_test_recommended: bool
+    relaykv_shadow_quality_test_reason: str | None
+    relaykv_shadow_quality_test_inputs: dict[str, Any]
     report_notes: list[str]
 
     def summary(self) -> dict[str, Any]:
@@ -96,8 +99,65 @@ class RelayStackHFSmokeReport:
             ),
             "hf_all_lengths_ok": self.hf_all_lengths_ok,
             "observed_max_context_tokens": self.observed_max_context_tokens,
+            "relaykv_shadow_quality_test_recommended": (
+                self.relaykv_shadow_quality_test_recommended
+            ),
+            "relaykv_shadow_quality_test_reason": (
+                self.relaykv_shadow_quality_test_reason
+            ),
+            "relaykv_shadow_quality_test_inputs": dict(
+                self.relaykv_shadow_quality_test_inputs
+            ),
             "report_notes": list(self.report_notes),
         }
+
+
+def build_relaykv_shadow_quality_test_plan_fields(
+    *,
+    any_oom: bool,
+    first_failed_context_tokens: int | None,
+    measured_vram_pressure_level: str | None,
+    vram_reservation_status: str | None,
+    available_working_kv_budget_mib: int | None,
+    memory_pressure_state: str | None = None,
+    memory_pressure_budget_pressure: bool | None = None,
+    final_routing_state: str | None = None,
+) -> dict[str, Any]:
+    inputs = {
+        "any_oom": any_oom,
+        "first_failed_context_tokens": first_failed_context_tokens,
+        "measured_vram_pressure_level": measured_vram_pressure_level,
+        "vram_reservation_status": vram_reservation_status,
+        "available_working_kv_budget_mib": available_working_kv_budget_mib,
+        "memory_pressure_state": memory_pressure_state,
+        "memory_pressure_budget_pressure": memory_pressure_budget_pressure,
+        "final_routing_state": final_routing_state,
+    }
+
+    reason: str | None = None
+    if any_oom:
+        reason = "oom_observed"
+    elif first_failed_context_tokens is not None:
+        reason = "context_length_failure_observed"
+    elif vram_reservation_status in {"no_kv_budget", "over_budget"}:
+        reason = f"vram_reservation_status:{vram_reservation_status}"
+    elif memory_pressure_state == "relaykv_routed_ready":
+        reason = "relaykv_routed_ready"
+    elif bool(memory_pressure_budget_pressure):
+        reason = "budget_pressure"
+    elif measured_vram_pressure_level == "near_capacity":
+        reason = "near_capacity"
+    elif (
+        available_working_kv_budget_mib is not None
+        and available_working_kv_budget_mib <= 1024
+    ):
+        reason = "low_working_kv_budget"
+
+    return {
+        "relaykv_shadow_quality_test_recommended": reason is not None,
+        "relaykv_shadow_quality_test_reason": reason,
+        "relaykv_shadow_quality_test_inputs": inputs,
+    }
 
 
 def _as_int(value: Any) -> int | None:
@@ -235,6 +295,9 @@ def build_relaystack_hf_smoke_report(
     relaykv_section = relaystack_payload.get("relaykv")
     if not isinstance(relaykv_section, dict):
         relaykv_section = {}
+    memory_pressure_decision = relaykv_section.get("memory_pressure_decision")
+    if not isinstance(memory_pressure_decision, dict):
+        memory_pressure_decision = {}
     vram_reservation_decision = relaykv_section.get("vram_reservation_decision")
     if not isinstance(vram_reservation_decision, dict):
         vram_reservation_decision = {}
@@ -306,8 +369,27 @@ def build_relaystack_hf_smoke_report(
     summary_available_working_kv_budget_mib = _as_int(
         summary.get("available_working_kv_budget_mib")
     )
+    memory_pressure_state = memory_pressure_decision.get("state")
+    memory_pressure_state = (
+        str(memory_pressure_state) if memory_pressure_state is not None else None
+    )
+    memory_pressure_budget_pressure = memory_pressure_decision.get("budget_pressure")
+    if isinstance(memory_pressure_budget_pressure, bool):
+        resolved_memory_pressure_budget_pressure = memory_pressure_budget_pressure
+    else:
+        resolved_memory_pressure_budget_pressure = None
     hf_all_lengths_ok = hf_load_ok and bool(context_rows) and all(
         row.ok for row in context_rows
+    )
+    shadow_quality_test_plan = build_relaykv_shadow_quality_test_plan_fields(
+        any_oom=any_oom,
+        first_failed_context_tokens=first_failed_context_tokens,
+        measured_vram_pressure_level=measured_vram_pressure_level,
+        vram_reservation_status=relaykv_vram_status,
+        available_working_kv_budget_mib=relaykv_available_working_kv_budget_mib,
+        memory_pressure_state=memory_pressure_state,
+        memory_pressure_budget_pressure=resolved_memory_pressure_budget_pressure,
+        final_routing_state=final_routing_state,
     )
 
     report_notes: list[str] = []
@@ -390,5 +472,14 @@ def build_relaystack_hf_smoke_report(
         relaystack_predicted_kv_budget_ok=relaykv_vram_status == "ok",
         hf_all_lengths_ok=hf_all_lengths_ok,
         observed_max_context_tokens=observed_max_context_tokens,
+        relaykv_shadow_quality_test_recommended=shadow_quality_test_plan[
+            "relaykv_shadow_quality_test_recommended"
+        ],
+        relaykv_shadow_quality_test_reason=shadow_quality_test_plan[
+            "relaykv_shadow_quality_test_reason"
+        ],
+        relaykv_shadow_quality_test_inputs=shadow_quality_test_plan[
+            "relaykv_shadow_quality_test_inputs"
+        ],
         report_notes=report_notes,
     )

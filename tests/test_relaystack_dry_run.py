@@ -67,6 +67,13 @@ def test_relaystack_dry_run_writes_expected_json(tmp_path: Path) -> None:
         in loaded["relaykv"]["vram_reservation_decision"]
     )
     assert loaded["relaykv"]["memory_pressure_decision"] is not None
+    assert loaded["relaykv"]["relaykv_shadow_quality_test_recommended"] is True
+    assert loaded["relaykv"]["relaykv_shadow_quality_test_reason"] == (
+        "relaykv_routed_ready"
+    )
+    assert loaded["relaykv"]["relaykv_shadow_quality_test_inputs"][
+        "memory_pressure_state"
+    ] == "relaykv_routed_ready"
     final_decision = loaded["relaystack"]["final_routing_decision"]
     assert final_decision["state"] == "waiting_for_user_approval"
     assert final_decision["relaymem_apply_allowed"] is False
@@ -124,6 +131,10 @@ def test_relaystack_dry_run_writes_expected_json(tmp_path: Path) -> None:
     )
     assert loaded["summary"]["prompt_preview_approval_required"] is True
     assert loaded["summary"]["prompt_preview_can_apply_without_user_approval"] is False
+    assert loaded["summary"]["relaykv_shadow_quality_test_recommended"] is True
+    assert loaded["summary"]["relaykv_shadow_quality_test_reason"] == (
+        "relaykv_routed_ready"
+    )
     assert loaded["summary"]["final_routing_state"] == "waiting_for_user_approval"
     assert loaded["summary"]["relaymem_apply_allowed"] is False
     assert loaded["summary"]["final_relaykv_routing_allowed"] is False
@@ -163,6 +174,11 @@ def test_relaystack_dry_run_blocks_routing_when_no_kv_budget(tmp_path: Path) -> 
     }
     assert loaded["relaykv"]["memory_pressure_decision"] is None
     assert loaded["relaykv"]["relaykv_routing_allowed"] is False
+    assert loaded["relaykv"]["relaykv_shadow_quality_test_recommended"] is True
+    assert loaded["relaykv"]["relaykv_shadow_quality_test_reason"] in {
+        "vram_reservation_status:no_kv_budget",
+        "vram_reservation_status:over_budget",
+    }
     final_decision = loaded["relaystack"]["final_routing_decision"]
     assert final_decision["state"] == "blocked_no_kv_budget"
     assert final_decision["relaykv_routing_allowed"] is False
