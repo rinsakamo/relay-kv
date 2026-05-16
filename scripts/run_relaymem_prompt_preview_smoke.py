@@ -18,6 +18,7 @@ from relaykv import (
     RelayMEMStructuredRecord,
     RelayMEMSummaryKind,
     RelayMEMSummaryRecord,
+    build_default_fast_recall_backend_capabilities,
     build_relaymem_prompt_preview_plan,
     search_relaymem_fast_recall,
 )
@@ -109,6 +110,7 @@ def run_relaymem_prompt_preview_smoke(
     approval_required: bool = True,
 ) -> dict[str, Any]:
     records = build_synthetic_records()
+    backend_capabilities = build_default_fast_recall_backend_capabilities()
     retrieval_results = search_relaymem_fast_recall(
         query=query,
         records=records,
@@ -142,6 +144,7 @@ def run_relaymem_prompt_preview_smoke(
             "synthetic": True,
             "stdlib_only": True,
             "external_backend_called": False,
+            "backend_capabilities": backend_capabilities.summary(),
             "notes": (
                 "Offline RelayMEM prompt preview smoke path. Uses Fast Recall retrieval "
                 "results plus preview planning only. No model, GPU, runtime, or KV apply path is called."
