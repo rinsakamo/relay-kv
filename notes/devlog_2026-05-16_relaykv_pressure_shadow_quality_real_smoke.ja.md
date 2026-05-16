@@ -10,6 +10,7 @@
 - 今回の Phase 10-E では、synthetic chain を再確認したうえで、real RelayKV pipeline artifact の fresh generation を 1 回試行した。
 - fresh generation は失敗したため、その失敗を記録した。
 - そのうえで、workspace に既存で存在していた `results/raw/prototype_checks/relaykv_pipeline_summary.json` を pressure shadow quality chain に流し、real-artifact path の report 振る舞いを確認した。
+- synthetic default chain 自体は no-model/no-GPU/report-only のままだが、fresh real pipeline smoke は既存 PyTorch RelayKV pipeline の model loading / attention comparison path を呼ぶ前提である。
 
 ## Commands
 
@@ -103,6 +104,7 @@ This means a fresh `8192` pipeline artifact could not be produced in the current
 
 - synthetic chain は引き続き正常で、Phase 10 report path 自体は `within_threshold` まで確認できた。
 - fresh real pipeline generation は、この環境では network name resolution と `protobuf` 欠落により停止した。今回は smoke/devlog 目的のため、重い依存修正には進んでいない。
+- つまり Phase 10-E の fresh real smoke は report-only ではなく、既存 PyTorch pipeline の実行を試みる段階である。ただし今回の run では tokenizer/model 側の依存・接続条件で停止し、end-to-end の attention comparison 完了までは到達していない。
 - 既存 real pipeline artifact を chain に流した結果、`recommended_quality_context_mismatch` になった。これは guard が期待通りに効いていることを示す。
 - 今回の real-artifact path は threshold-ready validation には到達していない。理由は pressure target context `8192` に対して pipeline artifact 側が `1024` だからである。
 - 一方で、quality metrics 自体は report に保持されており、`mean_abs_diff` はしきい値 `0.01` を超え、`max_abs_diff` は `0.10` 未満だった。だが context mismatch のため threshold claim には使っていない。
@@ -111,9 +113,11 @@ This means a fresh `8192` pipeline artifact could not be produced in the current
 ## Notes
 
 - No actual shadow attention execution beyond existing pipeline artifact generation.
+- The default synthetic chain remained no-model/no-GPU/report-only.
+- The fresh real smoke attempted the existing PyTorch RelayKV pipeline path, which includes model-loading and attention-comparison setup, but this run failed before end-to-end completion.
 - No RelayKV apply.
 - No runtime adapter.
-- No attention / KV pool / scheduler changes.
+- No production attention backend connection, KV pool mutation, or scheduler changes.
 
 ## Next
 
