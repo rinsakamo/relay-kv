@@ -251,6 +251,12 @@ def run_relaystack_dry_run(
             prompt_preview_plan.can_apply_without_user_approval
         ),
     }
+    fast_recall_fallback_backend_capabilities = (
+        backend_capabilities.summary()
+        if prompt_preview_plan.fallback_if_denied
+        is RelayMEMRetrievalMode.FAST_RECALL
+        else None
+    )
 
     payload = {
         "metadata": {
@@ -268,7 +274,7 @@ def run_relaystack_dry_run(
         },
         "relaymem": {
             "fast_recall_fallback_backend_capabilities": (
-                backend_capabilities.summary()
+                fast_recall_fallback_backend_capabilities
             ),
             "retrieval_results": [item.summary() for item in retrieval_results],
             "context_assembly_plan": context_assembly_plan.summary(),
