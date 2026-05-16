@@ -130,9 +130,11 @@ Phase 10:
   should be prioritized from existing pressure and smoke signals
   Phase 10-B: completed pressure-triggered shadow quality join/report layer combining
   RelayStack pressure recommendation with existing RelayKV pipeline quality metrics
-  Phase 10-C: current synthetic/no-model artifact-chain wrapper for reproducing the report inputs
+  Phase 10-C: completed synthetic/no-model artifact-chain wrapper for reproducing the report inputs
   and final pressure shadow quality report in a fixed order
-  Scope: report/join/wrapper only. No model, GPU, runtime, attention, KV, or scheduler path is called.
+  Phase 10-D: current existing-pipeline-artifact validation guide and threshold calibration scaffold
+  for joining real RelayKV pipeline summaries into the fixed chain without changing runtime behavior
+  Scope: report/join/wrapper/guide only. No model, GPU, runtime, attention, KV, or scheduler path is called.
 
 Phase 11:
   RelayKV fixed-budget working-set dry-run policy
@@ -157,4 +159,4 @@ The prototype already supports direct approximation-quality measurement. The cur
 - deeper layers are harder than shallow layers
 - longer contexts remain harder, but still follow the same coverage-driven trend
 
-See [experimental_findings.md](experimental_findings.md) for the current measured findings and [evaluation_targets.md](evaluation_targets.md) for the next target directions.
+See [experimental_findings.md](experimental_findings.md) for the current measured findings, [phase10_pressure_shadow_quality.md](phase10_pressure_shadow_quality.md) for the current Phase 10 chain and real-artifact validation workflow, and [evaluation_targets.md](evaluation_targets.md) for the next target directions.
