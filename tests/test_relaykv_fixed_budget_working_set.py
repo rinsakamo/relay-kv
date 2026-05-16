@@ -102,9 +102,14 @@ def test_fixed_budget_working_set_summary_is_json_safe_and_block_counts_match() 
     )
 
     summary = decision.summary()
+    assert decision.decision_state == "dry_run_ready"
+    assert decision.materialized_working_tokens == 1408
+    assert decision.estimated_working_tokens == 1536
+    assert decision.estimated_working_tokens <= 1536
     assert json.loads(json.dumps(summary)) == summary
     assert summary["dry_run_only"] is True
     assert "materialized_working_tokens" in summary
+    assert summary["transient_budget_tokens"] == 128
     for class_name in ("recent", "anchor", "retrieved", "transient"):
         class_budget = summary["class_budgets"][class_name]
         if class_name == "transient":
@@ -145,3 +150,39 @@ def test_fixed_budget_working_set_script_roundtrip(tmp_path: Path) -> None:
     assert loaded["materialized_working_tokens"] == 2048
     assert loaded["selected_block_plan"]["recent_block_count"] == 16
     assert loaded["selected_block_plan"]["total_selected_blocks"] * 64 <= 2048
+
+
+def test_fixed_budget_working_set_script_roundtrip_with_transient_budget(
+    tmp_path: Path,
+) -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    env = os.environ.copy()
+    env["PYTHONPATH"] = str(repo_root)
+    output_path = tmp_path / "relaykv_fixed_budget_working_set_transient.json"
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "scripts/run_relaykv_fixed_budget_working_set_dry_run.py",
+            "--total-working-budget-tokens",
+            "1536",
+            "--transient-budget-tokens",
+            "128",
+            "--block-size",
+            "64",
+            "--output",
+            str(output_path),
+        ],
+        cwd=repo_root,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    loaded = json.loads(output_path.read_text(encoding="utf-8"))
+    assert loaded["decision_state"] == "dry_run_ready"
+    assert loaded["materialized_working_tokens"] == 1408
+    assert loaded["estimated_working_tokens"] == 1536
+    assert loaded["transient_budget_tokens"] == 128

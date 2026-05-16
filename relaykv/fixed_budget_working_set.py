@@ -113,7 +113,7 @@ def _build_block_aligned_plan(
     budgets: dict[str, int],
     sources: dict[str, str],
     notes: list[str],
-) -> tuple[dict[str, RelayKVClassBudget], dict[str, int], int]:
+) -> tuple[dict[str, RelayKVClassBudget], dict[str, int], int, int]:
     available_physical_tokens = max(
         0,
         config.total_working_budget_tokens - config.transient_budget_tokens,
@@ -190,6 +190,9 @@ def _build_block_aligned_plan(
     }
     total_selected_blocks = sum(base_block_counts.values())
     materialized_working_tokens = total_selected_blocks * config.block_size
+    estimated_working_tokens = (
+        materialized_working_tokens + config.transient_budget_tokens
+    )
     selected_block_plan = {
         "total_budget_blocks_available": available_total_budget_blocks,
         "total_selected_blocks": total_selected_blocks,
@@ -198,16 +201,19 @@ def _build_block_aligned_plan(
         "retrieved_block_count": class_budgets["retrieved"].budget_blocks,
         "transient_block_count": class_budgets["transient"].budget_blocks,
         "estimated_physical_working_tokens": materialized_working_tokens,
-        "estimated_working_tokens": materialized_working_tokens,
+        "estimated_working_tokens": estimated_working_tokens,
         "materialized_working_tokens": materialized_working_tokens,
         "unallocated_tokens": max(
             0,
-            config.total_working_budget_tokens
-            - materialized_working_tokens
-            - config.transient_budget_tokens,
+            config.total_working_budget_tokens - estimated_working_tokens,
         ),
     }
-    return class_budgets, selected_block_plan, materialized_working_tokens
+    return (
+        class_budgets,
+        selected_block_plan,
+        materialized_working_tokens,
+        estimated_working_tokens,
+    )
 
 
 def _build_invalid_decision(
@@ -218,7 +224,12 @@ def _build_invalid_decision(
     fallback_reason: str,
     notes: list[str],
 ) -> RelayKVFixedBudgetWorkingSetDecision:
-    class_budgets, selected_block_plan, materialized_working_tokens = (
+    (
+        class_budgets,
+        selected_block_plan,
+        materialized_working_tokens,
+        estimated_working_tokens,
+    ) = (
         _build_block_aligned_plan(
             config=config,
             budgets=budgets,
@@ -232,7 +243,7 @@ def _build_invalid_decision(
         block_size=config.block_size,
         class_budgets=class_budgets,
         selected_block_plan=selected_block_plan,
-        estimated_working_tokens=materialized_working_tokens,
+        estimated_working_tokens=estimated_working_tokens,
         materialized_working_tokens=materialized_working_tokens,
         decision_state="invalid_budget",
         fallback_reason=fallback_reason,
@@ -377,7 +388,12 @@ def build_relaykv_fixed_budget_working_set_decision(
         if explicit_flags.get(name, False) and budgets[name] < minimum:
             notes.append(f"explicit_{name}_budget_below_minimum")
 
-    class_budgets, selected_block_plan, materialized_working_tokens = (
+    (
+        class_budgets,
+        selected_block_plan,
+        materialized_working_tokens,
+        estimated_working_tokens_block_aligned,
+    ) = (
         _build_block_aligned_plan(
             config=config,
             budgets=budgets,
@@ -385,7 +401,7 @@ def build_relaykv_fixed_budget_working_set_decision(
             notes=notes,
         )
     )
-    if materialized_working_tokens > config.total_working_budget_tokens:
+    if estimated_working_tokens_block_aligned > config.total_working_budget_tokens:
         notes.append("block_aligned_plan_exceeds_total_budget")
         return _build_invalid_decision(
             config=config,
@@ -400,7 +416,7 @@ def build_relaykv_fixed_budget_working_set_decision(
         block_size=config.block_size,
         class_budgets=class_budgets,
         selected_block_plan=selected_block_plan,
-        estimated_working_tokens=materialized_working_tokens,
+        estimated_working_tokens=estimated_working_tokens_block_aligned,
         materialized_working_tokens=materialized_working_tokens,
         decision_state="dry_run_ready",
         fallback_reason=None,
