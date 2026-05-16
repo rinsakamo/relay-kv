@@ -128,9 +128,11 @@ Phase 10:
   RelayKV pressure-triggered shadow policy quality test
   Phase 10-A: completed planning/report-only recommendation fields for when a shadow quality test
   should be prioritized from existing pressure and smoke signals
-  Phase 10-B: current pressure-triggered shadow quality join/report layer combining
+  Phase 10-B: completed pressure-triggered shadow quality join/report layer combining
   RelayStack pressure recommendation with existing RelayKV pipeline quality metrics
-  Scope: report/join only. No model, GPU, runtime, attention, KV, or scheduler path is called.
+  Phase 10-C: current synthetic/no-model artifact-chain wrapper for reproducing the report inputs
+  and final pressure shadow quality report in a fixed order
+  Scope: report/join/wrapper only. No model, GPU, runtime, attention, KV, or scheduler path is called.
 
 Phase 11:
   RelayKV fixed-budget working-set dry-run policy
