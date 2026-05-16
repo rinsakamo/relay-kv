@@ -82,6 +82,12 @@ from .relaykv_pressure_shadow_quality_report import (
     RelayKVShadowQualitySummary,
     build_relaykv_pressure_shadow_quality_report,
 )
+from .fixed_budget_working_set import (
+    RelayKVClassBudget,
+    RelayKVFixedBudgetConfig,
+    RelayKVFixedBudgetWorkingSetDecision,
+    build_relaykv_fixed_budget_working_set_decision,
+)
 from .vram_reservation import (
     RelayKVVramReservation,
     RelayKVVramReservationStatus,
@@ -263,6 +269,10 @@ __all__ = [
     "RelayKVShadowQualitySummary",
     "RelayKVPressureShadowQualityReport",
     "build_relaykv_pressure_shadow_quality_report",
+    "RelayKVClassBudget",
+    "RelayKVFixedBudgetConfig",
+    "RelayKVFixedBudgetWorkingSetDecision",
+    "build_relaykv_fixed_budget_working_set_decision",
     "AttentionCompareResult",
     "scaled_dot_product_attention",
     "compare_attention_outputs",
