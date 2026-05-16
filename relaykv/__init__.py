@@ -77,6 +77,11 @@ from .relaystack_hf_smoke_report import (
     build_relaykv_shadow_quality_test_plan_fields,
     build_relaystack_hf_smoke_report,
 )
+from .relaykv_pressure_shadow_quality_report import (
+    RelayKVPressureShadowQualityReport,
+    RelayKVShadowQualitySummary,
+    build_relaykv_pressure_shadow_quality_report,
+)
 from .vram_reservation import (
     RelayKVVramReservation,
     RelayKVVramReservationStatus,
@@ -255,6 +260,9 @@ __all__ = [
     "RelayStackHFSmokeReport",
     "build_relaykv_shadow_quality_test_plan_fields",
     "build_relaystack_hf_smoke_report",
+    "RelayKVShadowQualitySummary",
+    "RelayKVPressureShadowQualityReport",
+    "build_relaykv_pressure_shadow_quality_report",
     "AttentionCompareResult",
     "scaled_dot_product_attention",
     "compare_attention_outputs",
