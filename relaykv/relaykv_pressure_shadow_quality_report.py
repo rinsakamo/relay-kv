@@ -104,6 +104,24 @@ def _build_quality_summary(
     )
 
 
+def _expected_pressure_context_tokens(
+    relaystack_hf_report_payload: dict[str, Any],
+) -> int | None:
+    shadow_inputs = relaystack_hf_report_payload.get(
+        "relaykv_shadow_quality_test_inputs"
+    )
+    if not isinstance(shadow_inputs, dict):
+        shadow_inputs = {}
+    return (
+        _as_int(relaystack_hf_report_payload.get("first_failed_context_tokens"))
+        or _as_int(shadow_inputs.get("first_failed_context_tokens"))
+        or _as_int(relaystack_hf_report_payload.get("max_ok_context_tokens"))
+        or _as_int(shadow_inputs.get("max_ok_context_tokens"))
+        or _as_int(relaystack_hf_report_payload.get("observed_max_context_tokens"))
+        or _as_int(shadow_inputs.get("observed_max_context_tokens"))
+    )
+
+
 def build_relaykv_pressure_shadow_quality_report(
     *,
     relaystack_hf_report_payload: dict[str, Any],
@@ -118,6 +136,9 @@ def build_relaykv_pressure_shadow_quality_report(
         "relaykv_shadow_quality_test_reason"
     )
     pressure_reason = str(pressure_reason) if pressure_reason is not None else None
+    expected_context_tokens = _expected_pressure_context_tokens(
+        relaystack_hf_report_payload
+    )
 
     quality = _build_quality_summary(relaykv_pipeline_payload)
     quality_summary = quality.summary() if quality is not None else None
@@ -138,6 +159,16 @@ def build_relaykv_pressure_shadow_quality_report(
     elif not recommended:
         notes.append("quality_metrics_present_but_pressure_not_recommended")
         quality_status = "not_recommended"
+    elif (
+        expected_context_tokens is not None
+        and quality.seq_len is not None
+        and expected_context_tokens != quality.seq_len
+    ):
+        notes.append(
+            "pressure_context_mismatch:"
+            f"expected={expected_context_tokens}:observed={quality.seq_len}"
+        )
+        quality_status = "recommended_quality_context_mismatch"
     elif quality.mean_abs_diff is None or quality.max_abs_diff is None:
         notes.append("quality_metrics_incomplete")
         quality_status = "recommended_quality_observed"

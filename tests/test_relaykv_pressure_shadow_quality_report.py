@@ -82,6 +82,24 @@ def test_pressure_shadow_quality_report_exceeds_threshold() -> None:
     assert report.quality_status == "recommended_quality_exceeds_threshold"
 
 
+def test_pressure_shadow_quality_report_context_mismatch() -> None:
+    report = build_relaykv_pressure_shadow_quality_report(
+        relaystack_hf_report_payload=_make_relaystack_hf_report_payload(
+            recommended=True,
+            reason="context_length_failure_observed",
+        ),
+        relaykv_pipeline_payload={
+            **_make_pipeline_payload(),
+            "seq_len_actual": 1024,
+        },
+    )
+
+    assert report.shadow_quality_test_recommended is True
+    assert report.quality_status == "recommended_quality_context_mismatch"
+    assert "recommended_quality_within_threshold" != report.quality_status
+    assert any("expected=8192:observed=1024" in note for note in report.notes)
+
+
 def test_pressure_shadow_quality_report_not_recommended() -> None:
     report = build_relaykv_pressure_shadow_quality_report(
         relaystack_hf_report_payload=_make_relaystack_hf_report_payload(
