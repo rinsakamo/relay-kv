@@ -144,6 +144,9 @@ Phase 10:
 
 Phase 11:
   RelayKV fixed-budget working-set dry-run policy
+  Phase 11-A: current fixed-budget working-set dry-run policy schema and CLI
+  for allocating RECENT / ANCHOR / RETRIEVED token budgets without runtime integration
+  Scope: dry-run/schema/CLI only. No runtime adapter, materialization, attention connection, or scheduler path is changed.
 
 Phase 12:
   Runtime adapter selection and restart
