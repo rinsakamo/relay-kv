@@ -132,9 +132,11 @@ Phase 10:
   RelayStack pressure recommendation with existing RelayKV pipeline quality metrics
   Phase 10-C: completed synthetic/no-model artifact-chain wrapper for reproducing the report inputs
   and final pressure shadow quality report in a fixed order
-  Phase 10-D: current existing-pipeline-artifact validation guide and threshold calibration scaffold
+  Phase 10-D: completed existing-pipeline-artifact validation guide and threshold calibration scaffold
   for joining real RelayKV pipeline summaries into the fixed chain without changing runtime behavior
-  Scope: report/join/wrapper/guide only. No model, GPU, runtime, attention, KV, or scheduler path is called.
+  Phase 10-E: completed JST-dated real-artifact smoke/devlog pass covering
+  synthetic-chain confirmation, fresh real-pipeline generation attempt logging, and existing real-artifact join results
+  Scope: report/join/wrapper/guide/devlog only. No model, GPU, runtime, attention, KV, or scheduler path is called.
 
 Phase 11:
   RelayKV fixed-budget working-set dry-run policy
