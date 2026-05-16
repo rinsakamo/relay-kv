@@ -137,9 +137,12 @@ def _select_recent_candidates(
     budget_blocks: int,
 ) -> RelayKVClassBlockSelection:
     eligible = sorted(
-        [candidate for candidate in candidates if candidate.block_id not in selected_ids],
+        [
+            candidate
+            for candidate in candidates
+            if candidate.block_id not in selected_ids and candidate.is_recent
+        ],
         key=lambda candidate: (
-            not candidate.is_recent,
             -candidate.token_end,
             candidate.block_id,
         ),
@@ -279,7 +282,11 @@ def build_relaykv_fixed_budget_block_selection_decision(
         for candidate in candidates
         if candidate.block_id not in selected_all_ids
     ]
-    overflow_block_ids = sorted(overflow_reason_by_id.keys())
+    overflow_block_ids = sorted(
+        block_id
+        for block_id in overflow_reason_by_id.keys()
+        if block_id not in selected_all_ids
+    )
 
     rejection_reason_counts: dict[str, int] = {}
     for candidate in candidates:
@@ -289,6 +296,9 @@ def build_relaykv_fixed_budget_block_selection_decision(
         if reason is None:
             reason = "not_selected_by_priority"
         rejection_reason_counts[reason] = rejection_reason_counts.get(reason, 0) + 1
+
+    if selected_block_count_by_class["recent"] < class_budget_counts["recent"]:
+        notes.append("recent_budget_underfilled_due_to_recent_candidate_filter")
 
     materialized_working_tokens = sum(selected_token_estimate_by_class.values())
     estimated_working_tokens = (

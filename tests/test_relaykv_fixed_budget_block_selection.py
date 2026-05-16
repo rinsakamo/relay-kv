@@ -55,6 +55,56 @@ def test_fixed_budget_block_selection_has_no_duplicate_block_ids_across_classes(
     assert len(selected_ids) == len(set(selected_ids))
 
 
+def test_fixed_budget_block_selection_recent_only_uses_recent_candidates() -> None:
+    candidates = [
+        RelayKVBlockCandidate(
+            block_id=0,
+            token_start=0,
+            token_end=64,
+            score=10.0,
+            is_recent=False,
+            is_anchor=True,
+            is_retrieval_candidate=True,
+        ),
+        RelayKVBlockCandidate(
+            block_id=1,
+            token_start=64,
+            token_end=128,
+            score=9.0,
+            is_recent=False,
+            is_anchor=False,
+            is_retrieval_candidate=True,
+        ),
+        RelayKVBlockCandidate(
+            block_id=2,
+            token_start=128,
+            token_end=192,
+            score=8.0,
+            is_recent=True,
+            is_anchor=False,
+            is_retrieval_candidate=False,
+        ),
+    ]
+    decision = build_relaykv_fixed_budget_block_selection_decision(
+        fixed_budget_decision=build_relaykv_fixed_budget_working_set_decision(
+            config=RelayKVFixedBudgetConfig(
+                total_working_budget_tokens=512,
+                recent_budget_tokens=256,
+                anchor_budget_tokens=64,
+                retrieved_budget_tokens=64,
+                block_size=64,
+            )
+        ),
+        candidates=candidates,
+        block_size=64,
+    )
+
+    assert decision.selected_block_ids_by_class["recent"] == [2]
+    assert 0 not in decision.selected_block_ids_by_class["recent"]
+    assert 1 not in decision.selected_block_ids_by_class["recent"]
+    assert "recent_budget_underfilled_due_to_recent_candidate_filter" in decision.notes
+
+
 def test_fixed_budget_block_selection_rejected_and_overflow_are_json_safe() -> None:
     decision = build_relaykv_fixed_budget_block_selection_decision(
         fixed_budget_decision=build_relaykv_fixed_budget_working_set_decision(
@@ -72,6 +122,29 @@ def test_fixed_budget_block_selection_rejected_and_overflow_are_json_safe() -> N
     assert isinstance(summary["rejected_block_ids"], list)
     assert isinstance(summary["overflow_block_ids"], list)
     assert isinstance(summary["rejection_reason_counts"], dict)
+
+
+def test_fixed_budget_block_selection_selected_overflow_and_rejected_are_disjoint() -> None:
+    decision = build_relaykv_fixed_budget_block_selection_decision(
+        fixed_budget_decision=build_relaykv_fixed_budget_working_set_decision(
+            config=RelayKVFixedBudgetConfig(
+                total_working_budget_tokens=2048,
+                block_size=64,
+            )
+        ),
+        candidates=build_synthetic_block_candidates(num_blocks=64, block_size=64),
+        block_size=64,
+    )
+
+    selected_ids = {
+        block_id
+        for block_ids in decision.selected_block_ids_by_class.values()
+        for block_id in block_ids
+    }
+    overflow_ids = set(decision.overflow_block_ids)
+    rejected_ids = set(decision.rejected_block_ids)
+    assert selected_ids.isdisjoint(overflow_ids)
+    assert selected_ids.isdisjoint(rejected_ids)
 
 
 def test_fixed_budget_block_selection_tiny_budget_stays_within_total() -> None:
