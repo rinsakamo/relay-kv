@@ -17,6 +17,8 @@ def _make_relaystack_payload(
     vram_status: str = "ok",
     available_working_kv_budget_mib: int = 2048,
     total_vram_mib: int = 12288,
+    memory_pressure_state: str | None = None,
+    memory_pressure_budget_pressure: bool | None = None,
 ) -> dict:
     return {
         "relaystack": {
@@ -36,6 +38,15 @@ def _make_relaystack_payload(
                 "status": vram_status,
                 "available_working_kv_budget_mib": available_working_kv_budget_mib,
             },
+            "memory_pressure_decision": (
+                {
+                    "state": memory_pressure_state,
+                    "budget_pressure": memory_pressure_budget_pressure,
+                }
+                if memory_pressure_state is not None
+                or memory_pressure_budget_pressure is not None
+                else None
+            ),
         },
         "summary": {
             "available_working_kv_budget_mib": available_working_kv_budget_mib,
@@ -123,6 +134,8 @@ def test_build_relaystack_hf_smoke_report_all_lengths_ok() -> None:
     assert report.measured_vram_pressure_level == "low"
     assert report.final_routing_state == "relaymem_and_relaykv_ready"
     assert report.hf_all_lengths_ok is True
+    assert report.relaykv_shadow_quality_test_recommended is False
+    assert report.relaykv_shadow_quality_test_reason is None
 
 
 def test_build_relaystack_hf_smoke_report_oom_at_longer_length() -> None:
@@ -171,6 +184,9 @@ def test_build_relaystack_hf_smoke_report_oom_at_longer_length() -> None:
     assert report.first_failed_context_tokens == 8192
     assert report.measured_vram_pressure_level == "oom_observed"
     assert "hf_oom_observed" in report.report_notes
+    assert report.relaykv_shadow_quality_test_recommended is True
+    assert report.relaykv_shadow_quality_test_reason == "oom_observed"
+    assert report.relaykv_shadow_quality_test_inputs["any_oom"] is True
 
 
 def test_build_relaystack_hf_smoke_report_load_failed() -> None:
@@ -266,6 +282,42 @@ def test_build_relaystack_hf_smoke_report_relaymem_only_note() -> None:
     assert report.measured_vram_pressure_level == "moderate"
 
 
+def test_build_relaystack_hf_smoke_report_recommends_shadow_quality_test_from_routed_ready() -> None:
+    hf_payload = _make_hf_payload(
+        rows=[
+            {
+                "target_context_tokens": 4096,
+                "input_tokens": 4100,
+                "ok": True,
+                "after": {
+                    "cuda": {
+                        "peak_allocated_mib": 6000.0,
+                        "peak_reserved_mib": 6800.0,
+                    }
+                },
+            }
+        ]
+    )
+    relaystack_payload = _make_relaystack_payload(
+        final_routing_state="waiting_for_user_approval",
+        relaymem_apply_allowed=False,
+        relaykv_routing_allowed=False,
+        memory_pressure_state="relaykv_routed_ready",
+        memory_pressure_budget_pressure=True,
+    )
+
+    report = build_relaystack_hf_smoke_report(
+        hf_smoke_payload=hf_payload,
+        relaystack_payload=relaystack_payload,
+    )
+
+    assert report.relaykv_shadow_quality_test_recommended is True
+    assert report.relaykv_shadow_quality_test_reason == "relaykv_routed_ready"
+    assert report.relaykv_shadow_quality_test_inputs["memory_pressure_state"] == (
+        "relaykv_routed_ready"
+    )
+
+
 def test_run_relaystack_hf_smoke_report_script_roundtrip(tmp_path: Path) -> None:
     repo_root = Path(__file__).resolve().parents[1]
     env = os.environ.copy()
@@ -343,4 +395,6 @@ def test_run_relaystack_hf_smoke_report_script_roundtrip(tmp_path: Path) -> None
     assert loaded["hf_load_ok"] is True
     assert loaded["max_ok_context_tokens"] == 8192
     assert loaded["final_routing_state"] == "relaymem_only"
+    assert loaded["relaykv_shadow_quality_test_recommended"] is False
+    assert loaded["relaykv_shadow_quality_test_reason"] is None
     assert json.loads(json.dumps(loaded)) == loaded

@@ -126,6 +126,9 @@ Phase 9:
 
 Phase 10:
   RelayKV pressure-triggered shadow policy quality test
+  Phase 10-A: planning/report-only recommendation fields for when a shadow quality test
+  should be prioritized from existing pressure and smoke signals
+  Scope: dry-run/report only. No model, GPU, runtime, attention, KV, or scheduler path is called.
 
 Phase 11:
   RelayKV fixed-budget working-set dry-run policy
