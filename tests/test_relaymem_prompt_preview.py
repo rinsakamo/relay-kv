@@ -320,7 +320,12 @@ def test_prompt_preview_smoke_no_approval_omits_approval_ux(tmp_path: Path) -> N
 
     assert completed.stdout
     payload = json.loads(output_path.read_text(encoding="utf-8"))
+    backend_capabilities = payload["metadata"]["backend_capabilities"]
     plan = payload["preview_plan"]
+    assert backend_capabilities["backend_type"] == "fast_recall"
+    assert backend_capabilities["runs_on_cpu"] is True
+    assert backend_capabilities["requires_gpu"] is False
+    assert backend_capabilities["uses_vram"] is False
     assert plan["approval_required"] is False
     assert plan["can_apply_without_user_approval"] is True
     assert not plan["approval_reason"]
@@ -349,7 +354,12 @@ def test_prompt_preview_smoke_tight_budget_uses_budget_message(tmp_path: Path) -
 
     assert completed.stdout
     payload = json.loads(output_path.read_text(encoding="utf-8"))
+    backend_capabilities = payload["metadata"]["backend_capabilities"]
     plan = payload["preview_plan"]
+    assert backend_capabilities["backend_type"] == "fast_recall"
+    assert backend_capabilities["runs_on_cpu"] is True
+    assert backend_capabilities["requires_gpu"] is False
+    assert backend_capabilities["uses_vram"] is False
     assert plan["approval_required"] is True
     assert plan["can_apply_without_user_approval"] is False
     assert plan["fallback_reason"] == "token_budget_exceeded"

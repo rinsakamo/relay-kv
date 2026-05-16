@@ -17,6 +17,7 @@ from relaykv import (
     RelayKVVramReservation,
     RelayKVVramReservationStatus,
     build_relaymem_context_assembly_plan,
+    build_default_fast_recall_backend_capabilities,
     build_relaymem_prompt_preview_plan,
     build_vram_reservation_budget_decision,
     decide_memory_pressure_state,
@@ -126,6 +127,7 @@ def run_relaystack_dry_run(
     disable_approval_gate: bool = False,
 ) -> dict[str, Any]:
     retrieval_results = build_synthetic_retrieval_results()
+    backend_capabilities = build_default_fast_recall_backend_capabilities()
 
     approval_required = not disable_approval_gate
     approval_reason = (
@@ -249,6 +251,13 @@ def run_relaystack_dry_run(
             prompt_preview_plan.can_apply_without_user_approval
         ),
     }
+    fast_recall_fallback_backend_capabilities = (
+        backend_capabilities.summary()
+        if prompt_preview_plan.fallback_if_denied
+        is RelayMEMRetrievalMode.FAST_RECALL
+        and prompt_preview_plan.fallback_reason is None
+        else None
+    )
 
     payload = {
         "metadata": {
@@ -265,6 +274,9 @@ def run_relaystack_dry_run(
             "approval_gate_enabled": not disable_approval_gate,
         },
         "relaymem": {
+            "fast_recall_fallback_backend_capabilities": (
+                fast_recall_fallback_backend_capabilities
+            ),
             "retrieval_results": [item.summary() for item in retrieval_results],
             "context_assembly_plan": context_assembly_plan.summary(),
             "prompt_preview_plan": prompt_preview_plan.summary(),
