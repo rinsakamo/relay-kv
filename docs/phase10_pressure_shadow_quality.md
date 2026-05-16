@@ -66,7 +66,7 @@ The wrapper does not run `scripts/run_relaykv_pipeline.py` for you in this mode.
 If a fresh pipeline artifact is needed, generate it separately with the repository's main comparison path:
 
 ```bash
-python scripts/run_relaykv_pipeline.py
+python scripts/run_relaykv_pipeline.py --seq-len 8192
 ```
 
 Expected output path:
@@ -74,6 +74,10 @@ Expected output path:
 ```text
 results/raw/prototype_checks/relaykv_pipeline_summary.json
 ```
+
+For threshold-ready validation, the pipeline `seq_len` should match the pressure target context.
+
+Omitting `--seq-len` uses the pipeline default. That is useful for demonstrating the context-mismatch guard, but not for threshold-ready validation against the current synthetic Phase 10 pressure target.
 
 This command is intentionally not part of default validation because it may depend on local model, torch, and GPU setup.
 
