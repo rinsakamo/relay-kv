@@ -255,6 +255,7 @@ def run_relaystack_dry_run(
         backend_capabilities.summary()
         if prompt_preview_plan.fallback_if_denied
         is RelayMEMRetrievalMode.FAST_RECALL
+        and prompt_preview_plan.fallback_reason is None
         else None
     )
 

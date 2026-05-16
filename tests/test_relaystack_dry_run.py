@@ -322,6 +322,7 @@ def test_relaystack_dry_run_tight_budget_uses_prompt_preview_fallback(
     assert "deep" in prompt_preview_plan["user_visible_message"].lower()
     assert "budget" in prompt_preview_plan["user_visible_message"].lower() or "fallback" in prompt_preview_plan["user_visible_message"].lower()
     assert "fast recall" not in prompt_preview_plan["user_visible_message"].lower()
+    assert loaded["relaymem"]["fast_recall_fallback_backend_capabilities"] is None
     assert loaded["user_gated_fallback"]["fallback_reason"] == "token_budget_exceeded"
     assert loaded["user_gated_fallback"]["can_apply_without_user_approval"] is False
     assert "deep" in loaded["user_gated_fallback"]["user_visible_message"].lower()
