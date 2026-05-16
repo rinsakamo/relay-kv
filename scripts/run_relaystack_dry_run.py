@@ -267,7 +267,9 @@ def run_relaystack_dry_run(
             "approval_gate_enabled": not disable_approval_gate,
         },
         "relaymem": {
-            "backend_capabilities": backend_capabilities.summary(),
+            "fast_recall_fallback_backend_capabilities": (
+                backend_capabilities.summary()
+            ),
             "retrieval_results": [item.summary() for item in retrieval_results],
             "context_assembly_plan": context_assembly_plan.summary(),
             "prompt_preview_plan": prompt_preview_plan.summary(),

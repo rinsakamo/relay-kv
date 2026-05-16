@@ -44,11 +44,17 @@ def test_relaystack_dry_run_writes_expected_json(tmp_path: Path) -> None:
     }
     assert loaded["metadata"]["no_model_loaded"] is True
     assert loaded["metadata"]["no_gpu_inspection"] is True
-    assert "backend_capabilities" in loaded["relaymem"]
-    assert loaded["relaymem"]["backend_capabilities"]["backend_type"] == "fast_recall"
-    assert loaded["relaymem"]["backend_capabilities"]["runs_on_cpu"] is True
-    assert loaded["relaymem"]["backend_capabilities"]["requires_gpu"] is False
-    assert loaded["relaymem"]["backend_capabilities"]["uses_vram"] is False
+    assert "backend_capabilities" not in loaded["relaymem"]
+    assert (
+        "fast_recall_fallback_backend_capabilities" in loaded["relaymem"]
+    )
+    fallback_backend_capabilities = loaded["relaymem"][
+        "fast_recall_fallback_backend_capabilities"
+    ]
+    assert fallback_backend_capabilities["backend_type"] == "fast_recall"
+    assert fallback_backend_capabilities["runs_on_cpu"] is True
+    assert fallback_backend_capabilities["requires_gpu"] is False
+    assert fallback_backend_capabilities["uses_vram"] is False
     assert "context_assembly_plan" in loaded["relaymem"]
     assert "prompt_preview_plan" in loaded["relaymem"]
     assert "selected_items" in loaded["relaymem"]["context_assembly_plan"]
