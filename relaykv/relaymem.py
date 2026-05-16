@@ -28,6 +28,42 @@ class RelayMEMMemorySource(str, Enum):
     KV_CHECKPOINT_METADATA = "kv_checkpoint_metadata"
 
 
+@dataclass(frozen=True)
+class RelayMEMBackendCapabilities:
+    backend_id: str
+    backend_type: str
+    runs_on_cpu: bool = True
+    requires_gpu: bool = False
+    uses_vram: bool = False
+    disk_backed: bool = False
+    local_first: bool = True
+    remote_allowed: bool = False
+    supports_hybrid_search: bool = False
+    supports_graph: bool = False
+    supports_timeline: bool = False
+    supports_compaction: bool = False
+
+    def __post_init__(self) -> None:
+        _require_non_empty(self.backend_id, "backend_id")
+        _require_non_empty(self.backend_type, "backend_type")
+
+    def summary(self) -> dict:
+        return {
+            "backend_id": self.backend_id,
+            "backend_type": self.backend_type,
+            "runs_on_cpu": self.runs_on_cpu,
+            "requires_gpu": self.requires_gpu,
+            "uses_vram": self.uses_vram,
+            "disk_backed": self.disk_backed,
+            "local_first": self.local_first,
+            "remote_allowed": self.remote_allowed,
+            "supports_hybrid_search": self.supports_hybrid_search,
+            "supports_graph": self.supports_graph,
+            "supports_timeline": self.supports_timeline,
+            "supports_compaction": self.supports_compaction,
+        }
+
+
 def _require_non_empty(value: str, field_name: str) -> None:
     if not value:
         raise ValueError(f"{field_name} must not be empty")
@@ -227,4 +263,21 @@ def build_relaymem_context_assembly_plan(
         user_visible_message=user_visible_message,
         proposed_retrieval_mode=proposed_retrieval_mode,
         fallback_if_denied=fallback_if_denied,
+    )
+
+
+def build_default_fast_recall_backend_capabilities() -> RelayMEMBackendCapabilities:
+    return RelayMEMBackendCapabilities(
+        backend_id="relaymem.fast_recall.default",
+        backend_type=RelayMEMRetrievalMode.FAST_RECALL.value,
+        runs_on_cpu=True,
+        requires_gpu=False,
+        uses_vram=False,
+        disk_backed=False,
+        local_first=True,
+        remote_allowed=False,
+        supports_hybrid_search=False,
+        supports_graph=False,
+        supports_timeline=False,
+        supports_compaction=False,
     )

@@ -34,12 +34,14 @@ from .memory_pressure_summary import (
     summarize_memory_pressure_decisions,
 )
 from .relaymem import (
+    RelayMEMBackendCapabilities,
     RelayMEMBackendKind,
     RelayMEMContextAssemblyPlan,
     RelayMEMContextItem,
     RelayMEMMemorySource,
     RelayMEMRetrievalMode,
     RelayMEMRetrievalResult,
+    build_default_fast_recall_backend_capabilities,
     build_relaymem_context_assembly_plan,
 )
 from .relaymem_fast_recall import (
@@ -222,10 +224,12 @@ __all__ = [
     "summarize_memory_pressure_decisions",
     "RelayMEMRetrievalMode",
     "RelayMEMBackendKind",
+    "RelayMEMBackendCapabilities",
     "RelayMEMMemorySource",
     "RelayMEMRetrievalResult",
     "RelayMEMContextItem",
     "RelayMEMContextAssemblyPlan",
+    "build_default_fast_recall_backend_capabilities",
     "build_relaymem_context_assembly_plan",
     "RelayMEMFastRecallCandidate",
     "relaymem_record_to_fast_recall_candidate",
