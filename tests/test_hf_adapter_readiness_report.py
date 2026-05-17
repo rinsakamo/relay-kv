@@ -533,3 +533,40 @@ def test_hf_adapter_readiness_report_missing_input_fails_without_output(
 
     assert result.returncode == 2
     assert not output_path.exists()
+
+
+def test_hf_adapter_readiness_report_rejects_non_object_input_artifacts(
+    tmp_path: Path,
+) -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    output_path = tmp_path / "relaystack_hf_adapter_readiness_report.json"
+    adapter_path, tokenizer_path, engine_path = _build_happy_path_artifacts(
+        tmp_path,
+        repo_root,
+    )
+
+    for target_path in (adapter_path, tokenizer_path, engine_path):
+        _write_json(target_path, [])  # type: ignore[arg-type]
+        result = _run(
+            repo_root,
+            "scripts/run_hf_adapter_readiness_report.py",
+            "--adapter-capabilities",
+            str(adapter_path),
+            "--tokenizer-span-probe",
+            str(tokenizer_path),
+            "--engine-metadata-probe",
+            str(engine_path),
+            "--output",
+            str(output_path),
+        )
+
+        assert result.returncode == 2
+        assert not output_path.exists()
+        combined_output = f"{result.stdout}\n{result.stderr}"
+        assert "JSON object" in combined_output or "non-object" in combined_output
+        assert "AttributeError" not in combined_output
+
+        adapter_path, tokenizer_path, engine_path = _build_happy_path_artifacts(
+            tmp_path,
+            repo_root,
+        )

@@ -6,8 +6,11 @@ import json
 from pathlib import Path
 
 
-def _load_json(path: Path) -> dict[str, object]:
-    return json.loads(path.read_text(encoding="utf-8"))
+def _load_json(path: Path, artifact_name: str) -> dict[str, object]:
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError(f"{artifact_name} at {path} must be a JSON object, not non-object JSON")
+    return payload
 
 
 def _add_check(
@@ -493,9 +496,9 @@ def build_hf_adapter_readiness_report(
     output_path: Path,
     strict: bool,
 ) -> tuple[dict[str, object], int]:
-    adapter_data = _load_json(adapter_capabilities_path)
-    tokenizer_data = _load_json(tokenizer_span_probe_path)
-    engine_data = _load_json(engine_metadata_probe_path)
+    adapter_data = _load_json(adapter_capabilities_path, "adapter capabilities artifact")
+    tokenizer_data = _load_json(tokenizer_span_probe_path, "tokenizer span probe artifact")
+    engine_data = _load_json(engine_metadata_probe_path, "engine metadata probe artifact")
 
     checks: list[dict[str, object]] = []
     _validate_schema_versions(checks, adapter_data, tokenizer_data, engine_data)
@@ -593,7 +596,7 @@ def main() -> int:
             output_path=output_path,
             strict=args.strict,
         )
-    except (FileNotFoundError, json.JSONDecodeError) as exc:
+    except (FileNotFoundError, json.JSONDecodeError, ValueError) as exc:
         print(
             json.dumps(
                 {
