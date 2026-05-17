@@ -93,6 +93,8 @@ The repository currently implements or prototypes the following pieces:
 - RelayStack no-model/no-GPU dry-run JSON combining RelayMEM retrieval results, context assembly, prompt preview planning, final routing decisions, RelayKV, VRAM reservation, runtime policy, and fallback fields
 - RelayStack HF smoke report layer that joins a synthetic-or-real HF context-length smoke artifact with a RelayStack dry-run artifact
 - HF adapter capability smoke artifact generator for `relaystack_adapter_capabilities.json`
+- HF tokenizer span probe artifact generator for `relaystack_tokenizer_span_probe.json`
+- HF engine/model metadata probe artifact generator for `relaystack_engine_metadata_probe.json`
 
 ## Design-only or not yet integrated
 
@@ -209,6 +211,8 @@ Phase 12:
   scripts/run_hf_tokenizer_span_probe.py
   Phase 12-F: completed HF engine/model metadata probe artifact in
   scripts/run_hf_engine_metadata_probe.py
+  Phase 12-G: current JST-dated status/devlog checkpoint for Phase 12-E through Phase 12-F in
+  notes/devlog_2026-05-17_phase12_hf_metadata_probes_ja.md
   Artifacts:
     - relaystack_adapter_capabilities.json
     - relaystack_tokenizer_span_probe.json
@@ -217,7 +221,7 @@ Phase 12:
   Scope: no-model/no-GPU/no-tokenizer-load metadata smoke only through Phase 12-F. No runtime adapter,
   model loading, tokenizer loading, KV materialization, attention connection, scheduler path, or KV-pool mutation is changed.
   Next likely implementation step:
-    - first tokenizer/config-backed probe before any KV materialization or attention work
+    - HF adapter readiness report joining the three Phase 12 metadata artifacts
 
 Phase 13:
   Safe materialization / shadow attention compare
