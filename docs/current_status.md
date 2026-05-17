@@ -40,9 +40,9 @@ The current project direction is broader than the initial small KV approximation
 - **RelayMEM** is the max-context-external memory layer that decides what should enter active context.
 - **RelayCTX** is the context transform layer between RelayMEM and RelayKV. It handles context packing, token-budget fitting, token compression plan metadata, prompt layout at the context-item level, source attribution, and token/span mapping.
 - **RelayStack** coordinates RelayMEM, RelayCTX, RelayKV, budget policy, runtime policy, and trace/evaluation schemas.
-- **Open-LLM-VTuber** is the current practical product/demo target for low-VRAM Japanese AI character runtime integration.
+- **OpenAI-compatible API boundaries** are the preferred product-facing boundary for practical validation. Application surfaces such as Open-LLM-VTuber are post-V0.1 validation targets, not pre-V0.1 Core implementation scope.
 
-RelayStack Core is intentionally not a tool-execution or agent-runtime layer. Tool execution, approval, UI, product-specific workflow orchestration, heavy RAG implementations, embedding/reranking/summarization model execution, engine-specific runtime internals, and observability product integrations should live outside RelayStack Core behind adapters or application/orchestration layers.
+RelayStack Core is intentionally not a tool-execution or agent-runtime layer. Tool execution, web search, approval, UI, product-specific workflow orchestration, TTS/ASR, VTube Studio or avatar integration, heavy RAG implementations, embedding/reranking/summarization model execution, engine-specific runtime internals, and observability product integrations should live outside RelayStack Core behind adapters or application/orchestration layers.
 
 See [relaystack_architecture.md](relaystack_architecture.md) for the current RelayStack core-boundary, runtime-mode, adapter-boundary, and fallback/degrade design.
 
@@ -100,14 +100,17 @@ The following items are part of the current direction, but should not be describ
 - RelayCTX runtime implementation beyond design-level context-transform responsibilities
 - concrete RelayMEM retrieval backend beyond the current lightweight Fast Recall path
 - concrete RelayStack data-contract and adapter-contract implementations
-- Open-LLM-VTuber integration
+- OpenAI-compatible product-facing RelayStack server
+- Open-LLM-VTuber or other avatar-app integration
+- tool execution or web search integration
 - User-Gated Fallback runtime UX
 - real KV materialization in an inference engine
 - real routed execution in a production backend
 - full end-to-end runtime policy integration across GPU, RAM, and SSD tiers
 - compressed KV implementation
 - disk-backed or RAM-backed full KV checkpoint execution
-- SGLang or vLLM runtime adapter changes beyond prior exploratory work
+- SGLang runtime adapter changes beyond prior exploratory work
+- vLLM runtime adapter support
 - RelayKV safe-degrade / block / request-context-reduction runtime handling after apply
 
 ## Revised phase direction
@@ -196,9 +199,8 @@ Phase 11.5:
     - Phase 11.5-D evaluation attribution plan
 
 Phase 12:
-  RelayStack adapter contract and runtime target selection
-  Choose SGLang, vLLM, HF, or another adapter target after the adapter contracts are clear.
-  Scope: adapter-boundary planning and target selection first; no scheduler, attention, or KV-pool mutation by default.
+  RelayStack V0.1 runtime boundary and HF-first validation
+  Use HF as the first concrete runtime path to validate the Core contracts and minimal OpenAI-compatible boundary without adding scheduler, attention, or KV-pool mutation by default. SGLang remains the next practical OpenAI-compatible runtime target after V0.1. vLLM remains a post-V0.1 adapter target and should not broaden the V0.1 implementation scope.
 
 Phase 13:
   Safe materialization / shadow attention compare
@@ -243,6 +245,27 @@ NORMAL_FULL
 ```
 
 RelayMEM and RelayCTX remain context-planning layers. They are especially useful for future turns, token/context pressure, long-term memory recall, and prefill reduction, while RelayKV handles decode-time KV pressure after active context has already entered the model.
+
+## V0.1 boundary and post-V0.1 validation
+
+V0.1 should validate the RelayStack Core contracts and the minimum product-facing OpenAI-compatible API boundary before expanding runtime or application scope.
+
+```text
+V0.1 scope:
+  RelayMEM / RelayCTX / RelayKV contract validation
+  HF-first runtime validation
+  minimal OpenAI-compatible API boundary
+  traceable budget, lineage, and runtime-mode artifacts
+
+Post-V0.1 validation:
+  SGLang OpenAI-compatible backend path
+  Open-LLM-VTuber or similar avatar application surface
+  local AI friend / avatar-style practical conversation tests
+  vLLM adapter evaluation
+  optional read-only web search or other tool policies
+```
+
+Tool execution, web search, UI, TTS/ASR, VTube Studio, Open-LLM-VTuber-specific behavior, and product workflows remain outside RelayStack Core. They should be treated as post-V0.1 validation surfaces or App / Agent responsibilities unless a later contract explicitly promotes a narrow capability behind an adapter boundary.
 
 ## Current empirical picture
 
