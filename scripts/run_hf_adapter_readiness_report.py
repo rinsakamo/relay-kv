@@ -166,6 +166,31 @@ def _validate_model_and_tokenizer_consistency(
         message="tokenizer_ref.tokenizer_name_or_path must match across adapter, tokenizer, and engine artifacts",
         observed=tokenizer_names,
     )
+    adapter_tokenizer_ref = adapter_data.get("tokenizer_ref") or {}
+    tokenizer_tokenizer_ref = tokenizer_data.get("tokenizer_ref") or {}
+    engine_tokenizer_ref = engine_data.get("tokenizer_ref") or {}
+    for field_name in (
+        "tokenizer_revision",
+        "tokenizer_config_hash",
+        "tokenizer_family",
+    ):
+        observed = {
+            "adapter": adapter_tokenizer_ref.get(field_name),
+            "tokenizer": tokenizer_tokenizer_ref.get(field_name),
+            "engine": engine_tokenizer_ref.get(field_name),
+        }
+        _add_check(
+            checks,
+            name=f"tokenizer_ref_{field_name}_consistency",
+            passed=(
+                observed["adapter"]
+                == observed["tokenizer"]
+                == observed["engine"]
+            ),
+            severity="error",
+            message=f"tokenizer_ref.{field_name} must match across adapter, tokenizer, and engine artifacts",
+            observed=observed,
+        )
 
 
 def _validate_safety_scope(
