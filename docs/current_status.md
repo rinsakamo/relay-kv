@@ -203,15 +203,18 @@ Phase 12:
   docs/phase12_hf_adapter_capability_schema.md
   Phase 12-C: completed HF adapter capability smoke artifact in
   scripts/run_hf_adapter_capability_smoke.py
-  Phase 12-D: current JST-dated status/devlog checkpoint for Phase 12-A through Phase 12-C in
+  Phase 12-D: completed JST-dated status/devlog checkpoint for Phase 12-A through Phase 12-C in
   notes/devlog_2026-05-17_phase12_hf_adapter_boundary_ja.md
+  Phase 12-E: completed HF tokenizer span probe artifact in
+  scripts/run_hf_tokenizer_span_probe.py
   Artifact:
     - relaystack_adapter_capabilities.json
+    - relaystack_tokenizer_span_probe.json
   Use HF as the first concrete runtime path to validate the Core contracts and minimal OpenAI-compatible boundary without adding scheduler, attention, or KV-pool mutation by default. SGLang remains the next practical OpenAI-compatible runtime target after V0.1. vLLM remains a post-V0.1 adapter target and should not broaden the V0.1 implementation scope.
-  Scope: no-model/no-GPU metadata smoke only through Phase 12-C. No runtime adapter,
-  model loading, KV materialization, attention connection, scheduler path, or KV-pool mutation is changed.
+  Scope: no-model/no-GPU/no-tokenizer-load metadata smoke only through Phase 12-E. No runtime adapter,
+  model loading, tokenizer loading, KV materialization, attention connection, scheduler path, or KV-pool mutation is changed.
   Next likely implementation step:
-    - tokenizer span probe artifact before any KV materialization or attention work
+    - engine metadata probe artifact before any KV materialization or attention work
 
 Phase 13:
   Safe materialization / shadow attention compare
