@@ -309,6 +309,43 @@ RelayKV after apply:
 
 RelayKV apply-after-pressure must therefore avoid states that imply an automatic return to FullKV.
 
+## Phase implications
+
+This architecture changes the phase plan by adding a contract-consolidation step before runtime adapter restart.
+
+```text
+Phase 11:
+  RelayKV fixed-budget working-set dry-run policy.
+  Continue dry-run/schema/CLI/report work without runtime adapter, materialization,
+  attention connection, KV-pool mutation, or scheduler changes.
+
+Phase 11.5:
+  RelayStack design contract consolidation.
+  Lock the core boundary, data contract, lineage/attribution contract,
+  runtime mode contract, fallback-vs-degrade terminology, and adapter contracts.
+
+Phase 12:
+  RelayStack adapter contract and runtime target selection.
+  Choose SGLang, vLLM, HF, or another adapter target only after the contracts are explicit.
+
+Phase 13:
+  Safe materialization / shadow attention compare.
+  FullKV is still available, so fallback-to-FullKV is valid in this phase.
+
+Phase 14:
+  Gated apply / safe degrade / block / context-reduction integration.
+  RelayKV may become the active required path. FullKV fallback is not assumed after apply.
+
+Phase 15:
+  RelayCTX budgeted context integration.
+  Add context packing, token-budget fitting, compression plan metadata,
+  source attribution, and token-span mapping. Do not add tool execution.
+
+Phase 16:
+  RelayMEM + RelayCTX + RelayKV attribution evaluation.
+  Evaluate MEM-only, MEM+CTX, and MEM+CTX+KV separately to attribute regressions.
+```
+
 ## Minimal near-term design documents
 
 The design should be split into focused documents rather than one large specification:
