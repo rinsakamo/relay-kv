@@ -136,9 +136,12 @@ def _validate_model_and_tokenizer_consistency(
     tokenizer_data: dict[str, object],
     engine_data: dict[str, object],
 ) -> None:
-    adapter_model_id = ((adapter_data.get("model_ref") or {}).get("model_id"))
-    tokenizer_model_id = ((tokenizer_data.get("model_ref") or {}).get("model_id"))
-    engine_model_id = ((engine_data.get("model_ref") or {}).get("model_id"))
+    adapter_model_ref = adapter_data.get("model_ref") or {}
+    tokenizer_model_ref = tokenizer_data.get("model_ref") or {}
+    engine_model_ref = engine_data.get("model_ref") or {}
+    adapter_model_id = adapter_model_ref.get("model_id")
+    tokenizer_model_id = tokenizer_model_ref.get("model_id")
+    engine_model_id = engine_model_ref.get("model_id")
     model_ids = [adapter_model_id, tokenizer_model_id, engine_model_id]
     _add_check(
         checks,
@@ -150,6 +153,36 @@ def _validate_model_and_tokenizer_consistency(
         severity="error",
         message="model_ref.model_id must match across adapter, tokenizer, and engine artifacts",
         observed=model_ids,
+    )
+    model_revisions = {
+        "adapter": adapter_model_ref.get("model_revision"),
+        "tokenizer": tokenizer_model_ref.get("model_revision"),
+        "engine": engine_model_ref.get("model_revision"),
+    }
+    _add_check(
+        checks,
+        name="model_ref_model_revision_consistency",
+        passed=(
+            model_revisions["adapter"]
+            == model_revisions["tokenizer"]
+            == model_revisions["engine"]
+        ),
+        severity="error",
+        message="model_ref.model_revision must match across adapter, tokenizer, and engine artifacts",
+        observed=model_revisions,
+    )
+    local_paths = {
+        "adapter": adapter_model_ref.get("local_path"),
+        "tokenizer": tokenizer_model_ref.get("local_path"),
+        "engine": engine_model_ref.get("local_path"),
+    }
+    _add_check(
+        checks,
+        name="model_ref_local_path_observed",
+        passed=True,
+        severity="info",
+        message="model_ref.local_path is observed for reference only in Phase 12-H",
+        observed=local_paths,
     )
     adapter_tokenizer = ((adapter_data.get("tokenizer_ref") or {}).get("tokenizer_name_or_path"))
     tokenizer_tokenizer = ((tokenizer_data.get("tokenizer_ref") or {}).get("tokenizer_name_or_path"))
