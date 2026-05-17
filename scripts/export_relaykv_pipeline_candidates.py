@@ -17,7 +17,8 @@ def main() -> int:
             "Export RelayKV pipeline/scoring artifacts into Phase 11-B candidates-json. "
             "Supports list input or dict input with top_scores, block_scores, candidates, "
             "or top_blocks. Accepted row aliases include block_idx/idx, start/end, "
-            "layer_idx, and block_score/importance_score."
+            "layer_idx, and block_score/importance_score. "
+            "Tail recent marking requires a full block inventory and is not allowed on top_scores."
         )
     )
     parser.add_argument("--input", type=Path, required=True)

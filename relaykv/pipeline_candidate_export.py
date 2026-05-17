@@ -60,9 +60,10 @@ def _resolve_input_rows(
     payload: Any,
     *,
     input_key: str,
-) -> list[dict[str, Any]]:
+) -> tuple[list[dict[str, Any]], str]:
     if isinstance(payload, list):
         rows = payload
+        resolved_input_key = "list"
     elif isinstance(payload, dict):
         if input_key != "auto":
             candidate_rows = payload.get(input_key)
@@ -71,12 +72,15 @@ def _resolve_input_rows(
                     f"input_key={input_key!r} did not resolve to a list of rows"
                 )
             rows = candidate_rows
+            resolved_input_key = input_key
         else:
             rows = None
+            resolved_input_key = "auto"
             for key in ("top_scores", "block_scores", "candidates", "top_blocks"):
                 candidate_rows = payload.get(key)
                 if isinstance(candidate_rows, list):
                     rows = candidate_rows
+                    resolved_input_key = key
                     break
             if rows is None:
                 raise ValueError(
@@ -96,7 +100,7 @@ def _resolve_input_rows(
                 f"{type(row).__name__}"
             )
         normalized_rows.append(row)
-    return normalized_rows
+    return normalized_rows, resolved_input_key
 
 
 def export_pipeline_candidates_from_payload(
@@ -115,7 +119,14 @@ def export_pipeline_candidates_from_payload(
     if mark_anchor_head_blocks < 0:
         raise ValueError("mark_anchor_head_blocks must be >= 0")
 
-    rows = _resolve_input_rows(payload, input_key=input_key)
+    rows, resolved_input_key = _resolve_input_rows(payload, input_key=input_key)
+    if mark_recent_tail_blocks > 0 and resolved_input_key == "top_scores":
+        raise ValueError(
+            "mark_recent_tail_blocks cannot be used with top_scores because "
+            "top_scores is a filtered score-ranked subset. Provide a full block "
+            "inventory via block_scores/candidates/list input, or pre-mark recent "
+            "blocks explicitly in the input rows."
+        )
     exported: list[dict[str, Any]] = []
 
     for row_index, row in enumerate(rows):

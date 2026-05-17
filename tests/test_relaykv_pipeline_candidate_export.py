@@ -77,6 +77,28 @@ def test_export_pipeline_candidates_accepts_top_scores_pipeline_keys() -> None:
     assert exported[1]["score"] == 0.70
 
 
+def test_export_pipeline_candidates_rejects_tail_marking_for_top_scores() -> None:
+    try:
+        export_pipeline_candidates_from_payload(
+            {
+                "top_scores": [
+                    {"block_id": 0, "start": 0, "end": 64, "score": 0.9},
+                    {"block_id": 2, "start": 128, "end": 192, "score": 0.7},
+                ]
+            },
+            block_size=64,
+            mark_recent_tail_blocks=1,
+        )
+    except ValueError as exc:
+        message = str(exc)
+    else:
+        raise AssertionError("ValueError was not raised")
+
+    assert "top_scores" in message
+    assert "filtered score-ranked subset" in message
+    assert "full block inventory" in message
+
+
 def test_export_pipeline_candidates_recent_flag_defaults_to_non_retrieval() -> None:
     exported = export_pipeline_candidates_from_payload(
         [
@@ -113,6 +135,24 @@ def test_export_pipeline_candidates_derives_block_id_and_marks_head_tail() -> No
     assert exported[0]["block_id"] == 1
     assert exported[0]["layer_id"] == 7
     assert exported[0]["is_anchor"] is True
+    assert exported[-1]["is_recent"] is True
+    assert exported[-1]["is_retrieval_candidate"] is False
+
+
+def test_export_pipeline_candidates_block_scores_allow_tail_marking() -> None:
+    exported = export_pipeline_candidates_from_payload(
+        {
+            "block_scores": [
+                {"block_id": 0, "start": 0, "end": 64, "score": 0.4},
+                {"block_id": 1, "start": 64, "end": 128, "score": 0.3},
+                {"block_id": 2, "start": 128, "end": 192, "score": 0.2},
+            ]
+        },
+        block_size=64,
+        mark_recent_tail_blocks=1,
+    )
+
+    assert exported[-1]["block_id"] == 2
     assert exported[-1]["is_recent"] is True
     assert exported[-1]["is_retrieval_candidate"] is False
 
