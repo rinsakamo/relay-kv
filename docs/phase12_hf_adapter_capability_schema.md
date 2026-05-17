@@ -299,3 +299,15 @@ python scripts/run_hf_engine_metadata_probe.py \
 ```
 
 In Phase 12-F, engine metadata remains CLI/user-provided or unknown. No model, config, or tokenizer load is required yet.
+
+Phase 12-H readiness report CLI:
+
+```bash
+python scripts/run_hf_adapter_readiness_report.py \
+  --adapter-capabilities /tmp/relaystack_adapter_capabilities.json \
+  --tokenizer-span-probe /tmp/relaystack_tokenizer_span_probe.json \
+  --engine-metadata-probe /tmp/relaystack_engine_metadata_probe.json \
+  --output /tmp/relaystack_hf_adapter_readiness_report.json
+```
+
+The readiness report checks consistency and safety only. It does not load a model, config, or tokenizer.
