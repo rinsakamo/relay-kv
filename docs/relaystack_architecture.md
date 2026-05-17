@@ -111,11 +111,14 @@ The following responsibilities should stay outside RelayStack Core:
 ```text
 App / Agent Layer:
   Tool execution
+  Web search
   Approval
   UI
   user interaction
   product-specific prompts
-  workflow orchestration
+  product workflows
+  TTS / ASR
+  VTube Studio or avatar integration
 
 Memory Backend:
   vector DB
@@ -132,9 +135,9 @@ Model Worker:
   graph extraction
 
 Engine Adapter:
-  SGLang
-  vLLM
-  Hugging Face
+  Hugging Face for V0.1 validation
+  SGLang after V0.1 as the next practical OpenAI-compatible runtime target
+  vLLM after V0.1 as a later adapter target
   llama.cpp or other engines
 
 Observability Adapter:
@@ -144,7 +147,7 @@ Observability Adapter:
   metrics storage
 ```
 
-RelayStack may consume records produced by tools or external workers, but RelayStack Core should not execute tools. Tool execution, approval, side effects, rollback, retry, and authentication scope belong to the application or agent orchestration layer.
+RelayStack may consume records produced by tools or external workers, but RelayStack Core should not execute tools. Tool execution, web search, approval, side effects, rollback, retry, and authentication scope belong to the application or agent orchestration layer unless a later narrow adapter contract explicitly allows a read-only capability.
 
 ## Adapter boundary
 
@@ -309,6 +312,29 @@ RelayKV after apply:
 
 RelayKV apply-after-pressure must therefore avoid states that imply an automatic return to FullKV.
 
+## V0.1 boundary
+
+V0.1 should prove the RelayStack Core contracts and the minimum product-facing OpenAI-compatible boundary before broadening runtime or application scope.
+
+```text
+Pre-V0.1 / V0.1 focus:
+  RelayStack Core boundary
+  RelayMEM / RelayCTX / RelayKV data and lineage contracts
+  runtime mode and fallback/degrade/block contracts
+  HF-first validation path
+  minimal OpenAI-compatible API boundary
+  JSON-safe trace and evaluation artifacts
+
+Post-V0.1 validation targets:
+  SGLang OpenAI-compatible backend path
+  Open-LLM-VTuber or similar avatar application surface
+  local AI friend / avatar-style practical conversation tests
+  vLLM adapter evaluation
+  optional read-only web search or other tool policy experiments
+```
+
+V0.1 should not absorb UI, TTS/ASR, VTube Studio, Open-LLM-VTuber-specific behavior, product workflows, tool execution, web search, or vLLM adapter work into RelayStack Core. Those remain App / Agent or adapter-layer concerns until a later contract explicitly narrows and promotes them.
+
 ## Phase implications
 
 This architecture changes the phase plan by adding a contract-consolidation step before runtime adapter restart.
@@ -325,8 +351,9 @@ Phase 11.5:
   runtime mode contract, fallback-vs-degrade terminology, and adapter contracts.
 
 Phase 12:
-  RelayStack adapter contract and runtime target selection.
-  Choose SGLang, vLLM, HF, or another adapter target only after the contracts are explicit.
+  RelayStack V0.1 runtime boundary and HF-first validation.
+  Keep SGLang as the next practical OpenAI-compatible runtime target after V0.1.
+  Keep vLLM as a post-V0.1 adapter target.
 
 Phase 13:
   Safe materialization / shadow attention compare.
