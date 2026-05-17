@@ -73,7 +73,26 @@ def test_export_pipeline_candidates_accepts_top_scores_pipeline_keys() -> None:
     assert exported[0]["is_anchor"] is True
     assert exported[0]["layer_id"] == 0
     assert exported[1]["is_recent"] is True
+    assert exported[1]["is_retrieval_candidate"] is False
     assert exported[1]["score"] == 0.70
+
+
+def test_export_pipeline_candidates_recent_flag_defaults_to_non_retrieval() -> None:
+    exported = export_pipeline_candidates_from_payload(
+        [
+            {
+                "block_id": 3,
+                "token_start": 192,
+                "token_end": 256,
+                "score": 0.4,
+                "recent": True,
+            }
+        ],
+        block_size=64,
+    )
+
+    assert exported[0]["is_recent"] is True
+    assert exported[0]["is_retrieval_candidate"] is False
 
 
 def test_export_pipeline_candidates_derives_block_id_and_marks_head_tail() -> None:
@@ -95,6 +114,26 @@ def test_export_pipeline_candidates_derives_block_id_and_marks_head_tail() -> No
     assert exported[0]["layer_id"] == 7
     assert exported[0]["is_anchor"] is True
     assert exported[-1]["is_recent"] is True
+    assert exported[-1]["is_retrieval_candidate"] is False
+
+
+def test_export_pipeline_candidates_recent_explicit_retrieval_override_is_preserved() -> None:
+    exported = export_pipeline_candidates_from_payload(
+        [
+            {
+                "block_id": 4,
+                "token_start": 256,
+                "token_end": 320,
+                "score": 0.6,
+                "tier": "recent",
+                "is_retrieval_candidate": True,
+            }
+        ],
+        block_size=64,
+    )
+
+    assert exported[0]["is_recent"] is True
+    assert exported[0]["is_retrieval_candidate"] is True
 
 
 def test_export_pipeline_candidates_missing_span_is_readable() -> None:

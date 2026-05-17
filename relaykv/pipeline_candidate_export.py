@@ -40,6 +40,22 @@ def _coerce_flag(item: dict[str, Any], *keys: str) -> bool:
     return False
 
 
+def _resolve_retrieval_candidate_flag(
+    row: dict[str, Any],
+    *,
+    is_recent: bool,
+) -> bool:
+    explicit_value = _get_alias_value(
+        row,
+        ("is_retrieval_candidate", "retrieval_candidate"),
+    )
+    if explicit_value is not None:
+        return bool(explicit_value)
+    if is_recent:
+        return False
+    return True
+
+
 def _resolve_input_rows(
     payload: Any,
     *,
@@ -125,10 +141,24 @@ def export_pipeline_candidates_from_payload(
 
         score_value = _get_alias_value(
             row,
-            ("score", "block_score", "importance_score", "selected_score", "retrieval_score"),
+            (
+                "score",
+                "block_score",
+                "importance_score",
+                "selected_score",
+                "retrieval_score",
+            ),
         )
         layer_id_value = _get_alias_value(row, ("layer_id", "layer_idx"))
         tier_value = row.get("tier")
+        is_recent = (
+            _coerce_flag(row, "is_recent", "recent")
+            or tier_value == "recent"
+        )
+        is_anchor = (
+            _coerce_flag(row, "is_anchor", "anchor")
+            or tier_value == "anchor"
+        )
 
         exported.append(
             {
@@ -136,18 +166,11 @@ def export_pipeline_candidates_from_payload(
                 "token_start": token_start,
                 "token_end": token_end,
                 "score": float(score_value) if score_value is not None else None,
-                "is_recent": (
-                    _coerce_flag(row, "is_recent", "recent")
-                    or tier_value == "recent"
-                ),
-                "is_anchor": (
-                    _coerce_flag(row, "is_anchor", "anchor")
-                    or tier_value == "anchor"
-                ),
-                "is_retrieval_candidate": (
-                    bool(row.get("is_retrieval_candidate"))
-                    if row.get("is_retrieval_candidate") is not None
-                    else True
+                "is_recent": is_recent,
+                "is_anchor": is_anchor,
+                "is_retrieval_candidate": _resolve_retrieval_candidate_flag(
+                    row,
+                    is_recent=is_recent,
                 ),
                 "layer_id": (
                     int(layer_id_value)
@@ -170,10 +193,22 @@ def export_pipeline_candidates_from_payload(
             candidate["is_anchor"] = True
 
     if mark_recent_tail_blocks > 0:
-        for candidate in sorted(exported, key=lambda item: item["block_id"])[
+        sorted_candidates = sorted(exported, key=lambda item: item["block_id"])
+        explicit_retrieval_ids = {
+            int(candidate["block_id"])
+            for row, candidate in zip(rows, exported, strict=False)
+            if _get_alias_value(
+                row,
+                ("is_retrieval_candidate", "retrieval_candidate"),
+            )
+            is not None
+        }
+        for candidate in sorted_candidates[
             -mark_recent_tail_blocks:
         ]:
             candidate["is_recent"] = True
+            if int(candidate["block_id"]) not in explicit_retrieval_ids:
+                candidate["is_retrieval_candidate"] = False
 
     return exported
 
