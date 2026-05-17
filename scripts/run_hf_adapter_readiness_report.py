@@ -157,6 +157,22 @@ def _validate_adapter_and_runtime_consistency(
         message="All artifacts must use runtime_target huggingface_transformers",
         observed=runtime_targets,
     )
+    adapter_names = {
+        "adapter": adapter_data.get("adapter_name"),
+        "engine": engine_data.get("adapter_name"),
+    }
+    _add_check(
+        checks,
+        name="adapter_name_consistency",
+        passed=(
+            adapter_names["adapter"] is None
+            or adapter_names["engine"] is None
+            or adapter_names["adapter"] == adapter_names["engine"]
+        ),
+        severity="error",
+        message="adapter_name must match across adapter and engine artifacts when both are present",
+        observed=adapter_names,
+    )
 
 
 def _validate_model_and_tokenizer_consistency(
@@ -224,10 +240,23 @@ def _validate_model_and_tokenizer_consistency(
     }
     _add_check(
         checks,
-        name="model_ref_local_path_observed",
-        passed=True,
-        severity="info",
-        message="model_ref.local_path is observed for reference only in Phase 12-H",
+        name="model_ref_local_path_consistency",
+        passed=(
+            (
+                local_paths["adapter"] is None
+                or local_paths["engine"] is None
+                or local_paths["adapter"] == local_paths["engine"]
+            )
+            and (
+                local_paths["tokenizer"] is None
+                or (
+                    (local_paths["adapter"] is None or local_paths["tokenizer"] == local_paths["adapter"])
+                    and (local_paths["engine"] is None or local_paths["tokenizer"] == local_paths["engine"])
+                )
+            )
+        ),
+        severity="error",
+        message="model_ref.local_path must match across non-null adapter/engine artifacts; tokenizer probe may omit it but must match if present",
         observed=local_paths,
     )
     adapter_tokenizer_ref = _as_mapping(
