@@ -158,9 +158,12 @@ Phase 11:
   for allocating RECENT / ANCHOR / RETRIEVED token budgets without runtime integration
   Phase 11-B: completed fixed-budget block candidate selection dry-run
   joining fixed-budget decisions to synthetic/candidate block metadata and emitting selected/rejected/overflow block ids
-  Phase 11-C: current pipeline/scoring candidate exporter
+  Phase 11-C: completed pipeline/scoring candidate exporter
   for converting pipeline-style block scoring artifacts into Phase 11-B candidates-json
   and feeding fixed-budget block selection from exported metadata
+  Phase 11-D: current fixed-budget selection artifact chain
+  chaining pipeline candidate export into fixed-budget block selection and emitting
+  candidates, selection, and chain_summary artifacts in one no-model/no-GPU dry-run path
   Scope: dry-run/schema/CLI/report only. No materialization, attention connection, runtime adapter, or scheduler path is changed.
 
 Phase 11.5:
