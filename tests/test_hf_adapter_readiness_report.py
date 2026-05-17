@@ -170,6 +170,87 @@ def test_hf_adapter_readiness_report_model_revision_mismatch_fails(
     assert "model_ref_model_revision_consistency" in failed_names
 
 
+def test_hf_adapter_readiness_report_tokenizer_null_model_revision_is_allowed(
+    tmp_path: Path,
+) -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    adapter_path, tokenizer_path, engine_path = _build_happy_path_artifacts(
+        tmp_path,
+        repo_root,
+    )
+    adapter_payload = json.loads(adapter_path.read_text(encoding="utf-8"))
+    tokenizer_payload = json.loads(tokenizer_path.read_text(encoding="utf-8"))
+    engine_payload = json.loads(engine_path.read_text(encoding="utf-8"))
+    adapter_payload["model_ref"]["model_revision"] = "rev-a"
+    tokenizer_payload["model_ref"]["model_revision"] = None
+    engine_payload["model_ref"]["model_revision"] = "rev-a"
+    _write_json(adapter_path, adapter_payload)
+    _write_json(tokenizer_path, tokenizer_payload)
+    _write_json(engine_path, engine_payload)
+    output_path = tmp_path / "relaystack_hf_adapter_readiness_report.json"
+
+    result = _run(
+        repo_root,
+        "scripts/run_hf_adapter_readiness_report.py",
+        "--adapter-capabilities",
+        str(adapter_path),
+        "--tokenizer-span-probe",
+        str(tokenizer_path),
+        "--engine-metadata-probe",
+        str(engine_path),
+        "--output",
+        str(output_path),
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert output_path.exists()
+    loaded = json.loads(output_path.read_text(encoding="utf-8"))
+    assert loaded["summary"]["ok"] is True
+    assert loaded["readiness"]["ready_for_next_metadata_step"] is True
+
+
+def test_hf_adapter_readiness_report_tokenizer_model_revision_mismatch_fails(
+    tmp_path: Path,
+) -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    adapter_path, tokenizer_path, engine_path = _build_happy_path_artifacts(
+        tmp_path,
+        repo_root,
+    )
+    adapter_payload = json.loads(adapter_path.read_text(encoding="utf-8"))
+    tokenizer_payload = json.loads(tokenizer_path.read_text(encoding="utf-8"))
+    engine_payload = json.loads(engine_path.read_text(encoding="utf-8"))
+    adapter_payload["model_ref"]["model_revision"] = "rev-a"
+    tokenizer_payload["model_ref"]["model_revision"] = "rev-b"
+    engine_payload["model_ref"]["model_revision"] = "rev-a"
+    _write_json(adapter_path, adapter_payload)
+    _write_json(tokenizer_path, tokenizer_payload)
+    _write_json(engine_path, engine_payload)
+    output_path = tmp_path / "relaystack_hf_adapter_readiness_report.json"
+
+    result = _run(
+        repo_root,
+        "scripts/run_hf_adapter_readiness_report.py",
+        "--adapter-capabilities",
+        str(adapter_path),
+        "--tokenizer-span-probe",
+        str(tokenizer_path),
+        "--engine-metadata-probe",
+        str(engine_path),
+        "--output",
+        str(output_path),
+    )
+
+    assert result.returncode == 1
+    assert output_path.exists()
+    loaded = json.loads(output_path.read_text(encoding="utf-8"))
+    assert loaded["summary"]["ok"] is False
+    failed_names = {
+        check["name"] for check in loaded["checks"] if not check["passed"]
+    }
+    assert "model_ref_model_revision_consistency" in failed_names
+
+
 def test_hf_adapter_readiness_report_unsafe_apply_claim_fails(tmp_path: Path) -> None:
     repo_root = Path(__file__).resolve().parents[1]
     adapter_path, tokenizer_path, engine_path = _build_happy_path_artifacts(

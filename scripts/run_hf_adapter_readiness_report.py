@@ -163,12 +163,14 @@ def _validate_model_and_tokenizer_consistency(
         checks,
         name="model_ref_model_revision_consistency",
         passed=(
-            model_revisions["adapter"]
-            == model_revisions["tokenizer"]
-            == model_revisions["engine"]
+            model_revisions["adapter"] == model_revisions["engine"]
+            and (
+                model_revisions["tokenizer"] is None
+                or model_revisions["tokenizer"] == model_revisions["adapter"]
+            )
         ),
         severity="error",
-        message="model_ref.model_revision must match across adapter, tokenizer, and engine artifacts",
+        message="model_ref.model_revision must match across adapter and engine artifacts; tokenizer probe may omit it but must match if present",
         observed=model_revisions,
     )
     local_paths = {
