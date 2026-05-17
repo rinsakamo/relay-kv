@@ -186,6 +186,9 @@ Phase 11.5:
   Phase 11.5-C: completed RelayStack runtime mode documentation in
   docs/relaystack_runtime_modes.md for VRAM/KV runtime states and
   fallback-vs-degrade-vs-block-vs-context-reduction semantics
+  Phase 11.5-D: completed RelayStack evaluation attribution plan documentation in
+  docs/relaystack_eval_plan.md for MEM-only, MEM+CTX, and MEM+CTX+KV evaluation separation
+  and regression attribution rules
   Scope: docs/schema planning only before runtime adapter restart.
   No runtime behavior is changed.
   Required contracts:
@@ -196,7 +199,7 @@ Phase 11.5:
     - Fallback vs RelayKV Degrade / Block / Context Reduction contract
     - Adapter contract for MemoryBackend / Tokenizer / Engine / Observability
   Next:
-    - Phase 11.5-D evaluation attribution plan
+    - Phase 11.5-E consolidation devlog
 
 Phase 12:
   RelayStack V0.1 runtime boundary and HF-first validation
