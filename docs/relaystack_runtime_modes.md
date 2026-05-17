@@ -274,6 +274,8 @@ Application or user must reduce active context, or RelayCTX must produce a small
 
 ## Transition matrix
 
+The matrix lists required contract transitions, including direct failure transitions from `RELAYKV_APPLY`.
+
 | From | To | Allowed? | Reason | Notes |
 | --- | --- | --- | --- | --- |
 | `NORMAL_FULL` | `RELAYKV_SHADOW` | yes | VRAM pressure warning or policy trigger | shadow can start while FullKV remains active |
@@ -281,6 +283,8 @@ Application or user must reduce active context, or RelayCTX must produce a small
 | `RELAYKV_SHADOW` | `RELAYKV_APPLY` | yes | gates and capabilities pass | apply requires explicit readiness, not shadow alone |
 | `RELAYKV_APPLY` | `NORMAL_FULL` | generally no | FullKV fallback after apply is not assumed under pressure | only an explicitly available external reset path could change this |
 | `RELAYKV_APPLY` | `RELAYKV_SAFE_DEGRADE` | yes | higher budget or quality risk | preferred safety transition after apply |
+| `RELAYKV_APPLY` | `BLOCKED_NO_SAFE_KV_PATH` | yes | no safe KV path remains and safe degrade is unavailable or unsafe | runtime should stop generation; App / Agent owns user-facing handling |
+| `RELAYKV_APPLY` | `REQUEST_CONTEXT_REDUCTION` | yes | active context must be reduced before continuing | Core emits request; App / Agent or RelayCTX planning path handles UX and new context proposal |
 | `RELAYKV_SAFE_DEGRADE` | `BLOCKED_NO_SAFE_KV_PATH` | yes | no safe degraded path remains | runtime should not continue |
 | `RELAYKV_SAFE_DEGRADE` | `REQUEST_CONTEXT_REDUCTION` | yes | reduced context may restore safety | App / Agent owns the user-facing flow |
 | `REQUEST_CONTEXT_REDUCTION` | `NORMAL_FULL` | yes, after new request | reduced or repacked prefill restored safe path | requires a new reduced request or prefill |
