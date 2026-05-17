@@ -370,3 +370,4 @@ docs/relaystack_eval_plan.md
 This document is the architecture-boundary starting point for that split.
 
 See [relaystack_adapter_contracts.md](relaystack_adapter_contracts.md) for the adapter-boundary requirements that Phase 11.5-B fixes before runtime target selection.
+See [relaystack_runtime_modes.md](relaystack_runtime_modes.md) for the Phase 11.5-C runtime state and fallback-vs-degrade contract.

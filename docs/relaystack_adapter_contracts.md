@@ -259,3 +259,5 @@ The next follow-on documents should remain split:
 - `docs/relaystack_data_contract.md`
 - `docs/relaystack_adapter_contracts.md`
 - `docs/relaystack_runtime_modes.md`
+
+Capability flags and post-apply safety semantics should be interpreted together with [relaystack_runtime_modes.md](relaystack_runtime_modes.md).
