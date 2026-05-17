@@ -176,7 +176,7 @@ Phase 11:
     - chain_summary.json
 
 Phase 11.5:
-  Current: RelayStack design contract consolidation
+  Completed: RelayStack design contract consolidation
   Phase 11.5-A: completed RelayStack data contract documentation in
   docs/relaystack_data_contract.md for RelayMEMContextItem, RelayCTXContextSpan,
   RelayKVBlockMeta, and RelayStackTraceEvent
@@ -189,21 +189,18 @@ Phase 11.5:
   Phase 11.5-D: completed RelayStack evaluation attribution plan documentation in
   docs/relaystack_eval_plan.md for MEM-only, MEM+CTX, and MEM+CTX+KV evaluation separation
   and regression attribution rules
-  Scope: docs/schema planning only before runtime adapter restart.
+  Phase 11.5-E: completed JST-dated consolidation devlog in
+  notes/devlog_2026-05-17_relaystack_contract_consolidation_ja.md
+  Scope: docs/schema/evaluation planning only before runtime adapter restart.
   No runtime behavior is changed.
-  Required contracts:
-    - RelayStack Core Boundary
-    - RelayMEM → RelayCTX → RelayKV data contract
-    - Lineage / Attribution contract
-    - Runtime Mode contract
-    - Fallback vs RelayKV Degrade / Block / Context Reduction contract
-    - Adapter contract for MemoryBackend / Tokenizer / Engine / Observability
-  Next:
-    - Phase 11.5-E consolidation devlog
 
 Phase 12:
-  RelayStack V0.1 runtime boundary and HF-first validation
+  Current: RelayStack V0.1 runtime boundary and HF-first validation
+  Phase 12-A: started runtime target selection and adapter capability matrix in
+  docs/phase12_runtime_target_selection.md
   Use HF as the first concrete runtime path to validate the Core contracts and minimal OpenAI-compatible boundary without adding scheduler, attention, or KV-pool mutation by default. SGLang remains the next practical OpenAI-compatible runtime target after V0.1. vLLM remains a post-V0.1 adapter target and should not broaden the V0.1 implementation scope.
+  Scope: docs/planning only for Phase 12-A. No runtime adapter, materialization,
+  attention connection, scheduler path, or KV-pool mutation is changed.
 
 Phase 13:
   Safe materialization / shadow attention compare
