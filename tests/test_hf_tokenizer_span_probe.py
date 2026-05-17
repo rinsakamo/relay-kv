@@ -104,3 +104,35 @@ def test_hf_tokenizer_span_probe_cli_override(tmp_path: Path) -> None:
     assert span["span_kind"] == "context_item"
     assert span["token_end"] == 42
     assert span["estimated_token_count"] == 42
+
+
+def test_hf_tokenizer_span_probe_rejects_non_positive_estimate(tmp_path: Path) -> None:
+    output_path = tmp_path / "relaystack_tokenizer_span_probe_invalid.json"
+    repo_root = Path(__file__).resolve().parents[1]
+    env = os.environ.copy()
+    env["PYTHONPATH"] = str(repo_root)
+
+    for invalid_value in ("-1", "0"):
+        if output_path.exists():
+            output_path.unlink()
+        result = subprocess.run(
+            [
+                sys.executable,
+                "scripts/run_hf_tokenizer_span_probe.py",
+                "--output",
+                str(output_path),
+                "--estimated-token-count",
+                invalid_value,
+            ],
+            cwd=repo_root,
+            env=env,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+        assert result.returncode != 0
+        assert not output_path.exists()
+        combined_output = f"{result.stdout}\n{result.stderr}".lower()
+        assert "estimated-token-count" in combined_output
+        assert "positive" in combined_output or "non-positive" in combined_output

@@ -12,6 +12,8 @@ DEFAULT_TEXT = "RelayStack tokenizer span probe."
 
 def _estimate_token_count(text: str, estimated_token_count: int | None) -> int:
     if estimated_token_count is not None:
+        if estimated_token_count <= 0:
+            raise ValueError("--estimated-token-count must be positive")
         return estimated_token_count
     return max(1, len(text.split()))
 
@@ -119,6 +121,8 @@ def main() -> int:
     parser.add_argument("--span-kind", default="prompt_text")
     parser.add_argument("--estimated-token-count", type=int, default=None)
     args = parser.parse_args()
+    if args.estimated_token_count is not None and args.estimated_token_count <= 0:
+        parser.error("--estimated-token-count must be positive")
 
     output = args.output.expanduser().resolve()
     tokenizer_name_or_path = (
