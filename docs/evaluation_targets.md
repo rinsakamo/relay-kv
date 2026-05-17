@@ -104,3 +104,5 @@ These targets deliberately separate three questions:
 - whether RelayStack can provide a better low-VRAM operating plan than realistic alternatives
 
 That separation is important because RelayKV does not extend maximum context by itself. Max-context-external behavior must come from RelayMEM and context assembly policy.
+
+For the stage-by-stage attribution contract behind those targets, see [relaystack_eval_plan.md](relaystack_eval_plan.md).
