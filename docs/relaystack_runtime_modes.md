@@ -291,7 +291,23 @@ The matrix lists required contract transitions, including direct failure transit
 
 ## Trace and event implications
 
-Runtime mode transitions should produce RelayStackTraceEvent-compatible events carrying at least:
+Runtime mode transitions should produce RelayStackTraceEvent-compatible events.
+
+These transition events must include all baseline required fields from [relaystack_data_contract.md](relaystack_data_contract.md). The mode-transition fields below are additions, not replacements.
+
+Baseline required fields:
+
+- `trace_id`
+- `request_id`
+- `phase`
+- `component`
+- `event_type`
+- `input_refs`
+- `output_refs`
+- `decision_state`
+- `timestamp`
+
+Mode-specific additions:
 
 - `previous_mode`
 - `next_mode`
