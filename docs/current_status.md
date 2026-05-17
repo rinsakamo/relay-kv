@@ -196,11 +196,13 @@ Phase 11.5:
 
 Phase 12:
   Current: RelayStack V0.1 runtime boundary and HF-first validation
-  Phase 12-A: started runtime target selection and adapter capability matrix in
+  Phase 12-A: completed runtime target selection and adapter capability matrix in
   docs/phase12_runtime_target_selection.md
+  Phase 12-B: started HF adapter capability schema and skeleton plan in
+  docs/phase12_hf_adapter_capability_schema.md
   Use HF as the first concrete runtime path to validate the Core contracts and minimal OpenAI-compatible boundary without adding scheduler, attention, or KV-pool mutation by default. SGLang remains the next practical OpenAI-compatible runtime target after V0.1. vLLM remains a post-V0.1 adapter target and should not broaden the V0.1 implementation scope.
-  Scope: docs/planning only for Phase 12-A. No runtime adapter, materialization,
-  attention connection, scheduler path, or KV-pool mutation is changed.
+  Scope: docs/planning only for Phase 12-A and Phase 12-B. No runtime adapter,
+  model loading, materialization, attention connection, scheduler path, or KV-pool mutation is changed.
 
 Phase 13:
   Safe materialization / shadow attention compare
