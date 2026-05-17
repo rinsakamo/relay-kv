@@ -18,21 +18,27 @@ def _validate_positive_optional_int(
         parser.error(f"{flag_name} must be positive")
 
 
-def _resolve_attention_type_hint(
+def _resolve_attention_metadata(
+    parser: argparse.ArgumentParser,
     num_attention_heads: int | None,
     num_key_value_heads: int | None,
-) -> str:
+) -> tuple[str, int | None]:
     if num_attention_heads is None or num_key_value_heads is None:
-        return "unknown"
+        return "unknown", None
     if num_key_value_heads == num_attention_heads:
-        return "mha"
-    if num_key_value_heads < num_attention_heads:
-        return "gqa"
-    return "unknown"
+        return "mha", 1
+    if num_key_value_heads > num_attention_heads:
+        parser.error("--num-key-value-heads must not exceed --num-attention-heads")
+    if num_attention_heads % num_key_value_heads != 0:
+        parser.error(
+            "--num-attention-heads must be divisible by --num-key-value-heads"
+        )
+    return "gqa", num_attention_heads // num_key_value_heads
 
 
 def build_hf_engine_metadata_probe_payload(
     *,
+    parser: argparse.ArgumentParser,
     output: Path,
     model_id: str,
     tokenizer_name_or_path: str,
@@ -53,6 +59,11 @@ def build_hf_engine_metadata_probe_payload(
     head_dim: int | None,
     hidden_size: int | None,
 ) -> dict[str, object]:
+    attention_type_hint, kv_head_group_count = _resolve_attention_metadata(
+        parser,
+        num_attention_heads,
+        num_key_value_heads,
+    )
     payload = {
         "schema_version": "relaystack.engine_metadata_probe.v0.1",
         "phase": "12-F",
@@ -90,11 +101,8 @@ def build_hf_engine_metadata_probe_payload(
             "num_key_value_heads": num_key_value_heads,
             "head_dim": head_dim,
             "hidden_size": hidden_size,
-            "attention_type_hint": _resolve_attention_type_hint(
-                num_attention_heads,
-                num_key_value_heads,
-            ),
-            "kv_head_group_count": num_key_value_heads,
+            "attention_type_hint": attention_type_hint,
+            "kv_head_group_count": kv_head_group_count,
         },
         "capabilities_snapshot": {
             "supports_tokenizer_span_probe": True,
@@ -191,6 +199,7 @@ def main() -> int:
         else args.model_id
     )
     payload = build_hf_engine_metadata_probe_payload(
+        parser=parser,
         output=output,
         model_id=args.model_id,
         tokenizer_name_or_path=tokenizer_name_or_path,

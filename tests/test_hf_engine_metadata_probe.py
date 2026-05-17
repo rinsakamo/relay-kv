@@ -113,7 +113,37 @@ def test_hf_engine_metadata_probe_cli_override(tmp_path: Path) -> None:
     assert loaded["engine_metadata"]["head_dim"] == 128
     assert loaded["engine_metadata"]["hidden_size"] == 4096
     assert loaded["engine_metadata"]["attention_type_hint"] == "gqa"
-    assert loaded["engine_metadata"]["kv_head_group_count"] == 8
+    assert loaded["engine_metadata"]["kv_head_group_count"] == 4
+
+
+def test_hf_engine_metadata_probe_mha_group_count(tmp_path: Path) -> None:
+    output_path = tmp_path / "relaystack_engine_metadata_probe_mha.json"
+    repo_root = Path(__file__).resolve().parents[1]
+    env = os.environ.copy()
+    env["PYTHONPATH"] = str(repo_root)
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "scripts/run_hf_engine_metadata_probe.py",
+            "--output",
+            str(output_path),
+            "--num-attention-heads",
+            "32",
+            "--num-key-value-heads",
+            "32",
+        ],
+        cwd=repo_root,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    loaded = json.loads(output_path.read_text(encoding="utf-8"))
+    assert loaded["engine_metadata"]["attention_type_hint"] == "mha"
+    assert loaded["engine_metadata"]["kv_head_group_count"] == 1
 
 
 def test_hf_engine_metadata_probe_rejects_non_positive_numeric_overrides(
@@ -151,3 +181,47 @@ def test_hf_engine_metadata_probe_rejects_non_positive_numeric_overrides(
         assert not output_path.exists()
         combined_output = f"{result.stdout}\n{result.stderr}".lower()
         assert "positive" in combined_output or "non-positive" in combined_output
+
+
+def test_hf_engine_metadata_probe_rejects_invalid_kv_head_relations(
+    tmp_path: Path,
+) -> None:
+    output_path = tmp_path / "relaystack_engine_metadata_probe_invalid_kv.json"
+    repo_root = Path(__file__).resolve().parents[1]
+    env = os.environ.copy()
+    env["PYTHONPATH"] = str(repo_root)
+
+    invalid_cases = (
+        ("12", "5"),
+        ("8", "16"),
+    )
+    for attention_heads, key_value_heads in invalid_cases:
+        if output_path.exists():
+            output_path.unlink()
+        result = subprocess.run(
+            [
+                sys.executable,
+                "scripts/run_hf_engine_metadata_probe.py",
+                "--output",
+                str(output_path),
+                "--num-attention-heads",
+                attention_heads,
+                "--num-key-value-heads",
+                key_value_heads,
+            ],
+            cwd=repo_root,
+            env=env,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+        assert result.returncode != 0
+        assert not output_path.exists()
+        combined_output = f"{result.stdout}\n{result.stderr}".lower()
+        assert "num-attention-heads" in combined_output
+        assert (
+            "divisible" in combined_output
+            or "divide" in combined_output
+            or "must not exceed" in combined_output
+        )
