@@ -629,3 +629,72 @@ def test_hf_adapter_readiness_report_rejects_malformed_nested_mappings(
         }
         assert expected_failed_name in failed_names
         assert "AttributeError" not in f"{result.stdout}\n{result.stderr}"
+
+
+def test_hf_adapter_readiness_report_rejects_malformed_summary_mappings(
+    tmp_path: Path,
+) -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    invalid_cases = (
+        (
+            "adapter_summary_bad",
+            "adapter",
+            False,
+            "adapter_capabilities_summary_object",
+        ),
+        (
+            "tokenizer_summary_bad",
+            "tokenizer",
+            False,
+            "tokenizer_span_probe_summary_object",
+        ),
+        (
+            "engine_summary_bad",
+            "engine",
+            False,
+            "engine_metadata_probe_summary_object",
+        ),
+    )
+
+    for _, target_kind, remove_adapter_gpu_flag, expected_failed_name in invalid_cases:
+        adapter_path, tokenizer_path, engine_path = _build_happy_path_artifacts(
+            tmp_path,
+            repo_root,
+        )
+        payload_map = {
+            "adapter": json.loads(adapter_path.read_text(encoding="utf-8")),
+            "tokenizer": json.loads(tokenizer_path.read_text(encoding="utf-8")),
+            "engine": json.loads(engine_path.read_text(encoding="utf-8")),
+        }
+        if remove_adapter_gpu_flag:
+            payload_map["adapter"]["safety_scope"].pop("no_gpu_inspection", None)
+        payload_map[target_kind]["summary"] = "bad"
+        _write_json(adapter_path, payload_map["adapter"])
+        _write_json(tokenizer_path, payload_map["tokenizer"])
+        _write_json(engine_path, payload_map["engine"])
+        output_path = tmp_path / "relaystack_hf_adapter_readiness_report.json"
+        if output_path.exists():
+            output_path.unlink()
+
+        result = _run(
+            repo_root,
+            "scripts/run_hf_adapter_readiness_report.py",
+            "--adapter-capabilities",
+            str(adapter_path),
+            "--tokenizer-span-probe",
+            str(tokenizer_path),
+            "--engine-metadata-probe",
+            str(engine_path),
+            "--output",
+            str(output_path),
+        )
+
+        assert result.returncode == 1
+        assert output_path.exists()
+        loaded = json.loads(output_path.read_text(encoding="utf-8"))
+        assert loaded["summary"]["ok"] is False
+        failed_names = {
+            check["name"] for check in loaded["checks"] if not check["passed"]
+        }
+        assert expected_failed_name in failed_names
+        assert "AttributeError" not in f"{result.stdout}\n{result.stderr}"

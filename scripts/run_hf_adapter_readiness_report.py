@@ -293,6 +293,24 @@ def _validate_safety_scope(
     tokenizer_data: dict[str, object],
     engine_data: dict[str, object],
 ) -> None:
+    adapter_summary = _as_mapping(
+        adapter_data.get("summary"),
+        artifact_name="adapter_capabilities",
+        field_name="summary",
+        checks=checks,
+    )
+    tokenizer_summary = _as_mapping(
+        tokenizer_data.get("summary"),
+        artifact_name="tokenizer_span_probe",
+        field_name="summary",
+        checks=checks,
+    )
+    engine_summary = _as_mapping(
+        engine_data.get("summary"),
+        artifact_name="engine_metadata_probe",
+        field_name="summary",
+        checks=checks,
+    )
     required_common_flags = (
         "dry_run_only",
         "no_model_loading_required",
@@ -323,7 +341,7 @@ def _validate_safety_scope(
         )
         adapter_observed = adapter_safety_scope.get(flag_name)
         if flag_name == "no_gpu_inspection" and adapter_observed is None:
-            adapter_observed = (adapter_data.get("summary") or {}).get(flag_name)
+            adapter_observed = adapter_summary.get(flag_name)
         observed = {
             "adapter": adapter_observed,
             "tokenizer": tokenizer_safety_scope.get(flag_name),
