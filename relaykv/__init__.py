@@ -88,6 +88,13 @@ from .fixed_budget_working_set import (
     RelayKVFixedBudgetWorkingSetDecision,
     build_relaykv_fixed_budget_working_set_decision,
 )
+from .fixed_budget_block_selection import (
+    RelayKVBlockCandidate,
+    RelayKVClassBlockSelection,
+    RelayKVFixedBudgetBlockSelectionDecision,
+    build_relaykv_fixed_budget_block_selection_decision,
+    build_synthetic_block_candidates,
+)
 from .vram_reservation import (
     RelayKVVramReservation,
     RelayKVVramReservationStatus,
@@ -273,6 +280,11 @@ __all__ = [
     "RelayKVFixedBudgetConfig",
     "RelayKVFixedBudgetWorkingSetDecision",
     "build_relaykv_fixed_budget_working_set_decision",
+    "RelayKVBlockCandidate",
+    "RelayKVClassBlockSelection",
+    "RelayKVFixedBudgetBlockSelectionDecision",
+    "build_relaykv_fixed_budget_block_selection_decision",
+    "build_synthetic_block_candidates",
     "AttentionCompareResult",
     "scaled_dot_product_attention",
     "compare_attention_outputs",
