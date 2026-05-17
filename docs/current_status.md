@@ -180,6 +180,9 @@ Phase 11.5:
   Phase 11.5-B: completed RelayStack adapter contract documentation in
   docs/relaystack_adapter_contracts.md for MemoryBackendAdapter, TokenizerAdapter,
   EngineAdapter, ObservabilityAdapter, and the App / Agent boundary
+  Phase 11.5-C: completed RelayStack runtime mode documentation in
+  docs/relaystack_runtime_modes.md for VRAM/KV runtime states and
+  fallback-vs-degrade-vs-block-vs-context-reduction semantics
   Scope: docs/schema planning only before runtime adapter restart.
   No runtime behavior is changed.
   Required contracts:
@@ -190,7 +193,7 @@ Phase 11.5:
     - Fallback vs RelayKV Degrade / Block / Context Reduction contract
     - Adapter contract for MemoryBackend / Tokenizer / Engine / Observability
   Next:
-    - Phase 11.5-C runtime modes / fallback-vs-degrade contract
+    - Phase 11.5-D evaluation attribution plan
 
 Phase 12:
   RelayStack adapter contract and runtime target selection
