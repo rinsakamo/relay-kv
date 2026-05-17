@@ -281,3 +281,12 @@ python scripts/run_hf_adapter_capability_smoke.py \
 ```
 
 This artifact remains no-model/no-GPU and no-apply.
+
+Phase 12-E tokenizer span probe CLI:
+
+```bash
+python scripts/run_hf_tokenizer_span_probe.py \
+  --output /tmp/relaystack_tokenizer_span_probe.json
+```
+
+In Phase 12-E, token spans remain estimated and tokenizer-scoped. No tokenizer load is required yet.
