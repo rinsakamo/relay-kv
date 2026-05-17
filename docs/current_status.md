@@ -174,7 +174,11 @@ Phase 11:
 
 Phase 11.5:
   Current: RelayStack design contract consolidation
+  Phase 11.5-A: started RelayStack data contract documentation in
+  docs/relaystack_data_contract.md for RelayMEMContextItem, RelayCTXContextSpan,
+  RelayKVBlockMeta, and RelayStackTraceEvent
   Scope: docs/schema planning only before runtime adapter restart.
+  No runtime behavior is changed.
   Required contracts:
     - RelayStack Core Boundary
     - RelayMEM → RelayCTX → RelayKV data contract
@@ -182,6 +186,8 @@ Phase 11.5:
     - Runtime Mode contract
     - Fallback vs RelayKV Degrade / Block / Context Reduction contract
     - Adapter contract for MemoryBackend / Tokenizer / Engine / Observability
+  Next:
+    - Phase 11.5-B adapter contracts or runtime modes
 
 Phase 12:
   RelayStack adapter contract and runtime target selection
