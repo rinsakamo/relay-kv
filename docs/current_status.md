@@ -161,13 +161,19 @@ Phase 11:
   Phase 11-C: completed pipeline/scoring candidate exporter
   for converting pipeline-style block scoring artifacts into Phase 11-B candidates-json
   and feeding fixed-budget block selection from exported metadata
-  Phase 11-D: current fixed-budget selection artifact chain
+  Phase 11-D: completed fixed-budget selection artifact chain
   chaining pipeline candidate export into fixed-budget block selection and emitting
   candidates, selection, and chain_summary artifacts in one no-model/no-GPU dry-run path
-  Scope: dry-run/schema/CLI/report only. No materialization, attention connection, runtime adapter, or scheduler path is changed.
+  Phase 11-E: completed JST-dated devlog/status consolidation for the fixed-budget dry-run chain
+  with the current RelayMEM / RelayCTX / RelayKV / RelayStack Core boundary clarified
+  Scope: dry-run/schema/CLI/report only. No materialization, attention connection,
+  runtime adapter, or scheduler path is changed. The fixed-budget chain artifacts are:
+    - relaykv_candidates.json
+    - relaykv_fixed_budget_block_selection.json
+    - chain_summary.json
 
 Phase 11.5:
-  RelayStack design contract consolidation
+  Current: RelayStack design contract consolidation
   Scope: docs/schema planning only before runtime adapter restart.
   Required contracts:
     - RelayStack Core Boundary
