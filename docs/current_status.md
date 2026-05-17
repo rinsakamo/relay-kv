@@ -112,7 +112,7 @@ The following items are part of the current direction, but should not be describ
 
 ## Revised phase direction
 
-The next work should keep model/GPU/runtime risk low until RelayMEM and RelayStack planning are useful as standalone artifacts.
+The next work should keep model/GPU/runtime risk low until RelayMEM and RelayStack planning are useful as standalone artifacts. The phase order now distinguishes implementation/evaluation order from runtime activation order.
 
 ```text
 Phase 6:
@@ -163,15 +163,42 @@ Phase 11:
   and feeding fixed-budget block selection from exported metadata
   Scope: dry-run/schema/CLI/report only. No materialization, attention connection, runtime adapter, or scheduler path is changed.
 
+Phase 11.5:
+  RelayStack design contract consolidation
+  Scope: docs/schema planning only before runtime adapter restart.
+  Required contracts:
+    - RelayStack Core Boundary
+    - RelayMEM → RelayCTX → RelayKV data contract
+    - Lineage / Attribution contract
+    - Runtime Mode contract
+    - Fallback vs RelayKV Degrade / Block / Context Reduction contract
+    - Adapter contract for MemoryBackend / Tokenizer / Engine / Observability
+
 Phase 12:
-  Runtime adapter selection and restart
-  Choose SGLang, vLLM, HF, or another adapter target for the next integration pass.
+  RelayStack adapter contract and runtime target selection
+  Choose SGLang, vLLM, HF, or another adapter target after the adapter contracts are clear.
+  Scope: adapter-boundary planning and target selection first; no scheduler, attention, or KV-pool mutation by default.
 
 Phase 13:
   Safe materialization / shadow attention compare
+  Scope: RelayKV decisions are evaluated while FullKV is still available.
+  FullKV fallback is valid in this phase because RelayKV is not yet the active required path.
 
 Phase 14:
   Gated apply / safe degrade / block / context-reduction integration
+  Scope: RelayKV becomes the active path only behind gates.
+  After RelayKV apply under VRAM pressure, FullKV fallback is not assumed to be available.
+  The required safety paths are safe degrade, block-no-safe-path, and request-context-reduction.
+
+Phase 15:
+  RelayCTX budgeted context integration
+  Scope: context packing, token-budget fitting, token compression plan metadata, source attribution,
+  and token-span mapping before prefill. RelayCTX should not execute tools.
+
+Phase 16:
+  RelayMEM + RelayCTX + RelayKV attribution evaluation
+  Scope: evaluate MEM-only, MEM+CTX, and MEM+CTX+KV paths separately so quality regressions can be attributed
+  to memory selection, context transformation, or KV working-set decisions.
 ```
 
 ## Runtime activation vs evaluation order
