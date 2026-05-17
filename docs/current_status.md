@@ -38,8 +38,13 @@ The current project direction is broader than the initial small KV approximation
 
 - **RelayKV** is the VRAM-aware active-context KV routing layer.
 - **RelayMEM** is the max-context-external memory layer that decides what should enter active context.
-- **RelayStack** coordinates RelayMEM, RelayKV, VRAM reservation, runtime policy, and User-Gated Fallback.
+- **RelayCTX** is the context transform layer between RelayMEM and RelayKV. It handles context packing, token-budget fitting, token compression plan metadata, prompt layout at the context-item level, source attribution, and token/span mapping.
+- **RelayStack** coordinates RelayMEM, RelayCTX, RelayKV, budget policy, runtime policy, and trace/evaluation schemas.
 - **Open-LLM-VTuber** is the current practical product/demo target for low-VRAM Japanese AI character runtime integration.
+
+RelayStack Core is intentionally not a tool-execution or agent-runtime layer. Tool execution, approval, UI, product-specific workflow orchestration, heavy RAG implementations, embedding/reranking/summarization model execution, engine-specific runtime internals, and observability product integrations should live outside RelayStack Core behind adapters or application/orchestration layers.
+
+See [relaystack_architecture.md](relaystack_architecture.md) for the current RelayStack core-boundary, runtime-mode, adapter-boundary, and fallback/degrade design.
 
 RelayKV extends usable active context under fixed VRAM budgets, but it does not by itself extend the model's trained or supported maximum context window.
 
@@ -62,6 +67,8 @@ residency_level  = location such as GPU HBM, CPU RAM, SSD, or remote tier
 ```
 
 This separation keeps future compressed or checkpointed KV representations from being confused with RelayKV's selection role.
+
+RelayKV fallback semantics should be treated carefully. Before apply, or while running in shadow, FullKV fallback may be possible because the FullKV path is still available. After RelayKV apply under VRAM pressure, FullKV fallback should generally be treated as unavailable. In that case RelayKV should use safe degrade, block, or request context reduction semantics rather than implying an automatic return to FullKV.
 
 ## Implemented today
 
@@ -90,7 +97,9 @@ The repository currently implements or prototypes the following pieces:
 
 The following items are part of the current direction, but should not be described as implemented runtime features yet:
 
-- concrete RelayMEM retrieval backend
+- RelayCTX runtime implementation beyond design-level context-transform responsibilities
+- concrete RelayMEM retrieval backend beyond the current lightweight Fast Recall path
+- concrete RelayStack data-contract and adapter-contract implementations
 - Open-LLM-VTuber integration
 - User-Gated Fallback runtime UX
 - real KV materialization in an inference engine
@@ -99,6 +108,7 @@ The following items are part of the current direction, but should not be describ
 - compressed KV implementation
 - disk-backed or RAM-backed full KV checkpoint execution
 - SGLang or vLLM runtime adapter changes beyond prior exploratory work
+- RelayKV safe-degrade / block / request-context-reduction runtime handling after apply
 
 ## Revised phase direction
 
@@ -161,8 +171,30 @@ Phase 13:
   Safe materialization / shadow attention compare
 
 Phase 14:
-  Gated apply / fallback integration
+  Gated apply / safe degrade / block / context-reduction integration
 ```
+
+## Runtime activation vs evaluation order
+
+RelayStack implementation and quality evaluation should proceed top-down for clean attribution:
+
+```text
+1. RelayMEM only
+2. RelayMEM + RelayCTX
+3. RelayMEM + RelayCTX + RelayKV
+```
+
+Runtime activation under pressure is different. When VRAM pressure is the trigger, RelayKV is the immediate runtime layer:
+
+```text
+NORMAL_FULL
+→ RELAYKV_SHADOW
+→ RELAYKV_APPLY
+→ RELAYKV_SAFE_DEGRADE
+→ BLOCKED_NO_SAFE_KV_PATH or REQUEST_CONTEXT_REDUCTION
+```
+
+RelayMEM and RelayCTX remain context-planning layers. They are especially useful for future turns, token/context pressure, long-term memory recall, and prefill reduction, while RelayKV handles decode-time KV pressure after active context has already entered the model.
 
 ## Current empirical picture
 
