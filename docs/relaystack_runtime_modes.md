@@ -304,6 +304,7 @@ Baseline required fields:
 - `event_type`
 - `input_refs`
 - `output_refs`
+- `budget_snapshot`
 - `decision_state`
 - `timestamp`
 
@@ -312,7 +313,6 @@ Mode-specific additions:
 - `previous_mode`
 - `next_mode`
 - `trigger`
-- `budget_snapshot`
 - `quality_signal` optional
 - `fallback_or_degrade_reason`
 - `adapter_capability_snapshot`
