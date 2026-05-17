@@ -92,6 +92,7 @@ The repository currently implements or prototypes the following pieces:
 - VRAM reservation schema and smoke path
 - RelayStack no-model/no-GPU dry-run JSON combining RelayMEM retrieval results, context assembly, prompt preview planning, final routing decisions, RelayKV, VRAM reservation, runtime policy, and fallback fields
 - RelayStack HF smoke report layer that joins a synthetic-or-real HF context-length smoke artifact with a RelayStack dry-run artifact
+- HF adapter capability smoke artifact generator for `relaystack_adapter_capabilities.json`
 
 ## Design-only or not yet integrated
 
@@ -99,7 +100,7 @@ The following items are part of the current direction, but should not be describ
 
 - RelayCTX runtime implementation beyond design-level context-transform responsibilities
 - concrete RelayMEM retrieval backend beyond the current lightweight Fast Recall path
-- concrete RelayStack data-contract and adapter-contract implementations
+- concrete RelayStack data-contract and adapter-contract implementations beyond metadata/artifact planning
 - OpenAI-compatible product-facing RelayStack server
 - Open-LLM-VTuber or other avatar-app integration
 - tool execution or web search integration
@@ -202,11 +203,15 @@ Phase 12:
   docs/phase12_hf_adapter_capability_schema.md
   Phase 12-C: completed HF adapter capability smoke artifact in
   scripts/run_hf_adapter_capability_smoke.py
+  Phase 12-D: current JST-dated status/devlog checkpoint for Phase 12-A through Phase 12-C in
+  notes/devlog_2026-05-17_phase12_hf_adapter_boundary_ja.md
   Artifact:
     - relaystack_adapter_capabilities.json
   Use HF as the first concrete runtime path to validate the Core contracts and minimal OpenAI-compatible boundary without adding scheduler, attention, or KV-pool mutation by default. SGLang remains the next practical OpenAI-compatible runtime target after V0.1. vLLM remains a post-V0.1 adapter target and should not broaden the V0.1 implementation scope.
-  Scope: no-model/no-GPU metadata smoke only for Phase 12-C. No runtime adapter,
+  Scope: no-model/no-GPU metadata smoke only through Phase 12-C. No runtime adapter,
   model loading, KV materialization, attention connection, scheduler path, or KV-pool mutation is changed.
+  Next likely implementation step:
+    - tokenizer span probe artifact before any KV materialization or attention work
 
 Phase 13:
   Safe materialization / shadow attention compare
