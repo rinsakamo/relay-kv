@@ -285,9 +285,14 @@ def _validate_no_apply_materialization(
 
 def _validate_tokenizer_spans(
     checks: list[dict[str, object]],
+    adapter_data: dict[str, object],
     tokenizer_data: dict[str, object],
+    engine_data: dict[str, object],
 ) -> None:
     spans = tokenizer_data.get("spans")
+    adapter_tokenizer_ref = adapter_data.get("tokenizer_ref") or {}
+    tokenizer_tokenizer_ref = tokenizer_data.get("tokenizer_ref") or {}
+    engine_tokenizer_ref = engine_data.get("tokenizer_ref") or {}
     _add_check(
         checks,
         name="tokenizer_span_count",
@@ -348,6 +353,42 @@ def _validate_tokenizer_spans(
             message="Tokenizer span lineage.engine_block_ref must remain null in Phase 12-H",
             observed=engine_block_ref,
         )
+        span_tokenizer_ref = span.get("tokenizer_ref")
+        _add_check(
+            checks,
+            name=f"tokenizer_span_tokenizer_ref_present_{index}",
+            passed=isinstance(span_tokenizer_ref, dict),
+            severity="error",
+            message="Each tokenizer span must include tokenizer_ref",
+            observed=span_tokenizer_ref,
+        )
+        if not isinstance(span_tokenizer_ref, dict):
+            continue
+        for field_name in (
+            "tokenizer_name_or_path",
+            "tokenizer_revision",
+            "tokenizer_config_hash",
+            "tokenizer_family",
+        ):
+            observed = {
+                "adapter": adapter_tokenizer_ref.get(field_name),
+                "tokenizer_top_level": tokenizer_tokenizer_ref.get(field_name),
+                "engine": engine_tokenizer_ref.get(field_name),
+                "span": span_tokenizer_ref.get(field_name),
+            }
+            _add_check(
+                checks,
+                name=f"tokenizer_span_{field_name}_consistency_{index}",
+                passed=(
+                    observed["adapter"]
+                    == observed["tokenizer_top_level"]
+                    == observed["engine"]
+                    == observed["span"]
+                ),
+                severity="error",
+                message=f"Tokenizer span tokenizer_ref.{field_name} must match adapter, tokenizer top-level, and engine tokenizer_ref",
+                observed=observed,
+            )
 
 
 def _validate_engine_metadata(
@@ -418,7 +459,7 @@ def build_hf_adapter_readiness_report(
     _validate_model_and_tokenizer_consistency(checks, adapter_data, tokenizer_data, engine_data)
     _validate_safety_scope(checks, adapter_data, tokenizer_data, engine_data)
     _validate_no_apply_materialization(checks, adapter_data, engine_data)
-    _validate_tokenizer_spans(checks, tokenizer_data)
+    _validate_tokenizer_spans(checks, adapter_data, tokenizer_data, engine_data)
     _validate_engine_metadata(checks, engine_data)
 
     failed_error_checks = [

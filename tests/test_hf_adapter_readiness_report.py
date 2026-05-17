@@ -243,6 +243,114 @@ def test_hf_adapter_readiness_report_tokenizer_config_hash_mismatch_fails(
     assert "tokenizer_ref_tokenizer_config_hash_consistency" in failed_names
 
 
+def test_hf_adapter_readiness_report_span_embedded_tokenizer_ref_mismatch_fails(
+    tmp_path: Path,
+) -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    adapter_path, tokenizer_path, engine_path = _build_happy_path_artifacts(
+        tmp_path,
+        repo_root,
+    )
+    tokenizer_payload = json.loads(tokenizer_path.read_text(encoding="utf-8"))
+    tokenizer_payload["spans"][0]["tokenizer_ref"]["tokenizer_name_or_path"] = "other/tokenizer"
+    _write_json(tokenizer_path, tokenizer_payload)
+    output_path = tmp_path / "relaystack_hf_adapter_readiness_report.json"
+
+    result = _run(
+        repo_root,
+        "scripts/run_hf_adapter_readiness_report.py",
+        "--adapter-capabilities",
+        str(adapter_path),
+        "--tokenizer-span-probe",
+        str(tokenizer_path),
+        "--engine-metadata-probe",
+        str(engine_path),
+        "--output",
+        str(output_path),
+    )
+
+    assert result.returncode == 1
+    assert output_path.exists()
+    loaded = json.loads(output_path.read_text(encoding="utf-8"))
+    assert loaded["summary"]["ok"] is False
+    failed_names = {
+        check["name"] for check in loaded["checks"] if not check["passed"]
+    }
+    assert "tokenizer_span_tokenizer_name_or_path_consistency_0" in failed_names
+
+
+def test_hf_adapter_readiness_report_span_embedded_tokenizer_revision_mismatch_fails(
+    tmp_path: Path,
+) -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    adapter_path, tokenizer_path, engine_path = _build_happy_path_artifacts(
+        tmp_path,
+        repo_root,
+    )
+    tokenizer_payload = json.loads(tokenizer_path.read_text(encoding="utf-8"))
+    tokenizer_payload["spans"][0]["tokenizer_ref"]["tokenizer_revision"] = "other-rev"
+    _write_json(tokenizer_path, tokenizer_payload)
+    output_path = tmp_path / "relaystack_hf_adapter_readiness_report.json"
+
+    result = _run(
+        repo_root,
+        "scripts/run_hf_adapter_readiness_report.py",
+        "--adapter-capabilities",
+        str(adapter_path),
+        "--tokenizer-span-probe",
+        str(tokenizer_path),
+        "--engine-metadata-probe",
+        str(engine_path),
+        "--output",
+        str(output_path),
+    )
+
+    assert result.returncode == 1
+    assert output_path.exists()
+    loaded = json.loads(output_path.read_text(encoding="utf-8"))
+    assert loaded["summary"]["ok"] is False
+    failed_names = {
+        check["name"] for check in loaded["checks"] if not check["passed"]
+    }
+    assert "tokenizer_span_tokenizer_revision_consistency_0" in failed_names
+
+
+def test_hf_adapter_readiness_report_span_missing_tokenizer_ref_fails(
+    tmp_path: Path,
+) -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    adapter_path, tokenizer_path, engine_path = _build_happy_path_artifacts(
+        tmp_path,
+        repo_root,
+    )
+    tokenizer_payload = json.loads(tokenizer_path.read_text(encoding="utf-8"))
+    del tokenizer_payload["spans"][0]["tokenizer_ref"]
+    _write_json(tokenizer_path, tokenizer_payload)
+    output_path = tmp_path / "relaystack_hf_adapter_readiness_report.json"
+
+    result = _run(
+        repo_root,
+        "scripts/run_hf_adapter_readiness_report.py",
+        "--adapter-capabilities",
+        str(adapter_path),
+        "--tokenizer-span-probe",
+        str(tokenizer_path),
+        "--engine-metadata-probe",
+        str(engine_path),
+        "--output",
+        str(output_path),
+    )
+
+    assert result.returncode == 1
+    assert output_path.exists()
+    loaded = json.loads(output_path.read_text(encoding="utf-8"))
+    assert loaded["summary"]["ok"] is False
+    failed_names = {
+        check["name"] for check in loaded["checks"] if not check["passed"]
+    }
+    assert "tokenizer_span_tokenizer_ref_present_0" in failed_names
+
+
 def test_hf_adapter_readiness_report_missing_input_fails_without_output(
     tmp_path: Path,
 ) -> None:
