@@ -290,3 +290,12 @@ python scripts/run_hf_tokenizer_span_probe.py \
 ```
 
 In Phase 12-E, token spans remain estimated and tokenizer-scoped. No tokenizer load is required yet.
+
+Phase 12-F engine metadata probe CLI:
+
+```bash
+python scripts/run_hf_engine_metadata_probe.py \
+  --output /tmp/relaystack_engine_metadata_probe.json
+```
+
+In Phase 12-F, engine metadata remains CLI/user-provided or unknown. No model, config, or tokenizer load is required yet.
