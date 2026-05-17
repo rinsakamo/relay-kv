@@ -368,3 +368,5 @@ docs/relaystack_eval_plan.md
 ```
 
 This document is the architecture-boundary starting point for that split.
+
+See [relaystack_adapter_contracts.md](relaystack_adapter_contracts.md) for the adapter-boundary requirements that Phase 11.5-B fixes before runtime target selection.
