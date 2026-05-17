@@ -272,3 +272,12 @@ relaystack_engine_metadata_probe.json
 ```
 
 The smoke path should remain metadata-only until a later phase explicitly starts safe materialization or shadow attention compare.
+
+Phase 12-C smoke CLI:
+
+```bash
+python scripts/run_hf_adapter_capability_smoke.py \
+  --output /tmp/relaystack_adapter_capabilities.json
+```
+
+This artifact remains no-model/no-GPU and no-apply.
