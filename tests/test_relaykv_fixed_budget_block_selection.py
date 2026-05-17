@@ -293,6 +293,119 @@ def test_fixed_budget_block_selection_candidates_json_path(tmp_path: Path) -> No
     assert loaded["selected_block_count_by_class"]["recent"] <= 2
 
 
+def test_fixed_budget_block_selection_pipeline_style_candidates_json_path(
+    tmp_path: Path,
+) -> None:
+    candidates_path = tmp_path / "pipeline_style_candidates.json"
+    candidates_path.write_text(
+        json.dumps(
+            [
+                {
+                    "block_id": 0,
+                    "start": 0,
+                    "end": 64,
+                    "score": 0.9,
+                    "layer_idx": 0,
+                    "is_anchor": True,
+                },
+                {
+                    "block_id": 1,
+                    "start": 64,
+                    "end": 128,
+                    "score": 0.8,
+                    "layer_idx": 0,
+                    "is_retrieval_candidate": True,
+                },
+                {
+                    "block_id": 2,
+                    "start": 128,
+                    "end": 192,
+                    "score": 0.7,
+                    "layer_idx": 0,
+                    "is_recent": True,
+                },
+            ]
+        ),
+        encoding="utf-8",
+    )
+    repo_root = Path(__file__).resolve().parents[1]
+    env = os.environ.copy()
+    env["PYTHONPATH"] = str(repo_root)
+    output_path = tmp_path / "pipeline_style_block_selection.json"
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "scripts/run_relaykv_fixed_budget_block_selection_dry_run.py",
+            "--total-working-budget-tokens",
+            "512",
+            "--block-size",
+            "64",
+            "--candidates-json",
+            str(candidates_path),
+            "--output",
+            str(output_path),
+        ],
+        cwd=repo_root,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    loaded = json.loads(output_path.read_text(encoding="utf-8"))
+    assert loaded["decision_state"] == "dry_run_ready"
+    assert loaded["selected_block_ids_by_class"]["anchor"] == [0]
+    assert loaded["selected_block_ids_by_class"]["recent"] == [2]
+
+
+def test_fixed_budget_block_selection_candidates_json_missing_required_field_is_readable(
+    tmp_path: Path,
+) -> None:
+    candidates_path = tmp_path / "invalid_candidates.json"
+    candidates_path.write_text(
+        json.dumps(
+            [
+                {
+                    "block_id": 0,
+                    "score": 1.0,
+                    "layer_idx": 0,
+                }
+            ]
+        ),
+        encoding="utf-8",
+    )
+    repo_root = Path(__file__).resolve().parents[1]
+    env = os.environ.copy()
+    env["PYTHONPATH"] = str(repo_root)
+    output_path = tmp_path / "invalid_block_selection.json"
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "scripts/run_relaykv_fixed_budget_block_selection_dry_run.py",
+            "--total-working-budget-tokens",
+            "512",
+            "--block-size",
+            "64",
+            "--candidates-json",
+            str(candidates_path),
+            "--output",
+            str(output_path),
+        ],
+        cwd=repo_root,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode != 0
+    assert "row 0" in result.stderr
+    assert "token_start" in result.stderr
+
+
 def test_fixed_budget_block_selection_script_roundtrip(tmp_path: Path) -> None:
     repo_root = Path(__file__).resolve().parents[1]
     env = os.environ.copy()

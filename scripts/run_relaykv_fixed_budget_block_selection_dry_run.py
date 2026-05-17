@@ -17,32 +17,84 @@ from relaykv import (
 )
 
 
+def _get_alias_value(
+    item: dict[str, object],
+    keys: tuple[str, ...],
+) -> object | None:
+    for key in keys:
+        if key in item:
+            return item[key]
+    return None
+
+
+def _require_alias_value(
+    item: dict[str, object],
+    *,
+    keys: tuple[str, ...],
+    row_index: int,
+    label: str,
+) -> object:
+    value = _get_alias_value(item, keys)
+    if value is None:
+        joined = ", ".join(keys)
+        raise ValueError(
+            f"candidates-json row {row_index} is missing required field {label} "
+            f"(accepted keys: {joined})"
+        )
+    return value
+
+
 def _load_candidates(path: Path) -> list[RelayKVBlockCandidate]:
     payload = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(payload, list):
         raise ValueError("candidates-json must contain a list of candidate objects")
-    return [
-        RelayKVBlockCandidate(
-            block_id=int(item["block_id"]),
-            token_start=int(item["token_start"]),
-            token_end=int(item["token_end"]),
-            score=float(item["score"]) if item.get("score") is not None else None,
-            is_recent=bool(item.get("is_recent", False)),
-            is_anchor=bool(item.get("is_anchor", False)),
-            is_retrieval_candidate=bool(item.get("is_retrieval_candidate", True)),
-            layer_id=(
-                int(item["layer_id"])
-                if item.get("layer_id") is not None
-                else None
-            ),
-            kv_head_group=(
-                int(item["kv_head_group"])
-                if item.get("kv_head_group") is not None
-                else None
-            ),
+
+    candidates: list[RelayKVBlockCandidate] = []
+    for row_index, item in enumerate(payload):
+        if not isinstance(item, dict):
+            raise ValueError(
+                f"candidates-json row {row_index} must be an object, got "
+                f"{type(item).__name__}"
+            )
+        block_id = _require_alias_value(
+            item,
+            keys=("block_id", "block_idx", "idx"),
+            row_index=row_index,
+            label="block_id",
         )
-        for item in payload
-    ]
+        token_start = _require_alias_value(
+            item,
+            keys=("token_start", "start"),
+            row_index=row_index,
+            label="token_start",
+        )
+        token_end = _require_alias_value(
+            item,
+            keys=("token_end", "end"),
+            row_index=row_index,
+            label="token_end",
+        )
+        score = _get_alias_value(item, ("score", "block_score", "importance_score"))
+        layer_id = _get_alias_value(item, ("layer_id", "layer_idx"))
+
+        candidates.append(
+            RelayKVBlockCandidate(
+                block_id=int(block_id),
+                token_start=int(token_start),
+                token_end=int(token_end),
+                score=float(score) if score is not None else None,
+                is_recent=bool(item.get("is_recent", False)),
+                is_anchor=bool(item.get("is_anchor", False)),
+                is_retrieval_candidate=bool(item.get("is_retrieval_candidate", True)),
+                layer_id=int(layer_id) if layer_id is not None else None,
+                kv_head_group=(
+                    int(item["kv_head_group"])
+                    if item.get("kv_head_group") is not None
+                    else None
+                ),
+            )
+        )
+    return candidates
 
 
 def main() -> int:
@@ -51,7 +103,9 @@ def main() -> int:
             "Dry-run fixed-budget RelayKV block selection. "
             "candidates-json format: "
             '[{"block_id":0,"token_start":0,"token_end":64,"score":1.0,'
-            '"is_recent":false,"is_anchor":true,"is_retrieval_candidate":true}]'
+            '"is_recent":false,"is_anchor":true,"is_retrieval_candidate":true}] '
+            "(accepted aliases: block_idx/idx, start/end, layer_idx, "
+            "block_score/importance_score)."
         )
     )
     parser.add_argument("--total-working-budget-tokens", type=int, required=True)
