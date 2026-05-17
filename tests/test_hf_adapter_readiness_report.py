@@ -474,6 +474,43 @@ def test_hf_adapter_readiness_report_span_missing_tokenizer_ref_fails(
     assert "tokenizer_span_tokenizer_ref_present_0" in failed_names
 
 
+def test_hf_adapter_readiness_report_malformed_non_object_span_fails(
+    tmp_path: Path,
+) -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    adapter_path, tokenizer_path, engine_path = _build_happy_path_artifacts(
+        tmp_path,
+        repo_root,
+    )
+    tokenizer_payload = json.loads(tokenizer_path.read_text(encoding="utf-8"))
+    tokenizer_payload["spans"] = ["not-a-span"]
+    _write_json(tokenizer_path, tokenizer_payload)
+    output_path = tmp_path / "relaystack_hf_adapter_readiness_report.json"
+
+    result = _run(
+        repo_root,
+        "scripts/run_hf_adapter_readiness_report.py",
+        "--adapter-capabilities",
+        str(adapter_path),
+        "--tokenizer-span-probe",
+        str(tokenizer_path),
+        "--engine-metadata-probe",
+        str(engine_path),
+        "--output",
+        str(output_path),
+    )
+
+    assert result.returncode == 1
+    assert output_path.exists()
+    loaded = json.loads(output_path.read_text(encoding="utf-8"))
+    assert loaded["summary"]["ok"] is False
+    failed_names = {
+        check["name"] for check in loaded["checks"] if not check["passed"]
+    }
+    assert "tokenizer_span_object_0" in failed_names
+    assert "AttributeError" not in result.stderr
+
+
 def test_hf_adapter_readiness_report_missing_input_fails_without_output(
     tmp_path: Path,
 ) -> None:

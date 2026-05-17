@@ -339,6 +339,16 @@ def _validate_tokenizer_spans(
     if not isinstance(spans, list):
         return
     for index, span in enumerate(spans):
+        _add_check(
+            checks,
+            name=f"tokenizer_span_object_{index}",
+            passed=isinstance(span, dict),
+            severity="error",
+            message="Each tokenizer span entry must be an object/dict",
+            observed=span,
+        )
+        if not isinstance(span, dict):
+            continue
         token_start = span.get("token_start")
         token_end = span.get("token_end")
         _add_check(
