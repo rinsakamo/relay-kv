@@ -95,6 +95,10 @@ from .fixed_budget_block_selection import (
     build_relaykv_fixed_budget_block_selection_decision,
     build_synthetic_block_candidates,
 )
+from .pipeline_candidate_export import (
+    export_pipeline_candidates_from_json_file,
+    export_pipeline_candidates_from_payload,
+)
 from .vram_reservation import (
     RelayKVVramReservation,
     RelayKVVramReservationStatus,
@@ -285,6 +289,8 @@ __all__ = [
     "RelayKVFixedBudgetBlockSelectionDecision",
     "build_relaykv_fixed_budget_block_selection_decision",
     "build_synthetic_block_candidates",
+    "export_pipeline_candidates_from_json_file",
+    "export_pipeline_candidates_from_payload",
     "AttentionCompareResult",
     "scaled_dot_product_attention",
     "compare_attention_outputs",

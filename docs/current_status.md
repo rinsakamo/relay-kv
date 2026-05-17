@@ -146,8 +146,11 @@ Phase 11:
   RelayKV fixed-budget working-set dry-run policy
   Phase 11-A: completed fixed-budget working-set dry-run policy schema and CLI
   for allocating RECENT / ANCHOR / RETRIEVED token budgets without runtime integration
-  Phase 11-B: current fixed-budget block candidate selection dry-run
+  Phase 11-B: completed fixed-budget block candidate selection dry-run
   joining fixed-budget decisions to synthetic/candidate block metadata and emitting selected/rejected/overflow block ids
+  Phase 11-C: current pipeline/scoring candidate exporter
+  for converting pipeline-style block scoring artifacts into Phase 11-B candidates-json
+  and feeding fixed-budget block selection from exported metadata
   Scope: dry-run/schema/CLI/report only. No materialization, attention connection, runtime adapter, or scheduler path is changed.
 
 Phase 12:
