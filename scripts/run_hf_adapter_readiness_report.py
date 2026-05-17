@@ -33,6 +33,26 @@ def _add_check(
     checks.append(check)
 
 
+def _as_mapping(
+    value: object,
+    *,
+    artifact_name: str,
+    field_name: str,
+    checks: list[dict[str, object]],
+) -> dict[str, object]:
+    if isinstance(value, dict):
+        return value
+    _add_check(
+        checks,
+        name=f"{artifact_name}_{field_name}_object",
+        passed=False,
+        severity="error",
+        message=f"{artifact_name}.{field_name} must be a JSON object/dict",
+        observed=value,
+    )
+    return {}
+
+
 def _validate_schema_versions(
     checks: list[dict[str, object]],
     adapter_data: dict[str, object],
@@ -71,11 +91,17 @@ def _validate_artifact_identity(
     tokenizer_data: dict[str, object],
     engine_data: dict[str, object],
 ) -> None:
+    adapter_capabilities = _as_mapping(
+        adapter_data.get("capabilities"),
+        artifact_name="adapter_capabilities",
+        field_name="capabilities",
+        checks=checks,
+    )
     _add_check(
         checks,
         name="adapter_capabilities_shape",
         passed=(
-            isinstance(adapter_data.get("capabilities"), dict)
+            bool(adapter_capabilities)
             and adapter_data.get("schema_version") == "relaystack.adapter_capabilities.v0.1"
         ),
         severity="error",
@@ -139,9 +165,24 @@ def _validate_model_and_tokenizer_consistency(
     tokenizer_data: dict[str, object],
     engine_data: dict[str, object],
 ) -> None:
-    adapter_model_ref = adapter_data.get("model_ref") or {}
-    tokenizer_model_ref = tokenizer_data.get("model_ref") or {}
-    engine_model_ref = engine_data.get("model_ref") or {}
+    adapter_model_ref = _as_mapping(
+        adapter_data.get("model_ref"),
+        artifact_name="adapter_capabilities",
+        field_name="model_ref",
+        checks=checks,
+    )
+    tokenizer_model_ref = _as_mapping(
+        tokenizer_data.get("model_ref"),
+        artifact_name="tokenizer_span_probe",
+        field_name="model_ref",
+        checks=checks,
+    )
+    engine_model_ref = _as_mapping(
+        engine_data.get("model_ref"),
+        artifact_name="engine_metadata_probe",
+        field_name="model_ref",
+        checks=checks,
+    )
     adapter_model_id = adapter_model_ref.get("model_id")
     tokenizer_model_id = tokenizer_model_ref.get("model_id")
     engine_model_id = engine_model_ref.get("model_id")
@@ -189,9 +230,27 @@ def _validate_model_and_tokenizer_consistency(
         message="model_ref.local_path is observed for reference only in Phase 12-H",
         observed=local_paths,
     )
-    adapter_tokenizer = ((adapter_data.get("tokenizer_ref") or {}).get("tokenizer_name_or_path"))
-    tokenizer_tokenizer = ((tokenizer_data.get("tokenizer_ref") or {}).get("tokenizer_name_or_path"))
-    engine_tokenizer = ((engine_data.get("tokenizer_ref") or {}).get("tokenizer_name_or_path"))
+    adapter_tokenizer_ref = _as_mapping(
+        adapter_data.get("tokenizer_ref"),
+        artifact_name="adapter_capabilities",
+        field_name="tokenizer_ref",
+        checks=checks,
+    )
+    tokenizer_tokenizer_ref = _as_mapping(
+        tokenizer_data.get("tokenizer_ref"),
+        artifact_name="tokenizer_span_probe",
+        field_name="tokenizer_ref",
+        checks=checks,
+    )
+    engine_tokenizer_ref = _as_mapping(
+        engine_data.get("tokenizer_ref"),
+        artifact_name="engine_metadata_probe",
+        field_name="tokenizer_ref",
+        checks=checks,
+    )
+    adapter_tokenizer = adapter_tokenizer_ref.get("tokenizer_name_or_path")
+    tokenizer_tokenizer = tokenizer_tokenizer_ref.get("tokenizer_name_or_path")
+    engine_tokenizer = engine_tokenizer_ref.get("tokenizer_name_or_path")
     tokenizer_names = [adapter_tokenizer, tokenizer_tokenizer, engine_tokenizer]
     _add_check(
         checks,
@@ -204,9 +263,6 @@ def _validate_model_and_tokenizer_consistency(
         message="tokenizer_ref.tokenizer_name_or_path must match across adapter, tokenizer, and engine artifacts",
         observed=tokenizer_names,
     )
-    adapter_tokenizer_ref = adapter_data.get("tokenizer_ref") or {}
-    tokenizer_tokenizer_ref = tokenizer_data.get("tokenizer_ref") or {}
-    engine_tokenizer_ref = engine_data.get("tokenizer_ref") or {}
     for field_name in (
         "tokenizer_revision",
         "tokenizer_config_hash",
@@ -247,13 +303,31 @@ def _validate_safety_scope(
         "no_runtime_apply",
     )
     for flag_name in required_common_flags:
-        adapter_observed = (adapter_data.get("safety_scope") or {}).get(flag_name)
+        adapter_safety_scope = _as_mapping(
+            adapter_data.get("safety_scope"),
+            artifact_name="adapter_capabilities",
+            field_name="safety_scope",
+            checks=checks,
+        )
+        tokenizer_safety_scope = _as_mapping(
+            tokenizer_data.get("safety_scope"),
+            artifact_name="tokenizer_span_probe",
+            field_name="safety_scope",
+            checks=checks,
+        )
+        engine_safety_scope = _as_mapping(
+            engine_data.get("safety_scope"),
+            artifact_name="engine_metadata_probe",
+            field_name="safety_scope",
+            checks=checks,
+        )
+        adapter_observed = adapter_safety_scope.get(flag_name)
         if flag_name == "no_gpu_inspection" and adapter_observed is None:
             adapter_observed = (adapter_data.get("summary") or {}).get(flag_name)
         observed = {
             "adapter": adapter_observed,
-            "tokenizer": (tokenizer_data.get("safety_scope") or {}).get(flag_name),
-            "engine": (engine_data.get("safety_scope") or {}).get(flag_name),
+            "tokenizer": tokenizer_safety_scope.get(flag_name),
+            "engine": engine_safety_scope.get(flag_name),
         }
         _add_check(
             checks,
@@ -267,7 +341,12 @@ def _validate_safety_scope(
         ("tokenizer", tokenizer_data),
         ("engine", engine_data),
     ):
-        observed = (artifact_data.get("safety_scope") or {}).get(
+        observed = _as_mapping(
+            artifact_data.get("safety_scope"),
+            artifact_name=f"{artifact_name}_artifact",
+            field_name="safety_scope",
+            checks=checks,
+        ).get(
             "no_tokenizer_loading_required"
         )
         _add_check(
@@ -285,8 +364,18 @@ def _validate_no_apply_materialization(
     adapter_data: dict[str, object],
     engine_data: dict[str, object],
 ) -> None:
-    adapter_capabilities = adapter_data.get("capabilities") or {}
-    engine_capabilities = engine_data.get("capabilities_snapshot") or {}
+    adapter_capabilities = _as_mapping(
+        adapter_data.get("capabilities"),
+        artifact_name="adapter_capabilities",
+        field_name="capabilities",
+        checks=checks,
+    )
+    engine_capabilities = _as_mapping(
+        engine_data.get("capabilities_snapshot"),
+        artifact_name="engine_metadata_probe",
+        field_name="capabilities_snapshot",
+        checks=checks,
+    )
     _add_check(
         checks,
         name="adapter_supports_materialization_false",
@@ -328,9 +417,24 @@ def _validate_tokenizer_spans(
     engine_data: dict[str, object],
 ) -> None:
     spans = tokenizer_data.get("spans")
-    adapter_tokenizer_ref = adapter_data.get("tokenizer_ref") or {}
-    tokenizer_tokenizer_ref = tokenizer_data.get("tokenizer_ref") or {}
-    engine_tokenizer_ref = engine_data.get("tokenizer_ref") or {}
+    adapter_tokenizer_ref = _as_mapping(
+        adapter_data.get("tokenizer_ref"),
+        artifact_name="adapter_capabilities",
+        field_name="tokenizer_ref",
+        checks=checks,
+    )
+    tokenizer_tokenizer_ref = _as_mapping(
+        tokenizer_data.get("tokenizer_ref"),
+        artifact_name="tokenizer_span_probe",
+        field_name="tokenizer_ref",
+        checks=checks,
+    )
+    engine_tokenizer_ref = _as_mapping(
+        engine_data.get("tokenizer_ref"),
+        artifact_name="engine_metadata_probe",
+        field_name="tokenizer_ref",
+        checks=checks,
+    )
     _add_check(
         checks,
         name="tokenizer_span_count",
@@ -383,16 +487,21 @@ def _validate_tokenizer_spans(
             message="Each tokenizer span must remain tokenizer_scoped",
             observed=span.get("tokenizer_scoped"),
         )
-        lineage = span.get("lineage")
+        lineage = _as_mapping(
+            span.get("lineage"),
+            artifact_name=f"tokenizer_span_{index}",
+            field_name="lineage",
+            checks=checks,
+        )
         _add_check(
             checks,
             name=f"tokenizer_span_lineage_{index}",
-            passed=isinstance(lineage, dict),
+            passed=bool(lineage),
             severity="error",
             message="Each tokenizer span must include lineage mapping",
             observed=lineage,
         )
-        engine_block_ref = None if not isinstance(lineage, dict) else lineage.get("engine_block_ref")
+        engine_block_ref = lineage.get("engine_block_ref")
         _add_check(
             checks,
             name=f"tokenizer_span_engine_block_ref_{index}",
@@ -401,16 +510,21 @@ def _validate_tokenizer_spans(
             message="Tokenizer span lineage.engine_block_ref must remain null in Phase 12-H",
             observed=engine_block_ref,
         )
-        span_tokenizer_ref = span.get("tokenizer_ref")
+        span_tokenizer_ref = _as_mapping(
+            span.get("tokenizer_ref"),
+            artifact_name=f"tokenizer_span_{index}",
+            field_name="tokenizer_ref",
+            checks=checks,
+        )
         _add_check(
             checks,
             name=f"tokenizer_span_tokenizer_ref_present_{index}",
-            passed=isinstance(span_tokenizer_ref, dict),
+            passed=bool(span_tokenizer_ref),
             severity="error",
             message="Each tokenizer span must include tokenizer_ref",
             observed=span_tokenizer_ref,
         )
-        if not isinstance(span_tokenizer_ref, dict):
+        if not span_tokenizer_ref:
             continue
         for field_name in (
             "tokenizer_name_or_path",
@@ -443,7 +557,12 @@ def _validate_engine_metadata(
     checks: list[dict[str, object]],
     engine_data: dict[str, object],
 ) -> None:
-    engine_metadata = engine_data.get("engine_metadata") or {}
+    engine_metadata = _as_mapping(
+        engine_data.get("engine_metadata"),
+        artifact_name="engine_metadata_probe",
+        field_name="engine_metadata",
+        checks=checks,
+    )
     for field_name in (
         "model_loaded",
         "tokenizer_loaded",

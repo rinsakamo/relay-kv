@@ -570,3 +570,62 @@ def test_hf_adapter_readiness_report_rejects_non_object_input_artifacts(
             tmp_path,
             repo_root,
         )
+
+
+def test_hf_adapter_readiness_report_rejects_malformed_nested_mappings(
+    tmp_path: Path,
+) -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    invalid_cases = (
+        ("adapter_model_ref_bad", "adapter", ("model_ref",), "adapter_capabilities_model_ref_object"),
+        ("adapter_tokenizer_ref_bad", "adapter", ("tokenizer_ref",), "adapter_capabilities_tokenizer_ref_object"),
+        ("adapter_capabilities_bad", "adapter", ("capabilities",), "adapter_capabilities_capabilities_object"),
+        ("tokenizer_span_lineage_bad", "tokenizer", ("spans", 0, "lineage"), "tokenizer_span_0_lineage_object"),
+        ("engine_metadata_bad", "engine", ("engine_metadata",), "engine_metadata_probe_engine_metadata_object"),
+        ("engine_capabilities_snapshot_bad", "engine", ("capabilities_snapshot",), "engine_metadata_probe_capabilities_snapshot_object"),
+    )
+
+    for _, target_kind, path_spec, expected_failed_name in invalid_cases:
+        adapter_path, tokenizer_path, engine_path = _build_happy_path_artifacts(
+            tmp_path,
+            repo_root,
+        )
+        payload_map = {
+            "adapter": json.loads(adapter_path.read_text(encoding="utf-8")),
+            "tokenizer": json.loads(tokenizer_path.read_text(encoding="utf-8")),
+            "engine": json.loads(engine_path.read_text(encoding="utf-8")),
+        }
+        target_payload = payload_map[target_kind]
+        cursor = target_payload
+        for key in path_spec[:-1]:
+            cursor = cursor[key]
+        cursor[path_spec[-1]] = "bad"
+        _write_json(adapter_path, payload_map["adapter"])
+        _write_json(tokenizer_path, payload_map["tokenizer"])
+        _write_json(engine_path, payload_map["engine"])
+        output_path = tmp_path / "relaystack_hf_adapter_readiness_report.json"
+        if output_path.exists():
+            output_path.unlink()
+
+        result = _run(
+            repo_root,
+            "scripts/run_hf_adapter_readiness_report.py",
+            "--adapter-capabilities",
+            str(adapter_path),
+            "--tokenizer-span-probe",
+            str(tokenizer_path),
+            "--engine-metadata-probe",
+            str(engine_path),
+            "--output",
+            str(output_path),
+        )
+
+        assert result.returncode == 1
+        assert output_path.exists()
+        loaded = json.loads(output_path.read_text(encoding="utf-8"))
+        assert loaded["summary"]["ok"] is False
+        failed_names = {
+            check["name"] for check in loaded["checks"] if not check["passed"]
+        }
+        assert expected_failed_name in failed_names
+        assert "AttributeError" not in f"{result.stdout}\n{result.stderr}"
