@@ -8,19 +8,22 @@ Its job is to decide what memories, retrieved facts, summaries, and structured s
 
 RelayMEM should be treated as a **hierarchical memory and context assembly layer**, not as a single RAG adapter. RAG-like retrieval is one possible backend capability, but RelayMEM owns the higher-level decision about which memory items should be assembled into active context under a token and latency budget.
 
-## Boundary with RelayKV
+## Boundary with RelayCTX and RelayKV
 
 The boundary is intentionally simple:
 
-- **RelayMEM** decides what memories enter active context
-- **RelayKV** decides how active-context KV blocks are routed under a VRAM budget
+- **RelayMEM** decides what memories should be proposed for active context.
+- **RelayCTX** decides how selected context items are packed, compressed, attributed, and token-span mapped before prefill.
+- **RelayKV** decides how active-context KV blocks are routed under a residual VRAM budget after prefill.
 
-RelayMEM operates outside the model's currently active context window. RelayKV operates inside the active context that is already admitted to the model.
+RelayMEM operates outside the model's currently active context window. RelayCTX is the context-transform boundary between memory items and token spans. RelayKV operates inside the active context that is already admitted to the model.
 
 The intended long-term data boundary is:
 
 ```text
 RelayMEMContextItem
+  ↓
+RelayCTXContextSpan
   ↓
 token_span
   ↓
@@ -29,7 +32,9 @@ logical_block_id
 RelayKVBlockMeta
 ```
 
-RelayMEM may provide hints such as memory source, evidence role, or semantic anchor priority. RelayKV should treat those as policy inputs rather than as mandatory routing decisions.
+RelayMEM may provide hints such as memory source, evidence role, or semantic anchor priority. RelayCTX should preserve these as source-attribution metadata where possible. RelayKV should treat those hints as policy inputs rather than as mandatory routing decisions.
+
+See [relaystack_architecture.md](relaystack_architecture.md) for the broader RelayStack core boundary, adapter boundary, runtime modes, and fallback/degrade terminology.
 
 ## Components
 
@@ -40,30 +45,35 @@ RelayMEM is expected to include the following component types:
 - **Summary Memory**: compressed summaries of prior context or prior sessions
 - **RAG Memory**: retrieved external knowledge and document-grounded evidence
 - **Structured Memory**: key-value facts, tool state, schedules, settings, and explicit records
-- **Context Assembly**: the layer that assembles active-context input from retrieved and summarized memory pieces
+- **Context Assembly**: the layer that proposes active-context input from retrieved and summarized memory pieces
 - **KV Checkpoint Metadata**: metadata about reusable prefixes, cached spans, or checkpointed context segments that may help future runtime decisions
 
 These memory classes are not all equivalent. For example, Profile Memory and selected evidence summaries may become semantic anchor hints, while detailed episode fragments or RAG chunks may become retrieved context candidates.
 
 ## RelayStack responsibility split
 
-RelayStack is not a RAG replacement. The responsibility split is:
+RelayStack is not a RAG replacement and is not an agent/tool runtime. The responsibility split is:
 
 ```text
 Retrieval backend
   finds candidate records, documents, chunks, or evidence chains
 
 RelayMEM
-  ranks, budgets, and assembles selected items into active context
+  ranks, budgets, and proposes selected items for active context
+
+RelayCTX
+  packs, compresses, attributes, and token-span maps selected context items
 
 Tokenizer / model prefill
   converts selected context into token spans and KV blocks
 
 RelayKV
-  manages the decode-time KV working set under a fixed VRAM budget
+  manages the decode-time KV working set under a fixed residual VRAM budget
 ```
 
-This split keeps RelayMEM focused on context-before-KV decisions and RelayKV focused on post-prefill KV working-set control.
+This split keeps RelayMEM focused on context-before-token decisions, RelayCTX focused on context-before-KV transformation, and RelayKV focused on post-prefill KV working-set control.
+
+Tool execution, approval, UI, product-specific workflow orchestration, shell/GitHub/Codex/browser actions, and rollback/retry semantics should live outside RelayStack Core. RelayMEM may consume records produced by tools, but RelayMEM should not execute tools itself.
 
 ## Pluggable RAG Backends
 
@@ -74,7 +84,7 @@ That means RelayMEM is responsible for questions such as:
 - what gets indexed
 - what gets summarized
 - what gets promoted to profile, episode, or structured memory
-- what gets assembled back into active context
+- what gets proposed for active context
 
 But the specific RAG backend used to retrieve evidence can be replaced depending on latency, quality, and deployment needs.
 
@@ -100,7 +110,7 @@ The default backend contract is:
 - **Engine-agnostic**: the backend must not depend on SGLang, vLLM, Hugging Face runtime internals, KV pools, attention backends, or scheduler state.
 - **Latency-tiered**: low-latency recall and deeper recall should be separable so the live path can use a cheap backend while deeper indexing or evidence-chain retrieval runs outside the critical path.
 
-Optional GPU use is allowed only as an accelerator for clearly bounded tasks such as embedding generation, reranking, summarization, or compression. Such use should remain disableable and must not be a hard requirement for the backend. Under VRAM pressure, RelayStack should be able to fall back to a CPU-only memory path rather than competing with RelayKV's residual VRAM budget.
+Optional GPU use is allowed only as an accelerator for clearly bounded tasks such as embedding generation, reranking, summarization, or compression. Such use should remain disableable and must not be a hard requirement for the backend. Under VRAM pressure, RelayStack should be able to use a CPU-only memory path rather than competing with RelayKV's residual VRAM budget.
 
 Backend capability metadata should eventually make these properties explicit, for example:
 
@@ -118,12 +128,12 @@ RelayMEMBackendCapabilities
   supports_compaction: true | false
 ```
 
-GBrain fits this model as a possible long-term memory backend candidate when used behind the RelayMEM backend boundary. It should not replace RelayMEM itself. RelayMEM should continue to own memory policy, context assembly, conflict handling, and the boundary to RelayKV.
+GBrain fits this model as a possible long-term memory backend candidate when used behind the RelayMEM backend boundary. It should not replace RelayMEM itself. RelayMEM should continue to own memory policy, context assembly, conflict handling, and the boundary to RelayCTX and RelayKV.
 
 ### Runtime use
 
 - **`LIVE_LOW_LATENCY`**: fast retrieval only
-- **`MEMORY_RECALL_MODE`**: deeper retrieval, possibly user-gated
+- **`MEMORY_RECALL_MODE`**: deeper retrieval, possibly application-gated
 - **`POST_STREAM_INDEX_MODE`**: offline indexing and refinement after the live interaction path
 
 Under this framing, a NeocorRAG-style evidence-chain retrieval flow is one possible **Deep Recall** backend candidate. It should not be treated as the default every-turn RAG path for RelayMEM.
