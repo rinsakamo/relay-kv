@@ -39,6 +39,12 @@ def _matches_local_path_in_readiness_scope(expected: object, observed: object) -
     return expected == observed
 
 
+def _matches_tokenizer_revision_in_readiness_scope(expected: object, observed: object) -> bool:
+    if expected is None:
+        return observed is None
+    return expected == observed
+
+
 def _compact_error(exc: Exception) -> str:
     return f"{exc.__class__.__name__}: {exc}"
 
@@ -361,6 +367,7 @@ def _build_probe_artifact(
     warnings: list[str],
     blocked_reason: str | None,
     requested_local_path: str | None,
+    requested_tokenizer_revision: str | None,
 ) -> dict[str, object]:
     readiness_summary = _as_mapping(readiness_data.get("summary"))
     readiness_ref = {
@@ -408,9 +415,9 @@ def _build_probe_artifact(
         "readiness_tokenizer_ref_match": (
             tokenizer_ref.get("tokenizer_name_or_path")
             == adapter_tokenizer_ref.get("tokenizer_name_or_path")
-            and _matches_when_present(
+            and _matches_tokenizer_revision_in_readiness_scope(
                 adapter_tokenizer_ref.get("tokenizer_revision"),
-                tokenizer_ref.get("tokenizer_revision"),
+                requested_tokenizer_revision,
             )
             and _matches_when_present(
                 adapter_tokenizer_ref.get("tokenizer_config_hash"),
@@ -420,9 +427,9 @@ def _build_probe_artifact(
                 tokenizer_span_ref.get("tokenizer_name_or_path"),
                 tokenizer_ref.get("tokenizer_name_or_path"),
             )
-            and _matches_when_present(
+            and _matches_tokenizer_revision_in_readiness_scope(
                 tokenizer_span_ref.get("tokenizer_revision"),
-                tokenizer_ref.get("tokenizer_revision"),
+                requested_tokenizer_revision,
             )
             and _matches_when_present(
                 tokenizer_span_ref.get("tokenizer_config_hash"),
@@ -432,9 +439,9 @@ def _build_probe_artifact(
                 engine_tokenizer_ref.get("tokenizer_name_or_path"),
                 tokenizer_ref.get("tokenizer_name_or_path"),
             )
-            and _matches_when_present(
+            and _matches_tokenizer_revision_in_readiness_scope(
                 engine_tokenizer_ref.get("tokenizer_revision"),
-                tokenizer_ref.get("tokenizer_revision"),
+                requested_tokenizer_revision,
             )
             and _matches_when_present(
                 engine_tokenizer_ref.get("tokenizer_config_hash"),
@@ -568,6 +575,7 @@ def build_hf_tokenizer_config_probe_payload(
             warnings=[],
             blocked_reason=blocked_reason,
             requested_local_path=local_path,
+            requested_tokenizer_revision=tokenizer_revision,
         )
         return artifact, 1
 
@@ -675,6 +683,7 @@ def build_hf_tokenizer_config_probe_payload(
             warnings=warnings,
             blocked_reason=blocked_reason,
             requested_local_path=local_path,
+            requested_tokenizer_revision=tokenizer_revision,
         )
         return artifact, 1
 
@@ -751,6 +760,7 @@ def build_hf_tokenizer_config_probe_payload(
         warnings=warnings,
         blocked_reason=None,
         requested_local_path=local_path,
+        requested_tokenizer_revision=tokenizer_revision,
     )
     return artifact, (0 if artifact["summary"]["ok"] is True else 1)
 
