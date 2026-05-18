@@ -424,6 +424,189 @@ def test_hf_adapter_readiness_report_unsafe_apply_claim_fails(tmp_path: Path) ->
     assert "adapter_supports_apply_false" in failed_names
 
 
+def test_hf_adapter_readiness_report_adapter_missing_tokenizer_span_probe_support_fails(
+    tmp_path: Path,
+) -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    adapter_path, tokenizer_path, engine_path = _build_happy_path_artifacts(tmp_path, repo_root)
+    adapter_payload = json.loads(adapter_path.read_text(encoding="utf-8"))
+    adapter_payload["capabilities"]["supports_tokenizer_span_probe"] = False
+    _write_json(adapter_path, adapter_payload)
+    output_path = tmp_path / "relaystack_hf_adapter_readiness_report.json"
+
+    result = _run(
+        repo_root,
+        "scripts/run_hf_adapter_readiness_report.py",
+        "--adapter-capabilities",
+        str(adapter_path),
+        "--tokenizer-span-probe",
+        str(tokenizer_path),
+        "--engine-metadata-probe",
+        str(engine_path),
+        "--output",
+        str(output_path),
+    )
+
+    assert result.returncode == 1
+    loaded = json.loads(output_path.read_text(encoding="utf-8"))
+    assert loaded["summary"]["ok"] is False
+    assert loaded["readiness"]["ready_for_real_tokenizer_probe"] is False
+    failed_names = {
+        check["name"] for check in loaded["checks"] if not check["passed"]
+    }
+    assert "adapter_supports_tokenizer_span_probe_true" in failed_names
+
+
+def test_hf_adapter_readiness_report_adapter_missing_engine_metadata_probe_support_fails(
+    tmp_path: Path,
+) -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    adapter_path, tokenizer_path, engine_path = _build_happy_path_artifacts(tmp_path, repo_root)
+    adapter_payload = json.loads(adapter_path.read_text(encoding="utf-8"))
+    adapter_payload["capabilities"]["supports_engine_metadata_probe"] = False
+    _write_json(adapter_path, adapter_payload)
+    output_path = tmp_path / "relaystack_hf_adapter_readiness_report.json"
+
+    result = _run(
+        repo_root,
+        "scripts/run_hf_adapter_readiness_report.py",
+        "--adapter-capabilities",
+        str(adapter_path),
+        "--tokenizer-span-probe",
+        str(tokenizer_path),
+        "--engine-metadata-probe",
+        str(engine_path),
+        "--output",
+        str(output_path),
+    )
+
+    assert result.returncode == 1
+    loaded = json.loads(output_path.read_text(encoding="utf-8"))
+    assert loaded["summary"]["ok"] is False
+    assert loaded["readiness"]["ready_for_model_config_probe"] is False
+    failed_names = {
+        check["name"] for check in loaded["checks"] if not check["passed"]
+    }
+    assert "adapter_supports_engine_metadata_probe_true" in failed_names
+
+
+def test_hf_adapter_readiness_report_engine_missing_tokenizer_span_probe_support_fails(
+    tmp_path: Path,
+) -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    adapter_path, tokenizer_path, engine_path = _build_happy_path_artifacts(tmp_path, repo_root)
+    engine_payload = json.loads(engine_path.read_text(encoding="utf-8"))
+    engine_payload["capabilities_snapshot"]["supports_tokenizer_span_probe"] = False
+    _write_json(engine_path, engine_payload)
+    output_path = tmp_path / "relaystack_hf_adapter_readiness_report.json"
+
+    result = _run(
+        repo_root,
+        "scripts/run_hf_adapter_readiness_report.py",
+        "--adapter-capabilities",
+        str(adapter_path),
+        "--tokenizer-span-probe",
+        str(tokenizer_path),
+        "--engine-metadata-probe",
+        str(engine_path),
+        "--output",
+        str(output_path),
+    )
+
+    assert result.returncode == 1
+    loaded = json.loads(output_path.read_text(encoding="utf-8"))
+    assert loaded["summary"]["ok"] is False
+    failed_names = {
+        check["name"] for check in loaded["checks"] if not check["passed"]
+    }
+    assert "engine_supports_tokenizer_span_probe_true" in failed_names
+
+
+def test_hf_adapter_readiness_report_engine_missing_engine_metadata_probe_support_fails(
+    tmp_path: Path,
+) -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    adapter_path, tokenizer_path, engine_path = _build_happy_path_artifacts(tmp_path, repo_root)
+    engine_payload = json.loads(engine_path.read_text(encoding="utf-8"))
+    engine_payload["capabilities_snapshot"]["supports_engine_metadata_probe"] = False
+    _write_json(engine_path, engine_payload)
+    output_path = tmp_path / "relaystack_hf_adapter_readiness_report.json"
+
+    result = _run(
+        repo_root,
+        "scripts/run_hf_adapter_readiness_report.py",
+        "--adapter-capabilities",
+        str(adapter_path),
+        "--tokenizer-span-probe",
+        str(tokenizer_path),
+        "--engine-metadata-probe",
+        str(engine_path),
+        "--output",
+        str(output_path),
+    )
+
+    assert result.returncode == 1
+    loaded = json.loads(output_path.read_text(encoding="utf-8"))
+    assert loaded["summary"]["ok"] is False
+    failed_names = {
+        check["name"] for check in loaded["checks"] if not check["passed"]
+    }
+    assert "engine_supports_engine_metadata_probe_true" in failed_names
+
+
+def test_hf_adapter_readiness_report_missing_or_non_bool_probe_support_fails(
+    tmp_path: Path,
+) -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    invalid_cases = (
+        ("adapter_missing", "adapter", "supports_tokenizer_span_probe", None),
+        ("adapter_non_bool", "adapter", "supports_tokenizer_span_probe", "yes"),
+        ("engine_missing", "engine", "supports_tokenizer_span_probe", None),
+        ("engine_non_bool", "engine", "supports_tokenizer_span_probe", "yes"),
+    )
+
+    for _, target_kind, field_name, value in invalid_cases:
+        adapter_path, tokenizer_path, engine_path = _build_happy_path_artifacts(tmp_path, repo_root)
+        adapter_payload = json.loads(adapter_path.read_text(encoding="utf-8"))
+        engine_payload = json.loads(engine_path.read_text(encoding="utf-8"))
+        if target_kind == "adapter":
+            target = adapter_payload["capabilities"]
+            if value is None:
+                del target[field_name]
+            else:
+                target[field_name] = value
+        else:
+            target = engine_payload["capabilities_snapshot"]
+            if value is None:
+                del target[field_name]
+            else:
+                target[field_name] = value
+        _write_json(adapter_path, adapter_payload)
+        _write_json(engine_path, engine_payload)
+        output_path = tmp_path / "relaystack_hf_adapter_readiness_report.json"
+        if output_path.exists():
+            output_path.unlink()
+
+        result = _run(
+            repo_root,
+            "scripts/run_hf_adapter_readiness_report.py",
+            "--adapter-capabilities",
+            str(adapter_path),
+            "--tokenizer-span-probe",
+            str(tokenizer_path),
+            "--engine-metadata-probe",
+            str(engine_path),
+            "--output",
+            str(output_path),
+        )
+
+        assert result.returncode == 1
+        assert output_path.exists()
+        loaded = json.loads(output_path.read_text(encoding="utf-8"))
+        assert loaded["summary"]["ok"] is False
+        assert "AttributeError" not in f"{result.stdout}\n{result.stderr}"
+
+
 def test_hf_adapter_readiness_report_tokenizer_revision_mismatch_fails(
     tmp_path: Path,
 ) -> None:

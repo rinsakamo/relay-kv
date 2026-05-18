@@ -423,6 +423,36 @@ def _validate_no_apply_materialization(
         field_name="capabilities_snapshot",
         checks=checks,
     )
+    for field_name, artifact_name, observed in (
+        (
+            "supports_tokenizer_span_probe",
+            "adapter",
+            adapter_capabilities.get("supports_tokenizer_span_probe"),
+        ),
+        (
+            "supports_engine_metadata_probe",
+            "adapter",
+            adapter_capabilities.get("supports_engine_metadata_probe"),
+        ),
+        (
+            "supports_tokenizer_span_probe",
+            "engine",
+            engine_capabilities.get("supports_tokenizer_span_probe"),
+        ),
+        (
+            "supports_engine_metadata_probe",
+            "engine",
+            engine_capabilities.get("supports_engine_metadata_probe"),
+        ),
+    ):
+        _add_check(
+            checks,
+            name=f"{artifact_name}_{field_name}_true",
+            passed=observed is True,
+            severity="error",
+            message=f"{artifact_name} artifact must set {field_name} to true for Phase 12-H readiness",
+            observed=observed,
+        )
     _add_check(
         checks,
         name="adapter_supports_materialization_false",
