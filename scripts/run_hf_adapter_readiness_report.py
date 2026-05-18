@@ -406,6 +406,33 @@ def _validate_safety_scope(
         )
 
 
+def _validate_input_summaries(
+    checks: list[dict[str, object]],
+    adapter_data: dict[str, object],
+    tokenizer_data: dict[str, object],
+    engine_data: dict[str, object],
+) -> None:
+    for artifact_name, artifact_data in (
+        ("adapter_capabilities", adapter_data),
+        ("tokenizer_span_probe", tokenizer_data),
+        ("engine_metadata_probe", engine_data),
+    ):
+        summary = _as_mapping(
+            artifact_data.get("summary"),
+            artifact_name=artifact_name,
+            field_name="summary",
+            checks=checks,
+        )
+        _add_check(
+            checks,
+            name=f"{artifact_name}_summary_ok_true",
+            passed=summary.get("ok") is True,
+            severity="error",
+            message=f"{artifact_name}.summary.ok must be true before Phase 12-H readiness can pass",
+            observed=summary.get("ok"),
+        )
+
+
 def _validate_no_apply_materialization(
     checks: list[dict[str, object]],
     adapter_data: dict[str, object],
@@ -702,6 +729,7 @@ def build_hf_adapter_readiness_report(
     _validate_adapter_and_runtime_consistency(checks, adapter_data, tokenizer_data, engine_data)
     _validate_model_and_tokenizer_consistency(checks, adapter_data, tokenizer_data, engine_data)
     _validate_safety_scope(checks, adapter_data, tokenizer_data, engine_data)
+    _validate_input_summaries(checks, adapter_data, tokenizer_data, engine_data)
     _validate_no_apply_materialization(checks, adapter_data, engine_data)
     _validate_tokenizer_spans(checks, adapter_data, tokenizer_data, engine_data)
     _validate_engine_metadata(checks, engine_data)
