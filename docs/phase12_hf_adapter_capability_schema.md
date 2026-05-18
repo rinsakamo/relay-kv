@@ -259,6 +259,35 @@ This schema should align with:
 
 The HF adapter capability artifact should not replace those contracts. It is a target-specific declaration of what the HF prototype adapter can safely provide.
 
+## Phase 12-I CLI
+
+The Phase 12-I tokenizer/config metadata probe is:
+
+```bash
+python scripts/run_hf_tokenizer_config_probe.py \
+  --readiness-report /tmp/relaystack_hf_adapter_readiness_report.json \
+  --output /tmp/relaystack_hf_tokenizer_config_probe.json \
+  --local-files-only
+```
+
+This remains tokenizer/config metadata only. It must not load model weights, inspect GPU state, materialize KV, connect attention, change scheduler state, or apply RelayKV.
+
+## Phase 12-J CLI
+
+The Phase 12-J five-artifact acceptance report is:
+
+```bash
+python scripts/run_hf_phase12_chain_acceptance_report.py \
+  --adapter-capabilities /tmp/relaystack_adapter_capabilities.json \
+  --tokenizer-span-probe /tmp/relaystack_tokenizer_span_probe.json \
+  --engine-metadata-probe /tmp/relaystack_engine_metadata_probe.json \
+  --readiness-report /tmp/relaystack_hf_adapter_readiness_report.json \
+  --tokenizer-config-probe /tmp/relaystack_hf_tokenizer_config_probe.json \
+  --output /tmp/relaystack_hf_phase12_chain_acceptance_report.json
+```
+
+This report validates only metadata/report-chain completeness, consistency, acceptance, and safety-scope constraints. It does not load tokenizer/config/model state by itself and does not change any runtime path.
+
 ## Phase 12-C handoff
 
 Phase 12-C can implement or document the first no-apply smoke artifact around this schema.
