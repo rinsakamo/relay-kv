@@ -21,6 +21,18 @@ def _as_mapping(value: object) -> dict[str, object]:
     return value if isinstance(value, dict) else {}
 
 
+def _matches_when_present(expected: object, observed: object) -> bool:
+    if expected is None:
+        return True
+    return expected == observed
+
+
+def _matches_when_both_present(expected: object, observed: object) -> bool:
+    if expected is None or observed is None:
+        return True
+    return expected == observed
+
+
 def _compact_error(exc: Exception) -> str:
     return f"{exc.__class__.__name__}: {exc}"
 
@@ -360,6 +372,7 @@ def _build_probe_artifact(
     adapter_model_ref = _as_mapping((adapter_data or {}).get("model_ref"))
     adapter_tokenizer_ref = _as_mapping((adapter_data or {}).get("tokenizer_ref"))
     tokenizer_span_ref = _as_mapping((tokenizer_data or {}).get("tokenizer_ref"))
+    engine_tokenizer_ref = _as_mapping((engine_data or {}).get("tokenizer_ref"))
     span_list = (tokenizer_data or {}).get("spans")
     sample_span_token_count_available = (
         isinstance(span_list, list)
@@ -380,13 +393,46 @@ def _build_probe_artifact(
                 model_ref.get("model_revision") is None
                 or model_ref.get("model_revision") == adapter_model_ref.get("model_revision")
             )
+            and _matches_when_present(
+                adapter_model_ref.get("local_path"),
+                model_ref.get("local_path"),
+            )
         ),
         "readiness_tokenizer_ref_match": (
             tokenizer_ref.get("tokenizer_name_or_path")
-            in {
-                adapter_tokenizer_ref.get("tokenizer_name_or_path"),
+            == adapter_tokenizer_ref.get("tokenizer_name_or_path")
+            and _matches_when_present(
+                adapter_tokenizer_ref.get("tokenizer_revision"),
+                tokenizer_ref.get("tokenizer_revision"),
+            )
+            and _matches_when_present(
+                adapter_tokenizer_ref.get("tokenizer_config_hash"),
+                tokenizer_ref.get("tokenizer_config_hash"),
+            )
+            and _matches_when_present(
                 tokenizer_span_ref.get("tokenizer_name_or_path"),
-            }
+                tokenizer_ref.get("tokenizer_name_or_path"),
+            )
+            and _matches_when_present(
+                tokenizer_span_ref.get("tokenizer_revision"),
+                tokenizer_ref.get("tokenizer_revision"),
+            )
+            and _matches_when_present(
+                tokenizer_span_ref.get("tokenizer_config_hash"),
+                tokenizer_ref.get("tokenizer_config_hash"),
+            )
+            and _matches_when_present(
+                engine_tokenizer_ref.get("tokenizer_name_or_path"),
+                tokenizer_ref.get("tokenizer_name_or_path"),
+            )
+            and _matches_when_present(
+                engine_tokenizer_ref.get("tokenizer_revision"),
+                tokenizer_ref.get("tokenizer_revision"),
+            )
+            and _matches_when_present(
+                engine_tokenizer_ref.get("tokenizer_config_hash"),
+                tokenizer_ref.get("tokenizer_config_hash"),
+            )
         ),
         "sample_span_token_count_available": sample_span_token_count_available,
         "config_attention_type_hint": config_probe.get("attention_type_hint", "unknown"),
