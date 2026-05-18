@@ -393,6 +393,10 @@ def _build_probe_artifact(
         "kv_head_group_count": config_probe.get("kv_head_group_count"),
         "context_window_candidate": context_window_candidate,
     }
+    if consistency["readiness_model_ref_match"] is not True:
+        errors.append("model_ref does not match readiness-validated adapter scope")
+    if consistency["readiness_tokenizer_ref_match"] is not True:
+        errors.append("tokenizer_ref does not match readiness-validated adapter scope")
     ok = len(errors) == 0
     readiness_flags = _as_mapping(readiness_data.get("readiness"))
     return {

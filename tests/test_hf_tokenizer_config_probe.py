@@ -259,6 +259,117 @@ def test_hf_tokenizer_config_probe_fake_load_success(tmp_path: Path) -> None:
     assert loaded["consistency"]["kv_head_group_count"] == 4
 
 
+def test_hf_tokenizer_config_probe_model_id_override_mismatch_fails_in_skip_mode(
+    tmp_path: Path,
+) -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    _, _, _, readiness_path = _build_happy_path_artifacts(tmp_path, repo_root)
+    output_path = tmp_path / "relaystack_hf_tokenizer_config_probe.json"
+
+    result = _run(
+        repo_root,
+        "scripts/run_hf_tokenizer_config_probe.py",
+        "--readiness-report",
+        str(readiness_path),
+        "--output",
+        str(output_path),
+        "--skip-tokenizer-load",
+        "--skip-config-load",
+        "--model-id",
+        "different/model",
+    )
+
+    assert result.returncode == 1
+    assert output_path.exists()
+    loaded = json.loads(output_path.read_text(encoding="utf-8"))
+    assert loaded["summary"]["ok"] is False
+    assert loaded["consistency"]["readiness_model_ref_match"] is False
+    assert loaded["summary"]["ready_for_next_metadata_step"] is False
+    assert any("model_ref" in note for note in loaded["notes"])
+
+
+def test_hf_tokenizer_config_probe_tokenizer_override_mismatch_fails_in_skip_mode(
+    tmp_path: Path,
+) -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    _, _, _, readiness_path = _build_happy_path_artifacts(tmp_path, repo_root)
+    output_path = tmp_path / "relaystack_hf_tokenizer_config_probe.json"
+
+    result = _run(
+        repo_root,
+        "scripts/run_hf_tokenizer_config_probe.py",
+        "--readiness-report",
+        str(readiness_path),
+        "--output",
+        str(output_path),
+        "--skip-tokenizer-load",
+        "--skip-config-load",
+        "--tokenizer-name-or-path",
+        "different/tokenizer",
+    )
+
+    assert result.returncode == 1
+    loaded = json.loads(output_path.read_text(encoding="utf-8"))
+    assert loaded["summary"]["ok"] is False
+    assert loaded["consistency"]["readiness_tokenizer_ref_match"] is False
+
+
+def test_hf_tokenizer_config_probe_matching_overrides_still_pass(
+    tmp_path: Path,
+) -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    _, _, _, readiness_path = _build_happy_path_artifacts(tmp_path, repo_root)
+    output_path = tmp_path / "relaystack_hf_tokenizer_config_probe.json"
+
+    result = _run(
+        repo_root,
+        "scripts/run_hf_tokenizer_config_probe.py",
+        "--readiness-report",
+        str(readiness_path),
+        "--output",
+        str(output_path),
+        "--skip-tokenizer-load",
+        "--skip-config-load",
+        "--model-id",
+        "Qwen/Qwen2.5-Coder-7B-Instruct-AWQ",
+        "--tokenizer-name-or-path",
+        "Qwen/Qwen2.5-Coder-7B-Instruct-AWQ",
+    )
+
+    assert result.returncode == 0, result.stderr
+    loaded = json.loads(output_path.read_text(encoding="utf-8"))
+    assert loaded["summary"]["ok"] is True
+
+
+def test_hf_tokenizer_config_probe_fake_load_success_with_mismatch_still_fails(
+    tmp_path: Path,
+) -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    _, _, _, readiness_path = _build_happy_path_artifacts(tmp_path, repo_root)
+    output_path = tmp_path / "relaystack_hf_tokenizer_config_probe.json"
+    fake_root = _write_fake_transformers(tmp_path / "fake_py")
+
+    result = _run(
+        repo_root,
+        "scripts/run_hf_tokenizer_config_probe.py",
+        "--readiness-report",
+        str(readiness_path),
+        "--output",
+        str(output_path),
+        "--local-files-only",
+        "--model-id",
+        "different/model",
+        extra_pythonpath=fake_root,
+    )
+
+    assert result.returncode == 1
+    loaded = json.loads(output_path.read_text(encoding="utf-8"))
+    assert loaded["summary"]["ok"] is False
+    assert loaded["tokenizer_probe"]["loaded"] is True
+    assert loaded["config_probe"]["loaded"] is True
+    assert loaded["consistency"]["readiness_model_ref_match"] is False
+
+
 def test_hf_tokenizer_config_probe_fake_tokenizer_failure(tmp_path: Path) -> None:
     repo_root = Path(__file__).resolve().parents[1]
     _, _, _, readiness_path = _build_happy_path_artifacts(tmp_path, repo_root)
