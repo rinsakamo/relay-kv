@@ -215,16 +215,20 @@ Phase 12:
   notes/devlog_2026-05-17_phase12_hf_metadata_probes_ja.md
   Phase 12-H: completed HF adapter readiness report in
   scripts/run_hf_adapter_readiness_report.py
+  Phase 12-I: completed HF tokenizer/config-backed metadata probe in
+  scripts/run_hf_tokenizer_config_probe.py
   Artifacts:
     - relaystack_adapter_capabilities.json
     - relaystack_tokenizer_span_probe.json
     - relaystack_engine_metadata_probe.json
     - relaystack_hf_adapter_readiness_report.json
+    - relaystack_hf_tokenizer_config_probe.json
   Use HF as the first concrete runtime path to validate the Core contracts and minimal OpenAI-compatible boundary without adding scheduler, attention, or KV-pool mutation by default. SGLang remains the next practical OpenAI-compatible runtime target after V0.1. vLLM remains a post-V0.1 adapter target and should not broaden the V0.1 implementation scope.
-  Scope: no-model/no-GPU/no-tokenizer-load metadata readiness report only through Phase 12-H. No runtime adapter,
-  model loading, tokenizer loading, KV materialization, attention connection, scheduler path, or KV-pool mutation is changed.
+  Scope: tokenizer/config metadata probe only through Phase 12-I. No runtime adapter,
+  model loading of weights, GPU inspection, KV materialization, attention connection, scheduler path, or KV-pool mutation is changed.
+  Phase 12-I may load tokenizer/config metadata only, behind the existing readiness gate.
   Next likely implementation step:
-    - first real tokenizer/config probe behind the existing readiness/safety checks
+    - tokenizer/config-backed checkpoint devlog or next HF metadata consolidation step
 
 Phase 13:
   Safe materialization / shadow attention compare
