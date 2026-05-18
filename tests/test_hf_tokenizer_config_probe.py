@@ -441,6 +441,104 @@ def test_hf_tokenizer_config_probe_matching_local_path_override_passes(
     assert loaded["summary"]["ok"] is True
 
 
+def test_hf_tokenizer_config_probe_local_path_supplied_without_readiness_scope_fails(
+    tmp_path: Path,
+) -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    _, _, _, readiness_path = _build_happy_path_artifacts(tmp_path, repo_root)
+    output_path = tmp_path / "relaystack_hf_tokenizer_config_probe.json"
+
+    result = _run(
+        repo_root,
+        "scripts/run_hf_tokenizer_config_probe.py",
+        "--readiness-report",
+        str(readiness_path),
+        "--output",
+        str(output_path),
+        "--skip-tokenizer-load",
+        "--skip-config-load",
+        "--local-path",
+        "/tmp/model-x",
+    )
+
+    assert result.returncode == 1
+    loaded = json.loads(output_path.read_text(encoding="utf-8"))
+    assert loaded["summary"]["ok"] is False
+    assert loaded["consistency"]["readiness_model_ref_match"] is False
+    assert any("model_ref" in note for note in loaded["notes"])
+
+
+def test_hf_tokenizer_config_probe_no_local_path_without_readiness_scope_passes(
+    tmp_path: Path,
+) -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    _, _, _, readiness_path = _build_happy_path_artifacts(tmp_path, repo_root)
+    output_path = tmp_path / "relaystack_hf_tokenizer_config_probe.json"
+
+    result = _run(
+        repo_root,
+        "scripts/run_hf_tokenizer_config_probe.py",
+        "--readiness-report",
+        str(readiness_path),
+        "--output",
+        str(output_path),
+        "--skip-tokenizer-load",
+        "--skip-config-load",
+    )
+
+    assert result.returncode == 0, result.stderr
+    loaded = json.loads(output_path.read_text(encoding="utf-8"))
+    assert loaded["summary"]["ok"] is True
+
+
+def test_hf_tokenizer_config_probe_missing_local_path_with_readiness_scope_fails(
+    tmp_path: Path,
+) -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    adapter_path, tokenizer_path, engine_path, readiness_path = _build_happy_path_artifacts(
+        tmp_path,
+        repo_root,
+    )
+    adapter_payload = json.loads(adapter_path.read_text(encoding="utf-8"))
+    engine_payload = json.loads(engine_path.read_text(encoding="utf-8"))
+    adapter_payload["model_ref"]["local_path"] = "/tmp/model-a"
+    engine_payload["model_ref"]["local_path"] = "/tmp/model-a"
+    _write_json(adapter_path, adapter_payload)
+    _write_json(engine_path, engine_payload)
+    assert (
+        _run(
+            repo_root,
+            "scripts/run_hf_adapter_readiness_report.py",
+            "--adapter-capabilities",
+            str(adapter_path),
+            "--tokenizer-span-probe",
+            str(tokenizer_path),
+            "--engine-metadata-probe",
+            str(engine_path),
+            "--output",
+            str(readiness_path),
+        ).returncode
+        == 0
+    )
+    output_path = tmp_path / "relaystack_hf_tokenizer_config_probe.json"
+
+    result = _run(
+        repo_root,
+        "scripts/run_hf_tokenizer_config_probe.py",
+        "--readiness-report",
+        str(readiness_path),
+        "--output",
+        str(output_path),
+        "--skip-tokenizer-load",
+        "--skip-config-load",
+    )
+
+    assert result.returncode == 1
+    loaded = json.loads(output_path.read_text(encoding="utf-8"))
+    assert loaded["summary"]["ok"] is False
+    assert loaded["consistency"]["readiness_model_ref_match"] is False
+
+
 def test_hf_tokenizer_config_probe_tokenizer_revision_override_mismatch_fails_in_skip_mode(
     tmp_path: Path,
 ) -> None:

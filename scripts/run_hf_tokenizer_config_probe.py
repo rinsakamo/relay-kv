@@ -33,6 +33,12 @@ def _matches_when_both_present(expected: object, observed: object) -> bool:
     return expected == observed
 
 
+def _matches_local_path_in_readiness_scope(expected: object, observed: object) -> bool:
+    if expected is None:
+        return observed is None
+    return expected == observed
+
+
 def _compact_error(exc: Exception) -> str:
     return f"{exc.__class__.__name__}: {exc}"
 
@@ -354,6 +360,7 @@ def _build_probe_artifact(
     errors: list[str],
     warnings: list[str],
     blocked_reason: str | None,
+    requested_local_path: str | None,
 ) -> dict[str, object]:
     readiness_summary = _as_mapping(readiness_data.get("summary"))
     readiness_ref = {
@@ -393,9 +400,9 @@ def _build_probe_artifact(
                 model_ref.get("model_revision") is None
                 or model_ref.get("model_revision") == adapter_model_ref.get("model_revision")
             )
-            and _matches_when_present(
+            and _matches_local_path_in_readiness_scope(
                 adapter_model_ref.get("local_path"),
-                model_ref.get("local_path"),
+                requested_local_path,
             )
         ),
         "readiness_tokenizer_ref_match": (
@@ -560,6 +567,7 @@ def build_hf_tokenizer_config_probe_payload(
             errors=[blocked_reason],
             warnings=[],
             blocked_reason=blocked_reason,
+            requested_local_path=local_path,
         )
         return artifact, 1
 
@@ -666,6 +674,7 @@ def build_hf_tokenizer_config_probe_payload(
             errors=errors,
             warnings=warnings,
             blocked_reason=blocked_reason,
+            requested_local_path=local_path,
         )
         return artifact, 1
 
@@ -741,6 +750,7 @@ def build_hf_tokenizer_config_probe_payload(
         errors=errors,
         warnings=warnings,
         blocked_reason=None,
+        requested_local_path=local_path,
     )
     return artifact, (0 if artifact["summary"]["ok"] is True else 1)
 
