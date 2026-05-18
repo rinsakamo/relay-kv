@@ -311,3 +311,14 @@ python scripts/run_hf_adapter_readiness_report.py \
 ```
 
 The readiness report checks consistency and safety only. It does not load a model, config, or tokenizer.
+
+Phase 12-I tokenizer/config metadata probe CLI:
+
+```bash
+python scripts/run_hf_tokenizer_config_probe.py \
+  --readiness-report /tmp/relaystack_hf_adapter_readiness_report.json \
+  --output /tmp/relaystack_hf_tokenizer_config_probe.json \
+  --local-files-only
+```
+
+Phase 12-I is tokenizer/config metadata only. It may load tokenizer/config metadata, but it still does not load model weights.
