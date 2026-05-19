@@ -364,6 +364,8 @@ def test_hf_phase12_chain_acceptance_report_happy_path(tmp_path: Path) -> None:
     assert loaded["acceptance"]["ready_for_materialization"] is False
     assert loaded["acceptance"]["ready_for_apply"] is False
     assert loaded["consistency"]["readiness_input_refs_match"] is True
+    assert loaded["consistency"]["tokenizer_config_probe_input_refs_match"] is True
+    assert loaded["consistency"]["tokenizer_config_probe_readiness_ref_match"] is True
     assert json.loads(json.dumps(loaded)) == loaded
 
 
@@ -656,6 +658,173 @@ def test_hf_phase12_chain_acceptance_report_missing_readiness_input_ref_blocks(
     assert loaded["summary"]["ok"] is False
     assert loaded["consistency"]["readiness_input_refs_match"] is False
     assert any("input_refs.adapter_capabilities_path" in reason for reason in loaded["acceptance"]["blocking_reasons"])
+
+
+def test_hf_phase12_chain_acceptance_report_stale_probe_readiness_input_ref_blocks(
+    tmp_path: Path,
+) -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    paths = _build_happy_path_payloads(tmp_path)
+    probe_payload = json.loads(paths["probe"].read_text(encoding="utf-8"))
+    probe_payload["input_refs"]["readiness_report_path"] = str(tmp_path / "other_readiness.json")
+    _write_json(paths["probe"], probe_payload)
+    output_path = tmp_path / "relaystack_hf_phase12_chain_acceptance_report.json"
+
+    result = _run(
+        repo_root,
+        "scripts/run_hf_phase12_chain_acceptance_report.py",
+        "--adapter-capabilities",
+        str(paths["adapter"]),
+        "--tokenizer-span-probe",
+        str(paths["tokenizer"]),
+        "--engine-metadata-probe",
+        str(paths["engine"]),
+        "--readiness-report",
+        str(paths["readiness"]),
+        "--tokenizer-config-probe",
+        str(paths["probe"]),
+        "--output",
+        str(output_path),
+    )
+
+    assert result.returncode == 1
+    loaded = json.loads(output_path.read_text(encoding="utf-8"))
+    assert loaded["summary"]["ok"] is False
+    assert loaded["consistency"]["tokenizer_config_probe_input_refs_match"] is False
+    assert any("input_refs.readiness_report_path" in reason for reason in loaded["acceptance"]["blocking_reasons"])
+
+
+def test_hf_phase12_chain_acceptance_report_stale_probe_adapter_input_ref_blocks(
+    tmp_path: Path,
+) -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    paths = _build_happy_path_payloads(tmp_path)
+    probe_payload = json.loads(paths["probe"].read_text(encoding="utf-8"))
+    probe_payload["input_refs"]["adapter_capabilities_path"] = str(tmp_path / "other_adapter.json")
+    _write_json(paths["probe"], probe_payload)
+    output_path = tmp_path / "relaystack_hf_phase12_chain_acceptance_report.json"
+
+    result = _run(
+        repo_root,
+        "scripts/run_hf_phase12_chain_acceptance_report.py",
+        "--adapter-capabilities",
+        str(paths["adapter"]),
+        "--tokenizer-span-probe",
+        str(paths["tokenizer"]),
+        "--engine-metadata-probe",
+        str(paths["engine"]),
+        "--readiness-report",
+        str(paths["readiness"]),
+        "--tokenizer-config-probe",
+        str(paths["probe"]),
+        "--output",
+        str(output_path),
+    )
+
+    assert result.returncode == 1
+    loaded = json.loads(output_path.read_text(encoding="utf-8"))
+    assert loaded["consistency"]["tokenizer_config_probe_input_refs_match"] is False
+    assert any("input_refs.adapter_capabilities_path" in reason for reason in loaded["acceptance"]["blocking_reasons"])
+
+
+def test_hf_phase12_chain_acceptance_report_stale_probe_tokenizer_input_ref_blocks(
+    tmp_path: Path,
+) -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    paths = _build_happy_path_payloads(tmp_path)
+    probe_payload = json.loads(paths["probe"].read_text(encoding="utf-8"))
+    probe_payload["input_refs"]["tokenizer_span_probe_path"] = str(tmp_path / "other_tokenizer.json")
+    _write_json(paths["probe"], probe_payload)
+    output_path = tmp_path / "relaystack_hf_phase12_chain_acceptance_report.json"
+
+    result = _run(
+        repo_root,
+        "scripts/run_hf_phase12_chain_acceptance_report.py",
+        "--adapter-capabilities",
+        str(paths["adapter"]),
+        "--tokenizer-span-probe",
+        str(paths["tokenizer"]),
+        "--engine-metadata-probe",
+        str(paths["engine"]),
+        "--readiness-report",
+        str(paths["readiness"]),
+        "--tokenizer-config-probe",
+        str(paths["probe"]),
+        "--output",
+        str(output_path),
+    )
+
+    assert result.returncode == 1
+    loaded = json.loads(output_path.read_text(encoding="utf-8"))
+    assert loaded["consistency"]["tokenizer_config_probe_input_refs_match"] is False
+    assert any("input_refs.tokenizer_span_probe_path" in reason for reason in loaded["acceptance"]["blocking_reasons"])
+
+
+def test_hf_phase12_chain_acceptance_report_stale_probe_engine_input_ref_blocks(
+    tmp_path: Path,
+) -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    paths = _build_happy_path_payloads(tmp_path)
+    probe_payload = json.loads(paths["probe"].read_text(encoding="utf-8"))
+    probe_payload["input_refs"]["engine_metadata_probe_path"] = str(tmp_path / "other_engine.json")
+    _write_json(paths["probe"], probe_payload)
+    output_path = tmp_path / "relaystack_hf_phase12_chain_acceptance_report.json"
+
+    result = _run(
+        repo_root,
+        "scripts/run_hf_phase12_chain_acceptance_report.py",
+        "--adapter-capabilities",
+        str(paths["adapter"]),
+        "--tokenizer-span-probe",
+        str(paths["tokenizer"]),
+        "--engine-metadata-probe",
+        str(paths["engine"]),
+        "--readiness-report",
+        str(paths["readiness"]),
+        "--tokenizer-config-probe",
+        str(paths["probe"]),
+        "--output",
+        str(output_path),
+    )
+
+    assert result.returncode == 1
+    loaded = json.loads(output_path.read_text(encoding="utf-8"))
+    assert loaded["consistency"]["tokenizer_config_probe_input_refs_match"] is False
+    assert any("input_refs.engine_metadata_probe_path" in reason for reason in loaded["acceptance"]["blocking_reasons"])
+
+
+def test_hf_phase12_chain_acceptance_report_stale_probe_readiness_ref_path_blocks(
+    tmp_path: Path,
+) -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    paths = _build_happy_path_payloads(tmp_path)
+    probe_payload = json.loads(paths["probe"].read_text(encoding="utf-8"))
+    probe_payload["readiness_ref"]["path"] = str(tmp_path / "other_readiness.json")
+    _write_json(paths["probe"], probe_payload)
+    output_path = tmp_path / "relaystack_hf_phase12_chain_acceptance_report.json"
+
+    result = _run(
+        repo_root,
+        "scripts/run_hf_phase12_chain_acceptance_report.py",
+        "--adapter-capabilities",
+        str(paths["adapter"]),
+        "--tokenizer-span-probe",
+        str(paths["tokenizer"]),
+        "--engine-metadata-probe",
+        str(paths["engine"]),
+        "--readiness-report",
+        str(paths["readiness"]),
+        "--tokenizer-config-probe",
+        str(paths["probe"]),
+        "--output",
+        str(output_path),
+    )
+
+    assert result.returncode == 1
+    loaded = json.loads(output_path.read_text(encoding="utf-8"))
+    assert loaded["summary"]["ok"] is False
+    assert loaded["consistency"]["tokenizer_config_probe_readiness_ref_match"] is False
+    assert any("readiness_ref.path" in reason for reason in loaded["acceptance"]["blocking_reasons"])
 
 
 def test_hf_phase12_chain_acceptance_report_tokenizer_config_hard_failure_blocks(

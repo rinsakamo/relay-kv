@@ -350,16 +350,68 @@ def build_hf_phase12_chain_acceptance_report_payload(
         "tokenizer_span_probe_path": str(tokenizer_span_probe_path.expanduser().resolve(strict=False)),
         "engine_metadata_probe_path": str(engine_metadata_probe_path.expanduser().resolve(strict=False)),
     }
+    readiness_input_ref_messages = {
+        "adapter_capabilities_path": (
+            "readiness report input_refs.adapter_capabilities_path does not match selected "
+            "adapter capabilities path"
+        ),
+        "tokenizer_span_probe_path": (
+            "readiness report input_refs.tokenizer_span_probe_path does not match selected "
+            "tokenizer span probe path"
+        ),
+        "engine_metadata_probe_path": (
+            "readiness report input_refs.engine_metadata_probe_path does not match selected "
+            "engine metadata probe path"
+        ),
+    }
     readiness_input_refs_match = True
     for field_name, expected_path in expected_readiness_input_paths.items():
         observed_path = _resolved_path_string(readiness_input_refs.get(field_name))
         if observed_path != expected_path:
             readiness_input_refs_match = False
-            artifact_label = field_name.replace("_path", "").replace("_", " ")
-            _add_reason(
-                errors,
-                f"readiness report input_refs.{field_name} does not match selected {artifact_label} path",
-            )
+            _add_reason(errors, readiness_input_ref_messages[field_name])
+    probe_input_refs = _as_mapping(probe_data.get("input_refs"))
+    expected_probe_input_paths = {
+        "readiness_report_path": str(readiness_report_path.expanduser().resolve(strict=False)),
+        "adapter_capabilities_path": expected_readiness_input_paths["adapter_capabilities_path"],
+        "tokenizer_span_probe_path": expected_readiness_input_paths["tokenizer_span_probe_path"],
+        "engine_metadata_probe_path": expected_readiness_input_paths["engine_metadata_probe_path"],
+    }
+    tokenizer_config_probe_input_refs_match = True
+    for field_name, expected_path in expected_probe_input_paths.items():
+        observed_path = _resolved_path_string(probe_input_refs.get(field_name))
+        if observed_path != expected_path:
+            tokenizer_config_probe_input_refs_match = False
+            if field_name == "readiness_report_path":
+                _add_reason(
+                    errors,
+                    "tokenizer_config_probe input_refs.readiness_report_path does not match selected readiness report path",
+                )
+            elif field_name == "adapter_capabilities_path":
+                _add_reason(
+                    errors,
+                    "tokenizer_config_probe input_refs.adapter_capabilities_path does not match selected adapter capabilities path",
+                )
+            elif field_name == "tokenizer_span_probe_path":
+                _add_reason(
+                    errors,
+                    "tokenizer_config_probe input_refs.tokenizer_span_probe_path does not match selected tokenizer span probe path",
+                )
+            elif field_name == "engine_metadata_probe_path":
+                _add_reason(
+                    errors,
+                    "tokenizer_config_probe input_refs.engine_metadata_probe_path does not match selected engine metadata probe path",
+                )
+    probe_readiness_ref = _as_mapping(probe_data.get("readiness_ref"))
+    tokenizer_config_probe_readiness_ref_match = (
+        _resolved_path_string(probe_readiness_ref.get("path"))
+        == expected_probe_input_paths["readiness_report_path"]
+    )
+    if not tokenizer_config_probe_readiness_ref_match:
+        _add_reason(
+            errors,
+            "tokenizer_config_probe readiness_ref.path does not match selected readiness report path",
+        )
 
     tokenizer_config_probe_accepted = _tokenizer_config_probe_accepted(
         probe_data,
@@ -454,6 +506,8 @@ def build_hf_phase12_chain_acceptance_report_payload(
         and tokenizer_ref_consistent
         and readiness_gate_ok
         and readiness_input_refs_match
+        and tokenizer_config_probe_input_refs_match
+        and tokenizer_config_probe_readiness_ref_match
         and tokenizer_config_probe_accepted
         and metadata_report_only
         and not model_loaded
@@ -487,6 +541,8 @@ def build_hf_phase12_chain_acceptance_report_payload(
             "tokenizer_ref_consistent": tokenizer_ref_consistent,
             "readiness_gate_ok": readiness_gate_ok,
             "readiness_input_refs_match": readiness_input_refs_match,
+            "tokenizer_config_probe_input_refs_match": tokenizer_config_probe_input_refs_match,
+            "tokenizer_config_probe_readiness_ref_match": tokenizer_config_probe_readiness_ref_match,
             "tokenizer_config_probe_accepted": tokenizer_config_probe_accepted,
         },
         "safety_scope": {
