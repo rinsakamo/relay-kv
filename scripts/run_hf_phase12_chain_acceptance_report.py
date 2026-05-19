@@ -47,6 +47,12 @@ def _matches_optional(expected: object, observed: object) -> bool:
     return expected == observed
 
 
+def _resolved_path_string(value: object) -> str | None:
+    if not isinstance(value, str) or not value:
+        return None
+    return str(Path(value).expanduser().resolve(strict=False))
+
+
 def _model_ref_consistent(
     adapter_model_ref: dict[str, object],
     tokenizer_model_ref: dict[str, object],
@@ -338,6 +344,22 @@ def build_hf_phase12_chain_acceptance_report_payload(
     readiness_gate_ok = readiness_summary.get("ok") is True
     if not readiness_gate_ok:
         _add_reason(errors, "readiness report summary.ok must be true")
+    readiness_input_refs = _as_mapping(readiness_data.get("input_refs"))
+    expected_readiness_input_paths = {
+        "adapter_capabilities_path": str(adapter_capabilities_path.expanduser().resolve(strict=False)),
+        "tokenizer_span_probe_path": str(tokenizer_span_probe_path.expanduser().resolve(strict=False)),
+        "engine_metadata_probe_path": str(engine_metadata_probe_path.expanduser().resolve(strict=False)),
+    }
+    readiness_input_refs_match = True
+    for field_name, expected_path in expected_readiness_input_paths.items():
+        observed_path = _resolved_path_string(readiness_input_refs.get(field_name))
+        if observed_path != expected_path:
+            readiness_input_refs_match = False
+            artifact_label = field_name.replace("_path", "").replace("_", " ")
+            _add_reason(
+                errors,
+                f"readiness report input_refs.{field_name} does not match selected {artifact_label} path",
+            )
 
     tokenizer_config_probe_accepted = _tokenizer_config_probe_accepted(
         probe_data,
@@ -431,6 +453,7 @@ def build_hf_phase12_chain_acceptance_report_payload(
         and model_ref_consistent
         and tokenizer_ref_consistent
         and readiness_gate_ok
+        and readiness_input_refs_match
         and tokenizer_config_probe_accepted
         and metadata_report_only
         and not model_loaded
@@ -463,6 +486,7 @@ def build_hf_phase12_chain_acceptance_report_payload(
             "model_ref_consistent": model_ref_consistent,
             "tokenizer_ref_consistent": tokenizer_ref_consistent,
             "readiness_gate_ok": readiness_gate_ok,
+            "readiness_input_refs_match": readiness_input_refs_match,
             "tokenizer_config_probe_accepted": tokenizer_config_probe_accepted,
         },
         "safety_scope": {
