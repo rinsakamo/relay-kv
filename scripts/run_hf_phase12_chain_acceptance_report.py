@@ -272,6 +272,7 @@ def _tokenizer_span_safety_ok(
     tokenizer_summary = _as_mapping(tokenizer_data.get("summary"))
     tokenizer_safety_scope = _as_mapping(tokenizer_data.get("safety_scope"))
     spans = _as_list(tokenizer_data.get("spans"))
+    top_level_tokenizer_ref = _as_mapping(tokenizer_data.get("tokenizer_ref"))
 
     ok = True
     if not (
@@ -294,13 +295,42 @@ def _tokenizer_span_safety_ok(
     for span in spans:
         span_mapping = _as_mapping(span)
         lineage = _as_mapping(span_mapping.get("lineage"))
+        token_start = span_mapping.get("token_start")
+        token_end = span_mapping.get("token_end")
+        estimated_token_count = span_mapping.get("estimated_token_count")
+        span_tokenizer_ref = _as_mapping(span_mapping.get("tokenizer_ref"))
         if span_mapping.get("token_span_is_estimated") is not True or span_mapping.get("tokenizer_scoped") is not True:
+            _add_reason(errors, "selected tokenizer span probe artifact is not metadata-only")
+            ok = False
+            break
+        if not (
+            isinstance(token_start, int)
+            and isinstance(token_end, int)
+            and token_start >= 0
+            and token_end > token_start
+        ):
+            _add_reason(errors, "selected tokenizer span probe has invalid span token bounds")
+            ok = False
+            break
+        if not (isinstance(estimated_token_count, int) and estimated_token_count > 0):
             _add_reason(errors, "selected tokenizer span probe artifact is not metadata-only")
             ok = False
             break
         if lineage.get("engine_block_ref") is not None:
             _add_reason(errors, "selected tokenizer span probe contains engine block refs")
             ok = False
+            break
+        for field_name in (
+            "tokenizer_name_or_path",
+            "tokenizer_revision",
+            "tokenizer_config_hash",
+            "tokenizer_family",
+        ):
+            if span_tokenizer_ref.get(field_name) != top_level_tokenizer_ref.get(field_name):
+                _add_reason(errors, "selected tokenizer span probe span tokenizer_ref mismatch")
+                ok = False
+                break
+        if not ok:
             break
     return ok
 
@@ -322,12 +352,20 @@ def _engine_metadata_safety_ok(
     ):
         _add_reason(errors, "selected engine metadata probe reports model/tokenizer/GPU loaded state")
         ok = False
+    if engine_metadata.get("model_config_loaded") is True:
+        _add_reason(errors, "selected engine metadata probe reports model_config_loaded state")
+        ok = False
     attention_type_hint = engine_metadata.get("attention_type_hint")
     kv_head_group_count = engine_metadata.get("kv_head_group_count")
     if attention_type_hint == "mha" and kv_head_group_count != 1:
         _add_reason(errors, "selected engine metadata probe is not metadata-only")
         ok = False
-    if attention_type_hint == "gqa" and not isinstance(kv_head_group_count, int):
+    if attention_type_hint == "gqa" and not (
+        isinstance(kv_head_group_count, int) and kv_head_group_count > 0
+    ):
+        _add_reason(errors, "selected engine metadata probe has invalid gqa kv_head_group_count")
+        ok = False
+    if attention_type_hint == "unknown" and kv_head_group_count is not None:
         _add_reason(errors, "selected engine metadata probe is not metadata-only")
         ok = False
     if attention_type_hint not in ("mha", "gqa", "unknown"):
