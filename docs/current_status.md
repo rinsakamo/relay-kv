@@ -62,7 +62,7 @@ RelayLM
 - **RelayLM** is the product-facing lineage-manager framing.
 - **RelayStack Core** is the internal responsibility boundary. It is not a separate runtime component name.
 - **RelayKV** is the VRAM-aware active-context KV routing layer.
-- **RelayMEM** is the max-context-external memory layer that decides what should enter active context.
+- **RelayMEM** is the memory-lineage layer. In the short term it decides what memory records should enter active context. In the longer term it may also emit memory lifecycle, reuse, residency preference, or placement-intent hints. It does not directly allocate physical memory or own engine-specific placement.
 - **RelayCTX** is the context transform layer between RelayMEM and RelayKV. It handles context packing, token-budget fitting, context rebuild planning, token compression plan metadata, prompt layout at the context-item level, source attribution, and token/span mapping.
 - **RelayPLC** is the policy, lifecycle, and control layer. It replaces the older RelayPolicy naming.
 - **RelayTRC** is the trace, transition, and record schema layer. It replaces the older Trace Schema naming.
@@ -97,6 +97,23 @@ This separation keeps future compressed or checkpointed KV representations from 
 
 RelayKV fallback semantics should be treated carefully. Before apply, or while running in shadow, FullKV fallback may be possible because the FullKV path is still available. After RelayKV apply under VRAM pressure, FullKV fallback should generally be treated as unavailable. In that case RelayKV should use safe degrade, block, or request context reduction semantics rather than implying an automatic return to FullKV.
 
+## RelayMEM adapter requirement
+
+RelayMEM can be designed and evaluated with synthetic or offline records, but a meaningful runtime RelayMEM path requires adapters.
+
+```text
+RelayMEM
+  ↓ MemoryADP
+memory backend records
+
+RelayMEM
+  ↓ EngineADP / RuntimeADP
+model/runtime context limits, tokenizer compatibility, cache/runtime metadata availability,
+and placement capability facts
+```
+
+RelayMEM may emit memory lineage, lifecycle, reuse, residency preference, or placement-intent metadata. The physical placement itself remains behind EngineADP / RuntimeADP and the target runtime such as SGLang, vLLM, HF, or llama.cpp.
+
 ## RelayLM modes
 
 RelayLM does not require RelayKV to be active from the start.
@@ -120,6 +137,8 @@ SAFE_DEGRADE:
 ```
 
 For models whose KV cache is already relatively small, or when the runtime has sufficient VRAM, MEM_CTX_ONLY can still provide value through memory selection, context packing, context rebuild planning, and traceability. RelayKV becomes the critical layer when RelayLM must make model-max-context operation VRAM-aware.
+
+Even in MEM_CTX_ONLY mode, RelayMEM and RelayCTX need EngineADP / RuntimeADP capability facts for safe operation: model/runtime context limit, tokenizer compatibility, cache/runtime constraints, available placement capabilities, and whether context rebuild or prefill reduction can be safely applied.
 
 ## Implemented today
 
@@ -155,7 +174,9 @@ The following items are part of the current direction, but should not be describ
 - Relay Adapter concrete implementation beyond current metadata/artifact planning
 - RelayCTX runtime implementation beyond design-level context-transform responsibilities
 - concrete context rebuild execution path
+- concrete RelayMEM runtime path backed by both MemoryADP and EngineADP / RuntimeADP facts
 - concrete RelayMEM retrieval backend beyond the current lightweight Fast Recall path
+- concrete RelayMEM placement-intent use beyond schema/design notes
 - concrete RelayStack data-contract and adapter-contract implementations beyond metadata/artifact planning
 - OpenAI-compatible product-facing RelayStack / RelayLM server
 - Hermes-Agent, OpenClaw, Open-LLM-VTuber, or other agent/avatar-app integration
