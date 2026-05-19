@@ -83,6 +83,8 @@ External systems:
 
 RelayMEM decides what memories, records, summaries, retrieved facts, or structured state should be proposed for active context.
 
+RelayMEM is a memory-lineage layer, not a direct physical allocator. In the short term, it covers semantic memory selection and context item proposal. In the longer term, it may also emit memory lifecycle, reuse, residency preference, or placement-intent hints that help RelayPLC, RelayKV, and adapters choose an efficient runtime path.
+
 RelayMEM owns:
 
 - memory record schemas
@@ -90,15 +92,19 @@ RelayMEM owns:
 - memory ranking and budgeting policy
 - context item proposal
 - memory lifecycle state metadata
+- future placement-intent or residency-preference metadata
 
 RelayMEM does not own:
 
-- KV cache routing
+- direct physical memory allocation
+- direct KV cache routing
 - tokenizer internals
 - inference-engine runtime state
 - tool execution
 - product-specific user interface or approval flows
 - concrete heavy RAG, embedding, reranking, summarization, or graph extraction implementations
+
+A meaningful RelayMEM runtime path depends on adapters. MemoryADP supplies memory backend records, while EngineADP / RuntimeADP supplies engine capability, runtime context limits, cache/runtime metadata availability, and placement capability. RelayMEM can emit memory lineage and placement intent, but engine-specific physical placement remains behind EngineADP / RuntimeADP and the target runtime such as SGLang, vLLM, HF, or llama.cpp.
 
 ### RelayCTX
 
@@ -249,8 +255,9 @@ RelayStack Core should remain engine-agnostic and product-agnostic. External dep
 
 ```text
 RelayMEM
-  ↓ MemoryADP
+  ↓ MemoryADP + EngineADP / RuntimeADP capability facts
   SQLite / GBrain / Qdrant / GraphRAG / external memory service
+  plus runtime context/cache/placement capability metadata
 
 RelayCTX
   ↓ TokenizerADP
@@ -345,6 +352,8 @@ SAFE_DEGRADE:
 
 MEM_CTX_ONLY can be the default for models whose KV cache is already relatively small or when the runtime has sufficient VRAM. KV_SHADOW and KV_APPLY become important when long context, low VRAM, KV-heavy attention layouts, or max-context operation require active KV working-set control.
 
+Even in MEM_CTX_ONLY mode, RelayMEM and RelayCTX need EngineADP / RuntimeADP capability facts for safe operation: model/runtime context limit, tokenizer compatibility, cache/runtime constraints, available placement capabilities, and whether context rebuild or prefill reduction can be safely applied.
+
 ## Attention and runtime-cache abstraction
 
 RelayLM should not permanently assume that every model is GQA with a conventional KV-cache layout. RelayKV remains the first concrete runtime-cache control implementation, but the RelayLM-level lineage should allow broader cache/state artifacts.
@@ -383,7 +392,8 @@ The next schema work should prioritize these contracts:
 
 ```text
 RelayMEMContextItem
-  source item, memory type, priority, evidence role, confidence, privacy/scope metadata
+  source item, memory type, priority, evidence role, confidence, privacy/scope metadata,
+  lifecycle metadata, future placement intent
 
 RelayCTXContextSpan
   source item, compression status, token span, prompt layout role, attribution metadata
