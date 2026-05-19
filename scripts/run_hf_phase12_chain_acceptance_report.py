@@ -178,6 +178,65 @@ def _tokenizer_config_probe_accepted(
     return False
 
 
+def _selected_artifact_identity_scope_ok(
+    *,
+    adapter_data: dict[str, object],
+    tokenizer_data: dict[str, object],
+    engine_data: dict[str, object],
+    probe_data: dict[str, object],
+    errors: list[str],
+) -> tuple[bool, bool, bool]:
+    adapter_kinds = [
+        adapter_data.get("adapter_kind"),
+        tokenizer_data.get("adapter_kind"),
+        engine_data.get("adapter_kind"),
+    ]
+    probe_adapter_kind = probe_data.get("adapter_kind")
+    if probe_adapter_kind is not None:
+        adapter_kinds.append(probe_adapter_kind)
+    adapter_identity_consistent = all(kind == "hf_prototype" for kind in adapter_kinds)
+    if not adapter_identity_consistent:
+        _add_reason(errors, "selected artifact adapter_kind mismatch across phase12 chain")
+
+    runtime_targets = [
+        adapter_data.get("runtime_target"),
+        tokenizer_data.get("runtime_target"),
+        engine_data.get("runtime_target"),
+    ]
+    probe_runtime_target = probe_data.get("runtime_target")
+    if probe_runtime_target is not None:
+        runtime_targets.append(probe_runtime_target)
+    runtime_target_consistent = all(target == "huggingface_transformers" for target in runtime_targets)
+    if adapter_data.get("runtime_target") != "huggingface_transformers":
+        _add_reason(errors, "selected adapter capabilities runtime_target must be 'huggingface_transformers'")
+    elif not runtime_target_consistent:
+        _add_reason(errors, "selected artifact runtime_target mismatch across phase12 chain")
+
+    adapter_names = [
+        value
+        for value in (
+            adapter_data.get("adapter_name"),
+            engine_data.get("adapter_name"),
+            probe_data.get("adapter_name"),
+        )
+        if value is not None
+    ]
+    adapter_name_consistent = len(set(adapter_names)) <= 1
+    if not adapter_name_consistent:
+        _add_reason(errors, "selected artifact adapter_name mismatch across phase12 chain")
+
+    selected_artifact_identity_scope_ok = (
+        adapter_identity_consistent and runtime_target_consistent and adapter_name_consistent
+    )
+    if not selected_artifact_identity_scope_ok:
+        _add_reason(errors, "selected artifact identity scope does not match readiness HF boundary")
+    return (
+        adapter_identity_consistent,
+        runtime_target_consistent,
+        selected_artifact_identity_scope_ok,
+    )
+
+
 def _adapter_capability_safety_ok(
     adapter_data: dict[str, object],
     errors: list[str],
@@ -537,6 +596,17 @@ def build_hf_phase12_chain_acceptance_report_payload(
         errors,
         warnings,
     )
+    (
+        adapter_identity_consistent,
+        runtime_target_consistent,
+        selected_artifact_identity_scope_ok,
+    ) = _selected_artifact_identity_scope_ok(
+        adapter_data=adapter_data,
+        tokenizer_data=tokenizer_data,
+        engine_data=engine_data,
+        probe_data=probe_data,
+        errors=errors,
+    )
     adapter_capability_safety_ok = _adapter_capability_safety_ok(adapter_data, errors)
     tokenizer_span_safety_ok = _tokenizer_span_safety_ok(tokenizer_data, errors)
     engine_metadata_safety_ok = _engine_metadata_safety_ok(engine_data, errors)
@@ -631,6 +701,7 @@ def build_hf_phase12_chain_acceptance_report_payload(
         chain_complete
         and model_ref_consistent
         and tokenizer_ref_consistent
+        and selected_artifact_identity_scope_ok
         and readiness_gate_ok
         and readiness_input_refs_match
         and upstream_artifact_content_safety_match
@@ -667,6 +738,9 @@ def build_hf_phase12_chain_acceptance_report_payload(
         "consistency": {
             "model_ref_consistent": model_ref_consistent,
             "tokenizer_ref_consistent": tokenizer_ref_consistent,
+            "adapter_identity_consistent": adapter_identity_consistent,
+            "runtime_target_consistent": runtime_target_consistent,
+            "selected_artifact_identity_scope_ok": selected_artifact_identity_scope_ok,
             "readiness_gate_ok": readiness_gate_ok,
             "readiness_input_refs_match": readiness_input_refs_match,
             "adapter_capability_safety_ok": adapter_capability_safety_ok,
