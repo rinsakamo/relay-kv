@@ -1120,6 +1120,211 @@ def test_hf_phase12_chain_acceptance_report_readiness_not_ok_blocks(
     assert loaded["consistency"]["readiness_gate_ok"] is False
 
 
+def test_hf_phase12_chain_acceptance_report_readiness_next_metadata_false_blocks(
+    tmp_path: Path,
+) -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    paths = _build_happy_path_payloads(tmp_path)
+    readiness_payload = json.loads(paths["readiness"].read_text(encoding="utf-8"))
+    readiness_payload["readiness"]["ready_for_next_metadata_step"] = False
+    _write_json(paths["readiness"], readiness_payload)
+    output_path = tmp_path / "relaystack_hf_phase12_chain_acceptance_report.json"
+
+    result = _run(
+        repo_root,
+        "scripts/run_hf_phase12_chain_acceptance_report.py",
+        "--adapter-capabilities",
+        str(paths["adapter"]),
+        "--tokenizer-span-probe",
+        str(paths["tokenizer"]),
+        "--engine-metadata-probe",
+        str(paths["engine"]),
+        "--readiness-report",
+        str(paths["readiness"]),
+        "--tokenizer-config-probe",
+        str(paths["probe"]),
+        "--output",
+        str(output_path),
+    )
+
+    assert result.returncode == 1
+    loaded = json.loads(output_path.read_text(encoding="utf-8"))
+    assert loaded["summary"]["ok"] is False
+    assert loaded["acceptance"]["ready_for_next_metadata_step"] is False
+    assert loaded["consistency"]["readiness_downstream_probe_flags_ok"] is False
+    assert "readiness report must allow next metadata step" in loaded["acceptance"]["blocking_reasons"]
+
+
+def test_hf_phase12_chain_acceptance_report_readiness_real_tokenizer_false_blocks(
+    tmp_path: Path,
+) -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    paths = _build_happy_path_payloads(tmp_path)
+    readiness_payload = json.loads(paths["readiness"].read_text(encoding="utf-8"))
+    readiness_payload["readiness"]["ready_for_real_tokenizer_probe"] = False
+    _write_json(paths["readiness"], readiness_payload)
+    output_path = tmp_path / "relaystack_hf_phase12_chain_acceptance_report.json"
+
+    result = _run(
+        repo_root,
+        "scripts/run_hf_phase12_chain_acceptance_report.py",
+        "--adapter-capabilities",
+        str(paths["adapter"]),
+        "--tokenizer-span-probe",
+        str(paths["tokenizer"]),
+        "--engine-metadata-probe",
+        str(paths["engine"]),
+        "--readiness-report",
+        str(paths["readiness"]),
+        "--tokenizer-config-probe",
+        str(paths["probe"]),
+        "--output",
+        str(output_path),
+    )
+
+    assert result.returncode == 1
+    loaded = json.loads(output_path.read_text(encoding="utf-8"))
+    assert loaded["summary"]["ok"] is False
+    assert loaded["consistency"]["readiness_downstream_probe_flags_ok"] is False
+    assert "readiness report must allow real tokenizer probe" in loaded["acceptance"]["blocking_reasons"]
+
+
+def test_hf_phase12_chain_acceptance_report_readiness_model_config_false_blocks(
+    tmp_path: Path,
+) -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    paths = _build_happy_path_payloads(tmp_path)
+    readiness_payload = json.loads(paths["readiness"].read_text(encoding="utf-8"))
+    readiness_payload["readiness"]["ready_for_model_config_probe"] = False
+    _write_json(paths["readiness"], readiness_payload)
+    output_path = tmp_path / "relaystack_hf_phase12_chain_acceptance_report.json"
+
+    result = _run(
+        repo_root,
+        "scripts/run_hf_phase12_chain_acceptance_report.py",
+        "--adapter-capabilities",
+        str(paths["adapter"]),
+        "--tokenizer-span-probe",
+        str(paths["tokenizer"]),
+        "--engine-metadata-probe",
+        str(paths["engine"]),
+        "--readiness-report",
+        str(paths["readiness"]),
+        "--tokenizer-config-probe",
+        str(paths["probe"]),
+        "--output",
+        str(output_path),
+    )
+
+    assert result.returncode == 1
+    loaded = json.loads(output_path.read_text(encoding="utf-8"))
+    assert loaded["summary"]["ok"] is False
+    assert loaded["consistency"]["readiness_downstream_probe_flags_ok"] is False
+    assert "readiness report must allow model config probe" in loaded["acceptance"]["blocking_reasons"]
+
+
+def test_hf_phase12_chain_acceptance_report_missing_readiness_next_metadata_blocks(
+    tmp_path: Path,
+) -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    paths = _build_happy_path_payloads(tmp_path)
+    readiness_payload = json.loads(paths["readiness"].read_text(encoding="utf-8"))
+    del readiness_payload["readiness"]["ready_for_next_metadata_step"]
+    _write_json(paths["readiness"], readiness_payload)
+    output_path = tmp_path / "relaystack_hf_phase12_chain_acceptance_report.json"
+
+    result = _run(
+        repo_root,
+        "scripts/run_hf_phase12_chain_acceptance_report.py",
+        "--adapter-capabilities",
+        str(paths["adapter"]),
+        "--tokenizer-span-probe",
+        str(paths["tokenizer"]),
+        "--engine-metadata-probe",
+        str(paths["engine"]),
+        "--readiness-report",
+        str(paths["readiness"]),
+        "--tokenizer-config-probe",
+        str(paths["probe"]),
+        "--output",
+        str(output_path),
+    )
+
+    assert result.returncode == 1
+    loaded = json.loads(output_path.read_text(encoding="utf-8"))
+    assert loaded["summary"]["ok"] is False
+    assert loaded["consistency"]["readiness_downstream_probe_flags_ok"] is False
+    assert "readiness report must allow next metadata step" in loaded["acceptance"]["blocking_reasons"]
+
+
+def test_hf_phase12_chain_acceptance_report_missing_readiness_real_tokenizer_blocks(
+    tmp_path: Path,
+) -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    paths = _build_happy_path_payloads(tmp_path)
+    readiness_payload = json.loads(paths["readiness"].read_text(encoding="utf-8"))
+    del readiness_payload["readiness"]["ready_for_real_tokenizer_probe"]
+    _write_json(paths["readiness"], readiness_payload)
+    output_path = tmp_path / "relaystack_hf_phase12_chain_acceptance_report.json"
+
+    result = _run(
+        repo_root,
+        "scripts/run_hf_phase12_chain_acceptance_report.py",
+        "--adapter-capabilities",
+        str(paths["adapter"]),
+        "--tokenizer-span-probe",
+        str(paths["tokenizer"]),
+        "--engine-metadata-probe",
+        str(paths["engine"]),
+        "--readiness-report",
+        str(paths["readiness"]),
+        "--tokenizer-config-probe",
+        str(paths["probe"]),
+        "--output",
+        str(output_path),
+    )
+
+    assert result.returncode == 1
+    loaded = json.loads(output_path.read_text(encoding="utf-8"))
+    assert loaded["summary"]["ok"] is False
+    assert loaded["consistency"]["readiness_downstream_probe_flags_ok"] is False
+    assert "readiness report must allow real tokenizer probe" in loaded["acceptance"]["blocking_reasons"]
+
+
+def test_hf_phase12_chain_acceptance_report_missing_readiness_model_config_blocks(
+    tmp_path: Path,
+) -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    paths = _build_happy_path_payloads(tmp_path)
+    readiness_payload = json.loads(paths["readiness"].read_text(encoding="utf-8"))
+    del readiness_payload["readiness"]["ready_for_model_config_probe"]
+    _write_json(paths["readiness"], readiness_payload)
+    output_path = tmp_path / "relaystack_hf_phase12_chain_acceptance_report.json"
+
+    result = _run(
+        repo_root,
+        "scripts/run_hf_phase12_chain_acceptance_report.py",
+        "--adapter-capabilities",
+        str(paths["adapter"]),
+        "--tokenizer-span-probe",
+        str(paths["tokenizer"]),
+        "--engine-metadata-probe",
+        str(paths["engine"]),
+        "--readiness-report",
+        str(paths["readiness"]),
+        "--tokenizer-config-probe",
+        str(paths["probe"]),
+        "--output",
+        str(output_path),
+    )
+
+    assert result.returncode == 1
+    loaded = json.loads(output_path.read_text(encoding="utf-8"))
+    assert loaded["summary"]["ok"] is False
+    assert loaded["consistency"]["readiness_downstream_probe_flags_ok"] is False
+    assert "readiness report must allow model config probe" in loaded["acceptance"]["blocking_reasons"]
+
+
 def test_hf_phase12_chain_acceptance_report_stale_readiness_adapter_path_blocks(
     tmp_path: Path,
 ) -> None:

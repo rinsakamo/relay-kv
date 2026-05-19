@@ -560,6 +560,16 @@ def build_hf_phase12_chain_acceptance_report_payload(
     readiness_gate_ok = readiness_summary.get("ok") is True
     if not readiness_gate_ok:
         _add_reason(errors, "readiness report summary.ok must be true")
+    readiness_readiness = _as_mapping(readiness_data.get("readiness"))
+    readiness_downstream_probe_flags_ok = True
+    for field_name, message in (
+        ("ready_for_next_metadata_step", "readiness report must allow next metadata step"),
+        ("ready_for_real_tokenizer_probe", "readiness report must allow real tokenizer probe"),
+        ("ready_for_model_config_probe", "readiness report must allow model config probe"),
+    ):
+        if readiness_readiness.get(field_name) is not True:
+            readiness_downstream_probe_flags_ok = False
+            _add_reason(errors, message)
     readiness_input_refs = _as_mapping(readiness_data.get("input_refs"))
     expected_readiness_input_paths = {
         "adapter_capabilities_path": str(adapter_capabilities_path.expanduser().resolve(strict=False)),
@@ -657,7 +667,6 @@ def build_hf_phase12_chain_acceptance_report_payload(
         and engine_metadata_safety_ok
     )
 
-    readiness_readiness = _as_mapping(readiness_data.get("readiness"))
     if readiness_readiness.get("ready_for_materialization") is not False:
         _add_reason(errors, "readiness report must keep ready_for_materialization false")
     if readiness_readiness.get("ready_for_apply") is not False:
@@ -744,6 +753,7 @@ def build_hf_phase12_chain_acceptance_report_payload(
         and tokenizer_ref_consistent
         and selected_artifact_identity_scope_ok
         and readiness_gate_ok
+        and readiness_downstream_probe_flags_ok
         and readiness_input_refs_match
         and upstream_artifact_content_safety_match
         and tokenizer_config_probe_input_refs_match
@@ -783,6 +793,7 @@ def build_hf_phase12_chain_acceptance_report_payload(
             "runtime_target_consistent": runtime_target_consistent,
             "selected_artifact_identity_scope_ok": selected_artifact_identity_scope_ok,
             "readiness_gate_ok": readiness_gate_ok,
+            "readiness_downstream_probe_flags_ok": readiness_downstream_probe_flags_ok,
             "readiness_input_refs_match": readiness_input_refs_match,
             "adapter_capability_safety_ok": adapter_capability_safety_ok,
             "tokenizer_span_safety_ok": tokenizer_span_safety_ok,
