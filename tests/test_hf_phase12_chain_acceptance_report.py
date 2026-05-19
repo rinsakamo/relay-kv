@@ -494,6 +494,113 @@ def test_hf_phase12_chain_acceptance_report_tokenizer_ref_mismatch_blocks(
     loaded = json.loads(output_path.read_text(encoding="utf-8"))
     assert loaded["summary"]["ok"] is False
     assert loaded["consistency"]["tokenizer_ref_consistent"] is False
+    assert loaded["consistency"]["selected_artifact_identity_scope_ok"] is False
+
+
+def test_hf_phase12_chain_acceptance_report_same_path_overwritten_tokenizer_family_in_tokenizer_blocks(
+    tmp_path: Path,
+) -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    paths = _build_happy_path_payloads(tmp_path)
+    tokenizer_payload = json.loads(paths["tokenizer"].read_text(encoding="utf-8"))
+    tokenizer_payload["tokenizer_ref"]["tokenizer_family"] = "other_tokenizer_family"
+    tokenizer_payload["spans"][0]["tokenizer_ref"]["tokenizer_family"] = "other_tokenizer_family"
+    _write_json(paths["tokenizer"], tokenizer_payload)
+    output_path = tmp_path / "relaystack_hf_phase12_chain_acceptance_report.json"
+
+    result = _run(
+        repo_root,
+        "scripts/run_hf_phase12_chain_acceptance_report.py",
+        "--adapter-capabilities",
+        str(paths["adapter"]),
+        "--tokenizer-span-probe",
+        str(paths["tokenizer"]),
+        "--engine-metadata-probe",
+        str(paths["engine"]),
+        "--readiness-report",
+        str(paths["readiness"]),
+        "--tokenizer-config-probe",
+        str(paths["probe"]),
+        "--output",
+        str(output_path),
+    )
+
+    assert result.returncode == 1
+    loaded = json.loads(output_path.read_text(encoding="utf-8"))
+    assert loaded["summary"]["ok"] is False
+    assert loaded["consistency"]["tokenizer_ref_consistent"] is False
+    assert loaded["consistency"]["selected_artifact_identity_scope_ok"] is False
+    assert "tokenizer_ref mismatch across phase12 artifact chain" in loaded["acceptance"]["blocking_reasons"]
+
+
+def test_hf_phase12_chain_acceptance_report_same_path_overwritten_tokenizer_family_in_engine_blocks(
+    tmp_path: Path,
+) -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    paths = _build_happy_path_payloads(tmp_path)
+    engine_payload = json.loads(paths["engine"].read_text(encoding="utf-8"))
+    engine_payload["tokenizer_ref"]["tokenizer_family"] = "other_tokenizer_family"
+    _write_json(paths["engine"], engine_payload)
+    output_path = tmp_path / "relaystack_hf_phase12_chain_acceptance_report.json"
+
+    result = _run(
+        repo_root,
+        "scripts/run_hf_phase12_chain_acceptance_report.py",
+        "--adapter-capabilities",
+        str(paths["adapter"]),
+        "--tokenizer-span-probe",
+        str(paths["tokenizer"]),
+        "--engine-metadata-probe",
+        str(paths["engine"]),
+        "--readiness-report",
+        str(paths["readiness"]),
+        "--tokenizer-config-probe",
+        str(paths["probe"]),
+        "--output",
+        str(output_path),
+    )
+
+    assert result.returncode == 1
+    loaded = json.loads(output_path.read_text(encoding="utf-8"))
+    assert loaded["summary"]["ok"] is False
+    assert loaded["consistency"]["tokenizer_ref_consistent"] is False
+    assert loaded["consistency"]["selected_artifact_identity_scope_ok"] is False
+    assert "tokenizer_ref mismatch across phase12 artifact chain" in loaded["acceptance"]["blocking_reasons"]
+
+
+def test_hf_phase12_chain_acceptance_report_same_path_overwritten_tokenizer_family_in_probe_blocks(
+    tmp_path: Path,
+) -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    paths = _build_happy_path_payloads(tmp_path)
+    probe_payload = json.loads(paths["probe"].read_text(encoding="utf-8"))
+    probe_payload["tokenizer_ref"]["tokenizer_family"] = "other_tokenizer_family"
+    _write_json(paths["probe"], probe_payload)
+    output_path = tmp_path / "relaystack_hf_phase12_chain_acceptance_report.json"
+
+    result = _run(
+        repo_root,
+        "scripts/run_hf_phase12_chain_acceptance_report.py",
+        "--adapter-capabilities",
+        str(paths["adapter"]),
+        "--tokenizer-span-probe",
+        str(paths["tokenizer"]),
+        "--engine-metadata-probe",
+        str(paths["engine"]),
+        "--readiness-report",
+        str(paths["readiness"]),
+        "--tokenizer-config-probe",
+        str(paths["probe"]),
+        "--output",
+        str(output_path),
+    )
+
+    assert result.returncode == 1
+    loaded = json.loads(output_path.read_text(encoding="utf-8"))
+    assert loaded["summary"]["ok"] is False
+    assert loaded["consistency"]["tokenizer_ref_consistent"] is False
+    assert loaded["consistency"]["selected_artifact_identity_scope_ok"] is False
+    assert "tokenizer_ref mismatch across phase12 artifact chain" in loaded["acceptance"]["blocking_reasons"]
 
 
 def test_hf_phase12_chain_acceptance_report_same_path_overwritten_adapter_blocks(

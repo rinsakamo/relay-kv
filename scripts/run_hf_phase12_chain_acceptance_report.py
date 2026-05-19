@@ -116,7 +116,7 @@ def _tokenizer_ref_consistent(
     ):
         return False
 
-    for field_name in ("tokenizer_revision", "tokenizer_config_hash"):
+    for field_name in ("tokenizer_revision", "tokenizer_config_hash", "tokenizer_family"):
         values = [
             adapter_tokenizer_ref.get(field_name),
             tokenizer_tokenizer_ref.get(field_name),
@@ -606,6 +606,9 @@ def build_hf_phase12_chain_acceptance_report_payload(
         engine_data=engine_data,
         probe_data=probe_data,
         errors=errors,
+    )
+    selected_artifact_identity_scope_ok = (
+        selected_artifact_identity_scope_ok and tokenizer_ref_consistent
     )
     adapter_capability_safety_ok = _adapter_capability_safety_ok(adapter_data, errors)
     tokenizer_span_safety_ok = _tokenizer_span_safety_ok(tokenizer_data, errors)
