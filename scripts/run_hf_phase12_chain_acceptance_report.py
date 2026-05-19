@@ -100,12 +100,13 @@ def _model_ref_consistent(
     return True
 
 
-def _tokenizer_ref_consistent(
+def _tokenizer_ref_consistency(
     adapter_tokenizer_ref: dict[str, object],
     tokenizer_tokenizer_ref: dict[str, object],
     engine_tokenizer_ref: dict[str, object],
     probe_tokenizer_ref: dict[str, object],
-) -> bool:
+    probe_data: dict[str, object],
+) -> tuple[bool, bool, bool, str | None]:
     adapter_name = adapter_tokenizer_ref.get("tokenizer_name_or_path")
     tokenizer_name = tokenizer_tokenizer_ref.get("tokenizer_name_or_path")
     engine_name = engine_tokenizer_ref.get("tokenizer_name_or_path")
@@ -114,9 +115,9 @@ def _tokenizer_ref_consistent(
         isinstance(adapter_name, str)
         and adapter_name == tokenizer_name == engine_name == probe_name
     ):
-        return False
+        return False, False, False, "tokenizer_ref mismatch across phase12 artifact chain"
 
-    for field_name in ("tokenizer_revision", "tokenizer_config_hash", "tokenizer_family"):
+    for field_name in ("tokenizer_revision", "tokenizer_config_hash"):
         values = [
             adapter_tokenizer_ref.get(field_name),
             tokenizer_tokenizer_ref.get(field_name),
@@ -125,8 +126,35 @@ def _tokenizer_ref_consistent(
         ]
         baseline = values[0]
         if any(value != baseline for value in values[1:]):
-            return False
-    return True
+            return False, False, False, "tokenizer_ref mismatch across phase12 artifact chain"
+
+    upstream_values = [
+        adapter_tokenizer_ref.get("tokenizer_family"),
+        tokenizer_tokenizer_ref.get("tokenizer_family"),
+        engine_tokenizer_ref.get("tokenizer_family"),
+    ]
+    upstream_baseline = upstream_values[0]
+    upstream_tokenizer_family_consistent = all(
+        value == upstream_baseline for value in upstream_values[1:]
+    )
+    if not upstream_tokenizer_family_consistent:
+        return False, False, False, "tokenizer_family mismatch across upstream phase12 artifacts"
+
+    probe_tokenizer_loaded = _as_mapping(probe_data.get("tokenizer_probe")).get("loaded") is True
+    probe_tokenizer_family = probe_tokenizer_ref.get("tokenizer_family")
+    probe_tokenizer_family_refinement_allowed = (
+        probe_tokenizer_loaded
+        and probe_tokenizer_family is not None
+        and probe_tokenizer_family != upstream_baseline
+    )
+    if not probe_tokenizer_family_refinement_allowed and probe_tokenizer_family != upstream_baseline:
+        return (
+            False,
+            upstream_tokenizer_family_consistent,
+            False,
+            "tokenizer_config_probe tokenizer_family mismatch is not an allowed concrete refinement",
+        )
+    return True, upstream_tokenizer_family_consistent, probe_tokenizer_family_refinement_allowed, None
 
 
 def _tokenizer_config_probe_accepted(
@@ -547,14 +575,20 @@ def build_hf_phase12_chain_acceptance_report_payload(
     tokenizer_tokenizer_ref = _as_mapping(tokenizer_data.get("tokenizer_ref"))
     engine_tokenizer_ref = _as_mapping(engine_data.get("tokenizer_ref"))
     probe_tokenizer_ref = _as_mapping(probe_data.get("tokenizer_ref"))
-    tokenizer_ref_consistent = _tokenizer_ref_consistent(
+    (
+        tokenizer_ref_consistent,
+        upstream_tokenizer_family_consistent,
+        probe_tokenizer_family_refinement_allowed,
+        tokenizer_ref_blocking_reason,
+    ) = _tokenizer_ref_consistency(
         adapter_tokenizer_ref,
         tokenizer_tokenizer_ref,
         engine_tokenizer_ref,
         probe_tokenizer_ref,
+        probe_data,
     )
-    if not tokenizer_ref_consistent:
-        _add_reason(errors, "tokenizer_ref mismatch across phase12 artifact chain")
+    if tokenizer_ref_blocking_reason is not None:
+        _add_reason(errors, tokenizer_ref_blocking_reason)
 
     readiness_summary = _as_mapping(readiness_data.get("summary"))
     readiness_gate_ok = readiness_summary.get("ok") is True
@@ -789,6 +823,8 @@ def build_hf_phase12_chain_acceptance_report_payload(
         "consistency": {
             "model_ref_consistent": model_ref_consistent,
             "tokenizer_ref_consistent": tokenizer_ref_consistent,
+            "upstream_tokenizer_family_consistent": upstream_tokenizer_family_consistent,
+            "probe_tokenizer_family_refinement_allowed": probe_tokenizer_family_refinement_allowed,
             "adapter_identity_consistent": adapter_identity_consistent,
             "runtime_target_consistent": runtime_target_consistent,
             "selected_artifact_identity_scope_ok": selected_artifact_identity_scope_ok,
