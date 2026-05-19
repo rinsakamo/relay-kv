@@ -178,6 +178,125 @@ def _tokenizer_config_probe_accepted(
     return False
 
 
+def _adapter_capability_safety_ok(
+    adapter_data: dict[str, object],
+    errors: list[str],
+) -> bool:
+    adapter_summary = _as_mapping(adapter_data.get("summary"))
+    adapter_capabilities = _as_mapping(adapter_data.get("capabilities"))
+    adapter_safety_scope = _as_mapping(adapter_data.get("safety_scope"))
+
+    ok = True
+    if adapter_capabilities.get("supports_materialization") is not False or adapter_capabilities.get("supports_apply") is not False:
+        _add_reason(errors, "selected adapter capabilities artifact enables materialization/apply capability")
+        ok = False
+    if not (
+        adapter_summary.get("ok") is True
+        and adapter_capabilities.get("supports_tokenizer_span_probe") is True
+        and adapter_capabilities.get("supports_engine_metadata_probe") is True
+        and adapter_safety_scope.get("dry_run_only") is True
+        and adapter_safety_scope.get("no_model_loading_required") is True
+        and adapter_safety_scope.get("no_kv_materialization") is True
+        and adapter_safety_scope.get("no_attention_connection") is True
+        and adapter_safety_scope.get("no_scheduler_change") is True
+        and adapter_safety_scope.get("no_runtime_apply") is True
+    ):
+        _add_reason(errors, "selected adapter capabilities artifact does not satisfy readiness safety invariants")
+        ok = False
+    return ok
+
+
+def _tokenizer_span_safety_ok(
+    tokenizer_data: dict[str, object],
+    errors: list[str],
+) -> bool:
+    tokenizer_summary = _as_mapping(tokenizer_data.get("summary"))
+    tokenizer_safety_scope = _as_mapping(tokenizer_data.get("safety_scope"))
+    spans = _as_list(tokenizer_data.get("spans"))
+
+    ok = True
+    if not (
+        tokenizer_summary.get("ok") is True
+        and tokenizer_summary.get("no_model_loaded") is True
+        and tokenizer_summary.get("no_tokenizer_loaded") is True
+        and tokenizer_summary.get("no_gpu_inspection") is True
+        and tokenizer_safety_scope.get("dry_run_only") is True
+        and tokenizer_safety_scope.get("no_model_loading_required") is True
+        and tokenizer_safety_scope.get("no_tokenizer_loading_required") is True
+        and tokenizer_safety_scope.get("no_gpu_inspection") is True
+        and tokenizer_safety_scope.get("no_kv_materialization") is True
+        and tokenizer_safety_scope.get("no_attention_connection") is True
+        and tokenizer_safety_scope.get("no_scheduler_change") is True
+        and tokenizer_safety_scope.get("no_runtime_apply") is True
+        and len(spans) >= 1
+    ):
+        _add_reason(errors, "selected tokenizer span probe artifact is not metadata-only")
+        ok = False
+    for span in spans:
+        span_mapping = _as_mapping(span)
+        lineage = _as_mapping(span_mapping.get("lineage"))
+        if span_mapping.get("token_span_is_estimated") is not True or span_mapping.get("tokenizer_scoped") is not True:
+            _add_reason(errors, "selected tokenizer span probe artifact is not metadata-only")
+            ok = False
+            break
+        if lineage.get("engine_block_ref") is not None:
+            _add_reason(errors, "selected tokenizer span probe contains engine block refs")
+            ok = False
+            break
+    return ok
+
+
+def _engine_metadata_safety_ok(
+    engine_data: dict[str, object],
+    errors: list[str],
+) -> bool:
+    engine_summary = _as_mapping(engine_data.get("summary"))
+    engine_safety_scope = _as_mapping(engine_data.get("safety_scope"))
+    engine_metadata = _as_mapping(engine_data.get("engine_metadata"))
+    engine_capabilities = _as_mapping(engine_data.get("capabilities_snapshot"))
+
+    ok = True
+    if (
+        engine_metadata.get("model_loaded") is True
+        or engine_metadata.get("tokenizer_loaded") is True
+        or engine_metadata.get("gpu_inspected") is True
+    ):
+        _add_reason(errors, "selected engine metadata probe reports model/tokenizer/GPU loaded state")
+        ok = False
+    attention_type_hint = engine_metadata.get("attention_type_hint")
+    kv_head_group_count = engine_metadata.get("kv_head_group_count")
+    if attention_type_hint == "mha" and kv_head_group_count != 1:
+        _add_reason(errors, "selected engine metadata probe is not metadata-only")
+        ok = False
+    if attention_type_hint == "gqa" and not isinstance(kv_head_group_count, int):
+        _add_reason(errors, "selected engine metadata probe is not metadata-only")
+        ok = False
+    if attention_type_hint not in ("mha", "gqa", "unknown"):
+        _add_reason(errors, "selected engine metadata probe is not metadata-only")
+        ok = False
+    if not (
+        engine_summary.get("ok") is True
+        and engine_summary.get("no_model_loaded") is True
+        and engine_summary.get("no_tokenizer_loaded") is True
+        and engine_summary.get("no_gpu_inspection") is True
+        and engine_capabilities.get("supports_tokenizer_span_probe") is True
+        and engine_capabilities.get("supports_engine_metadata_probe") is True
+        and engine_capabilities.get("supports_materialization") is False
+        and engine_capabilities.get("supports_apply") is False
+        and engine_safety_scope.get("dry_run_only") is True
+        and engine_safety_scope.get("no_model_loading_required") is True
+        and engine_safety_scope.get("no_tokenizer_loading_required") is True
+        and engine_safety_scope.get("no_gpu_inspection") is True
+        and engine_safety_scope.get("no_kv_materialization") is True
+        and engine_safety_scope.get("no_attention_connection") is True
+        and engine_safety_scope.get("no_scheduler_change") is True
+        and engine_safety_scope.get("no_runtime_apply") is True
+    ):
+        _add_reason(errors, "selected engine metadata probe is not metadata-only")
+        ok = False
+    return ok
+
+
 def build_hf_phase12_chain_acceptance_report_payload(
     *,
     adapter_capabilities_path: Path,
@@ -418,6 +537,14 @@ def build_hf_phase12_chain_acceptance_report_payload(
         errors,
         warnings,
     )
+    adapter_capability_safety_ok = _adapter_capability_safety_ok(adapter_data, errors)
+    tokenizer_span_safety_ok = _tokenizer_span_safety_ok(tokenizer_data, errors)
+    engine_metadata_safety_ok = _engine_metadata_safety_ok(engine_data, errors)
+    upstream_artifact_content_safety_match = (
+        adapter_capability_safety_ok
+        and tokenizer_span_safety_ok
+        and engine_metadata_safety_ok
+    )
 
     readiness_readiness = _as_mapping(readiness_data.get("readiness"))
     if readiness_readiness.get("ready_for_materialization") is not False:
@@ -506,6 +633,7 @@ def build_hf_phase12_chain_acceptance_report_payload(
         and tokenizer_ref_consistent
         and readiness_gate_ok
         and readiness_input_refs_match
+        and upstream_artifact_content_safety_match
         and tokenizer_config_probe_input_refs_match
         and tokenizer_config_probe_readiness_ref_match
         and tokenizer_config_probe_accepted
@@ -541,6 +669,10 @@ def build_hf_phase12_chain_acceptance_report_payload(
             "tokenizer_ref_consistent": tokenizer_ref_consistent,
             "readiness_gate_ok": readiness_gate_ok,
             "readiness_input_refs_match": readiness_input_refs_match,
+            "adapter_capability_safety_ok": adapter_capability_safety_ok,
+            "tokenizer_span_safety_ok": tokenizer_span_safety_ok,
+            "engine_metadata_safety_ok": engine_metadata_safety_ok,
+            "upstream_artifact_content_safety_match": upstream_artifact_content_safety_match,
             "tokenizer_config_probe_input_refs_match": tokenizer_config_probe_input_refs_match,
             "tokenizer_config_probe_readiness_ref_match": tokenizer_config_probe_readiness_ref_match,
             "tokenizer_config_probe_accepted": tokenizer_config_probe_accepted,

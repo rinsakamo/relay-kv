@@ -364,6 +364,7 @@ def test_hf_phase12_chain_acceptance_report_happy_path(tmp_path: Path) -> None:
     assert loaded["acceptance"]["ready_for_materialization"] is False
     assert loaded["acceptance"]["ready_for_apply"] is False
     assert loaded["consistency"]["readiness_input_refs_match"] is True
+    assert loaded["consistency"]["upstream_artifact_content_safety_match"] is True
     assert loaded["consistency"]["tokenizer_config_probe_input_refs_match"] is True
     assert loaded["consistency"]["tokenizer_config_probe_readiness_ref_match"] is True
     assert json.loads(json.dumps(loaded)) == loaded
@@ -490,6 +491,111 @@ def test_hf_phase12_chain_acceptance_report_tokenizer_ref_mismatch_blocks(
     loaded = json.loads(output_path.read_text(encoding="utf-8"))
     assert loaded["summary"]["ok"] is False
     assert loaded["consistency"]["tokenizer_ref_consistent"] is False
+
+
+def test_hf_phase12_chain_acceptance_report_same_path_overwritten_adapter_blocks(
+    tmp_path: Path,
+) -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    paths = _build_happy_path_payloads(tmp_path)
+    adapter_payload = json.loads(paths["adapter"].read_text(encoding="utf-8"))
+    adapter_payload["capabilities"]["supports_apply"] = True
+    _write_json(paths["adapter"], adapter_payload)
+    output_path = tmp_path / "relaystack_hf_phase12_chain_acceptance_report.json"
+
+    result = _run(
+        repo_root,
+        "scripts/run_hf_phase12_chain_acceptance_report.py",
+        "--adapter-capabilities",
+        str(paths["adapter"]),
+        "--tokenizer-span-probe",
+        str(paths["tokenizer"]),
+        "--engine-metadata-probe",
+        str(paths["engine"]),
+        "--readiness-report",
+        str(paths["readiness"]),
+        "--tokenizer-config-probe",
+        str(paths["probe"]),
+        "--output",
+        str(output_path),
+    )
+
+    assert result.returncode == 1
+    loaded = json.loads(output_path.read_text(encoding="utf-8"))
+    assert loaded["summary"]["ok"] is False
+    assert loaded["consistency"]["adapter_capability_safety_ok"] is False
+    assert loaded["consistency"]["upstream_artifact_content_safety_match"] is False
+    assert "selected adapter capabilities artifact enables materialization/apply capability" in loaded["acceptance"]["blocking_reasons"]
+
+
+def test_hf_phase12_chain_acceptance_report_same_path_overwritten_tokenizer_blocks(
+    tmp_path: Path,
+) -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    paths = _build_happy_path_payloads(tmp_path)
+    tokenizer_payload = json.loads(paths["tokenizer"].read_text(encoding="utf-8"))
+    tokenizer_payload["spans"][0]["lineage"]["engine_block_ref"] = "engine:block:1"
+    _write_json(paths["tokenizer"], tokenizer_payload)
+    output_path = tmp_path / "relaystack_hf_phase12_chain_acceptance_report.json"
+
+    result = _run(
+        repo_root,
+        "scripts/run_hf_phase12_chain_acceptance_report.py",
+        "--adapter-capabilities",
+        str(paths["adapter"]),
+        "--tokenizer-span-probe",
+        str(paths["tokenizer"]),
+        "--engine-metadata-probe",
+        str(paths["engine"]),
+        "--readiness-report",
+        str(paths["readiness"]),
+        "--tokenizer-config-probe",
+        str(paths["probe"]),
+        "--output",
+        str(output_path),
+    )
+
+    assert result.returncode == 1
+    loaded = json.loads(output_path.read_text(encoding="utf-8"))
+    assert loaded["summary"]["ok"] is False
+    assert loaded["consistency"]["tokenizer_span_safety_ok"] is False
+    assert loaded["consistency"]["upstream_artifact_content_safety_match"] is False
+    assert "selected tokenizer span probe contains engine block refs" in loaded["acceptance"]["blocking_reasons"]
+
+
+def test_hf_phase12_chain_acceptance_report_same_path_overwritten_engine_blocks(
+    tmp_path: Path,
+) -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    paths = _build_happy_path_payloads(tmp_path)
+    engine_payload = json.loads(paths["engine"].read_text(encoding="utf-8"))
+    engine_payload["engine_metadata"]["model_loaded"] = True
+    _write_json(paths["engine"], engine_payload)
+    output_path = tmp_path / "relaystack_hf_phase12_chain_acceptance_report.json"
+
+    result = _run(
+        repo_root,
+        "scripts/run_hf_phase12_chain_acceptance_report.py",
+        "--adapter-capabilities",
+        str(paths["adapter"]),
+        "--tokenizer-span-probe",
+        str(paths["tokenizer"]),
+        "--engine-metadata-probe",
+        str(paths["engine"]),
+        "--readiness-report",
+        str(paths["readiness"]),
+        "--tokenizer-config-probe",
+        str(paths["probe"]),
+        "--output",
+        str(output_path),
+    )
+
+    assert result.returncode == 1
+    loaded = json.loads(output_path.read_text(encoding="utf-8"))
+    assert loaded["summary"]["ok"] is False
+    assert loaded["consistency"]["engine_metadata_safety_ok"] is False
+    assert loaded["consistency"]["upstream_artifact_content_safety_match"] is False
+    assert "selected engine metadata probe reports model/tokenizer/GPU loaded state" in loaded["acceptance"]["blocking_reasons"]
 
 
 def test_hf_phase12_chain_acceptance_report_readiness_not_ok_blocks(
